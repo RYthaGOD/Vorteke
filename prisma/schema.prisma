@@ -1,0 +1,47 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+model Token {
+    address         String   @id
+    name            String
+    symbol          String
+    logoURI         String?
+    priceUsd        Float    @default(0)
+    priceChange24h  Float    @default(0)
+    volume24h       Float    @default(0)
+    liquidityUsd    Float    @default(0)
+    fdv             Float    @default(0)
+    mcap            Float    @default(0)
+    tier            String   @default("Basic")
+    securityTags    Json?
+    advancedMetrics Json?
+    lastUpdated     DateTime @default(now())
+}
+
+model Enhancement {
+    address           String    @id
+    tier              String    @default("Basic")
+    owner             String?
+    socials           Json?
+    customDescription String?
+    lastPaymentTx     String?   @unique
+    lastPaymentTime   DateTime?
+
+    @@index([lastPaymentTx])
+}
+
+model Claim {
+    id        String   @id @default(uuid())
+    address   String
+    wallet    String
+    signature String
+    timestamp DateTime
+    createdAt DateTime @default(now())
+}

@@ -1,0 +1,49 @@
+{
+    "name": "vorteke",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "@prisma/client": "^5.22.0",
+        "@privy-io/react-auth": "^3.14.1",
+        "@solana/spl-token": "^0.4.8",
+        "@solana/wallet-adapter-base": "^0.9.23",
+        "@solana/wallet-adapter-react": "^0.15.35",
+        "@solana/wallet-adapter-react-ui": "^0.9.35",
+        "@solana/wallet-adapter-wallets": "^0.19.32",
+        "@solana/web3.js": "^1.95.3",
+        "@tanstack/react-query": "^5.90.21",
+        "@tanstack/react-query-devtools": "^5.91.3",
+        "axios": "^1.13.5",
+        "framer-motion": "^12.34.3",
+        "html-to-image": "^1.11.13",
+        "lightweight-charts": "^4.2.0",
+        "lucide-react": "^0.453.0",
+        "next": "15.0.0",
+        "pino": "^10.3.1",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "tweetnacl": "^1.0.3",
+        "zustand": "^5.0.11"
+    },
+    "devDependencies": {
+        "@metaplex-foundation/mpl-core": "^1.7.0",
+        "@metaplex-foundation/umi": "^1.5.1",
+        "@metaplex-foundation/umi-bundle-defaults": "^1.5.1",
+        "@types/node": "^20",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "dotenv": "^17.3.1",
+        "eslint": "^8",
+        "eslint-config-next": "15.0.0",
+        "pino-pretty": "^11.2.1",
+        "prisma": "^5.22.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5"
+    }
+}

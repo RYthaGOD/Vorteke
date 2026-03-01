@@ -1,0 +1,1721 @@
+{
+  "enhancements": {},
+  "claims": {},
+  "tokens": {
+    "TEST_MINT_123": {
+      "address": "TEST_MINT_123",
+      "name": "Vortex Test",
+      "symbol": "VTX",
+      "lastUpdated": 1772085834091
+    },
+    "8HGer4vRWZMu5MUYU7ACPb4uanKgBewaXJZscLagpump": {
+      "address": "8HGer4vRWZMu5MUYU7ACPb4uanKgBewaXJZscLagpump",
+      "name": "Gizmo",
+      "symbol": "Gizmo",
+      "decimals": 9,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/ELPVg-OOu0gp2UAV?width=800&height=800&quality=90",
+      "priceUsd": 0.0001178,
+      "priceChange24h": 2.4,
+      "volume24h": 120920.3,
+      "liquidityUsd": 32654.23,
+      "fdv": 117884,
+      "mcap": 117884,
+      "holders": 0,
+      "socials": {
+        "website": "https://solgizmo.com/",
+        "twitter": "https://x.com/SolGizmoClawd"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 1,
+          "hypeLevel": "DORMANT"
+        },
+        "volumeVelocity": {
+          "score": 12,
+          "status": "STAGNANT",
+          "ratio": 0.3810121580890239
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772096669332
+    },
+    "2XnPuoYHmaz6RPzUutcdRZ7N3K2RrufU8H4uvAbmmuPi": {
+      "address": "2XnPuoYHmaz6RPzUutcdRZ7N3K2RrufU8H4uvAbmmuPi",
+      "name": "ORACLe TEA_PROTOCOL_COINS RAW",
+      "symbol": "TEa",
+      "decimals": 9,
+      "logoURI": "https://dd.dexscreener.com/ds-data/tokens/solana/2XnPuoYHmaz6RPzUutcdRZ7N3K2RrufU8H4uvAbmmuPi.png",
+      "priceUsd": 0.0002039,
+      "priceChange24h": 884,
+      "volume24h": 17302700.49,
+      "liquidityUsd": 431.76,
+      "fdv": 203933,
+      "mcap": 203933,
+      "holders": 0,
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772096669316
+    },
+    "8di3oYfjYcNBw1cFtC7nSP183DvXMxk6A8CtL9pTooYV": {
+      "address": "8di3oYfjYcNBw1cFtC7nSP183DvXMxk6A8CtL9pTooYV",
+      "name": "IMPulse AGENC Swap",
+      "symbol": "AGENC",
+      "decimals": 9,
+      "logoURI": "https://dd.dexscreener.com/ds-data/tokens/solana/8di3oYfjYcNBw1cFtC7nSP183DvXMxk6A8CtL9pTooYV.png",
+      "priceUsd": 0.0001958,
+      "priceChange24h": 846,
+      "volume24h": 17401852.72,
+      "liquidityUsd": 453.68,
+      "fdv": 195888,
+      "mcap": 195888,
+      "holders": 0,
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772102268687,
+      "tier": "Basic"
+    },
+    "EiYVSExDUKLkjQiZR8QnhdPmQfkgDi2exSWYKQpHRkkE": {
+      "address": "EiYVSExDUKLkjQiZR8QnhdPmQfkgDi2exSWYKQpHRkkE",
+      "name": "zk OPINION_MARKETS GRAVITY",
+      "symbol": "OPn",
+      "decimals": 9,
+      "logoURI": "https://dd.dexscreener.com/ds-data/tokens/solana/EiYVSExDUKLkjQiZR8QnhdPmQfkgDi2exSWYKQpHRkkE.png",
+      "priceUsd": 0.0001807,
+      "priceChange24h": 718,
+      "volume24h": 16806475.73,
+      "liquidityUsd": 388.69,
+      "fdv": 180701,
+      "mcap": 180701,
+      "holders": 0,
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772102257473,
+      "tier": "Basic"
+    },
+    "DMYNp65mub3i7LRpBdB66CgBAceLcQnv4gsWeCi6pump": {
+      "address": "DMYNp65mub3i7LRpBdB66CgBAceLcQnv4gsWeCi6pump",
+      "name": "bǐngwǔ",
+      "symbol": "丙午",
+      "decimals": 9,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/0ce2f3685975ec99983b0858f972a2732912af3d6f17c0bb2cd209560de8087b?width=800&height=800&quality=90",
+      "priceUsd": 0.0001652,
+      "priceChange24h": -27.07,
+      "volume24h": 48882.64,
+      "liquidityUsd": 46219.32,
+      "fdv": 165281,
+      "mcap": 165281,
+      "holders": 0,
+      "socials": {
+        "website": "https://bingwucoin.xyz/",
+        "twitter": "https://x.com/bingwusolana",
+        "telegram": "https://t.me/bingwusolana"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 0,
+          "hypeLevel": "DORMANT"
+        },
+        "volumeVelocity": {
+          "score": 31,
+          "status": "STABLE",
+          "ratio": 0.9398550171690195
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772086216251
+    },
+    "2QKrBtNECja4cJygxA7igwqxahs93GNmuQ2We2stpump": {
+      "address": "2QKrBtNECja4cJygxA7igwqxahs93GNmuQ2We2stpump",
+      "name": "Mac mini",
+      "symbol": "MACMINI",
+      "decimals": 9,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/pmlp0DuaEeTI_hBP?width=800&height=800&quality=90",
+      "priceUsd": 0.001849,
+      "priceChange24h": -40.94,
+      "volume24h": 2166249.46,
+      "liquidityUsd": 137117.35,
+      "fdv": 1849750,
+      "mcap": 1849750,
+      "holders": 0,
+      "socials": {
+        "twitter": "https://x.com/macminicoin"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 21,
+          "hypeLevel": "DORMANT"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0.005379112651624219
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772102268678,
+      "tier": "Basic"
+    },
+    "GnrLjRjAhXiPgZPpyTCWg1CAvDoR8TGdfrFqh9zykFuZ": {
+      "address": "GnrLjRjAhXiPgZPpyTCWg1CAvDoR8TGdfrFqh9zykFuZ",
+      "name": "USDAI_OFFICIAL_COIN MOMENTUM SOl",
+      "symbol": "CHIp",
+      "decimals": 9,
+      "logoURI": "https://dd.dexscreener.com/ds-data/tokens/solana/GnrLjRjAhXiPgZPpyTCWg1CAvDoR8TGdfrFqh9zykFuZ.png",
+      "priceUsd": 0.0005761,
+      "priceChange24h": 1221,
+      "volume24h": 15260843.22,
+      "liquidityUsd": 91961.95,
+      "fdv": 576157,
+      "mcap": 576157,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 25,
+          "status": "STABLE",
+          "ratio": 0.7700422327016739
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772102268685
+    },
+    "43myZPRSRoR5yMXrueiRfk3hjRi6RCTbRtCrRMiaMd8T": {
+      "address": "43myZPRSRoR5yMXrueiRfk3hjRi6RCTbRtCrRMiaMd8T",
+      "name": "vault BULLIEVERSE_AI amm",
+      "symbol": "BULL",
+      "decimals": 9,
+      "logoURI": "https://dd.dexscreener.com/ds-data/tokens/solana/43myZPRSRoR5yMXrueiRfk3hjRi6RCTbRtCrRMiaMd8T.png",
+      "priceUsd": 0.000162,
+      "priceChange24h": 623,
+      "volume24h": 15183955.46,
+      "liquidityUsd": 48584.73,
+      "fdv": 162071,
+      "mcap": 162071,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 27,
+          "status": "STABLE",
+          "ratio": 0.8308589814487881
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772102268686
+    },
+    "JUPyiwrYPRnK3B9kR4A9p7YQ8vLwK2qNCjY7MkW99Ld": {
+      "address": "JUPyiwrYPRnK3B9kR4A9p7YQ8vLwK2qNCjY7MkW99Ld",
+      "name": "VORTEX Asset",
+      "symbol": "UNKNWN",
+      "decimals": 9,
+      "logoURI": "https://dd.dexscreener.com/ds-data/tokens/solana/JUPyiwrYPRnK3B9kR4A9p7YQ8vLwK2qNCjY7MkW99Ld.png",
+      "priceUsd": 0,
+      "priceChange24h": 0,
+      "volume24h": 0,
+      "liquidityUsd": 0,
+      "fdv": 0,
+      "mcap": 0,
+      "holders": 0,
+      "tier": "Elite",
+      "socials": {
+        "website": "https://jup.ag",
+        "twitter": "https://x.com/JupiterExchange"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "verified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 0
+        },
+        "socialSentiment": {
+          "score": 0,
+          "hypeLevel": "DORMANT"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 95
+        }
+      },
+      "lastUpdated": 1772207827029,
+      "customDescription": "The giant of Solana liquidity. Unified routing for every token."
+    },
+    "Dfh5DzRgSvvCFDoYc2ciTkMrbDfRKybA4SoFbPmApump": {
+      "address": "Dfh5DzRgSvvCFDoYc2ciTkMrbDfRKybA4SoFbPmApump",
+      "name": "Pippin",
+      "symbol": "pippin",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/QmdcvSSBg7gWD4tvfXv3PuLtAiPyDZ5Z9w4LQVeRJKL3Lz",
+      "priceUsd": 0.6669622,
+      "priceChange24h": -16.78,
+      "volume24h": 35894546.66,
+      "liquidityUsd": 16593390.82,
+      "fdv": 670264152,
+      "mcap": 670264152,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {
+        "website": "https://pippin.love/",
+        "twitter": "https://x.com/ThePippinCo",
+        "telegram": "http://t.me/ThePippinCo"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 33.01,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 3,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 33.01
+        },
+        "socialSentiment": {
+          "score": 70,
+          "hypeLevel": "TRENDING"
+        },
+        "volumeVelocity": {
+          "score": 13,
+          "status": "STAGNANT",
+          "ratio": 0.4046285384645456
+        },
+        "sentiment": {
+          "buyPercent": 80,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772247602671,
+      "isSafe": false
+    },
+    "JUPyiK6hz3nHaG3Vs346m8xU22D8LeU67NPSB31W94A": {
+      "address": "JUPyiK6hz3nHaG3Vs346m8xU22D8LeU67NPSB31W94A",
+      "name": "VORTEX Asset",
+      "symbol": "UNKNWN",
+      "decimals": 9,
+      "logoURI": "https://dd.dexscreener.com/ds-data/tokens/solana/JUPyiK6hz3nHaG3Vs346m8xU22D8LeU67NPSB31W94A.png",
+      "priceUsd": 0,
+      "priceChange24h": 0,
+      "volume24h": 0,
+      "liquidityUsd": 0,
+      "fdv": 0,
+      "mcap": 0,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 0,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 0,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW"
+        },
+        "socialSentiment": {
+          "score": 0,
+          "hypeLevel": "DORMANT"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772115816612
+    },
+    "2aTDCGhFNE1b9i2hSD2QV4xCtEwQ7Vhz9GECgCAeSa17": {
+      "address": "2aTDCGhFNE1b9i2hSD2QV4xCtEwQ7Vhz9GECgCAeSa17",
+      "name": "BITWAY_XYZ NET SETTlement",
+      "symbol": "btw",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreiboddik63plybfdnrwl2g3tfjpblwj5acrk3w4uqnrejrfajik3pq",
+      "priceUsd": 0.00059578306,
+      "priceChange24h": 1310,
+      "volume24h": 17847617.92,
+      "liquidityUsd": 82055.98,
+      "fdv": 596196,
+      "mcap": 596196,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 32.52,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 5,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 32.52
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 95,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772211202179,
+      "isSafe": false
+    },
+    "9ypq79FbmJHp1f7nNiZGk5Vb8nyFooCmiAX5gpSWAqsi": {
+      "address": "9ypq79FbmJHp1f7nNiZGk5Vb8nyFooCmiAX5gpSWAqsi",
+      "name": "BILLIONS_NTWK_COIN base BRIDge",
+      "symbol": "BILL",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreidlx5anehy6aislqbewa74shjl467lnvqq7hpl73ouxcau42n6zbm",
+      "priceUsd": 0.0002003,
+      "priceChange24h": 840,
+      "volume24h": 23191025.87,
+      "liquidityUsd": 43005.68,
+      "fdv": 200360,
+      "mcap": 200360,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 34.04,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 5,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 34.04
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 95,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772201981101
+    },
+    "8VLCDb7JCuBqNPSZo4xeat3P7R9t2tUyc6PGQMRr3DYt": {
+      "address": "8VLCDb7JCuBqNPSZo4xeat3P7R9t2tUyc6PGQMRr3DYt",
+      "name": "CU BULLIEVERSE_AI net",
+      "symbol": "Bull",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreicd2ac3zqhhxyi6jddril3ewnrpkxg7nr5r243anbk7gj53g22zji",
+      "priceUsd": 0.0002162881,
+      "priceChange24h": 904,
+      "volume24h": 20001058.67,
+      "liquidityUsd": 44125.83,
+      "fdv": 216309,
+      "mcap": 216309,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 34.28,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 5,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 34.28
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 95,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772211202147,
+      "isSafe": false
+    },
+    "GazMqahz5tYbTjVfiCUfTMgXeQwZ1ZuaMqEu7xLj7TiA": {
+      "address": "GazMqahz5tYbTjVfiCUfTMgXeQwZ1ZuaMqEu7xLj7TiA",
+      "name": "BASe SPACE_COIN NOde",
+      "symbol": "space",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreidvo3wvs7p5kzujayddcfpddokq4iy2pofnlkmfslzlzwrtp2dwpi",
+      "priceUsd": 0.00055932865,
+      "priceChange24h": 1223,
+      "volume24h": 17201983.22,
+      "liquidityUsd": 88487.11,
+      "fdv": 558938,
+      "mcap": 558938,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 31.01,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 4,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 31.01
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 95,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772211201949,
+      "isSafe": false
+    },
+    "D1TtDef829Z2EHxFi8itpYbVFjaxu3GEAiHHUXjbQyBo": {
+      "address": "D1TtDef829Z2EHxFi8itpYbVFjaxu3GEAiHHUXjbQyBo",
+      "name": "PLatform POOl OPINION_MARKETS",
+      "symbol": "Opn",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreibj6p5aprzb34klghwcsonudpwvhkrkbnpprdv2lu6cmuald37qxm",
+      "priceUsd": 0.0002135,
+      "priceChange24h": 881,
+      "volume24h": 19987899.8,
+      "liquidityUsd": 44437.02,
+      "fdv": 213526,
+      "mcap": 213526,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 32.72,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 5,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 32.72
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 31,
+          "status": "STABLE",
+          "ratio": 0.9553754439394707
+        },
+        "sentiment": {
+          "buyPercent": 95,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772201981671
+    },
+    "Gzb9XduScnJqZ3GKbazbPLWx8Nw8V6uM9VqEZLe8mBLV": {
+      "address": "Gzb9XduScnJqZ3GKbazbPLWx8Nw8V6uM9VqEZLe8mBLV",
+      "name": "WaterMinder",
+      "symbol": "WMDR",
+      "decimals": 9,
+      "logoURI": "https://ipfs.io/ipfs/bafkreifrx3ngal36iftzw43toiv24exdjxeerjobatorc5ea6hrkui73ou",
+      "priceUsd": 0.000045728433,
+      "priceChange24h": -23.66,
+      "volume24h": 690125.24,
+      "liquidityUsd": 30949.26,
+      "fdv": 43569,
+      "mcap": 43569,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {
+        "website": "https://waterminder.com",
+        "twitter": "http://x.com/waterminder_app"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 54.81,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 85,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": true,
+          "clusterSize": 5,
+          "riskLevel": "MEDIUM",
+          "top10Percent": 54.81
+        },
+        "socialSentiment": {
+          "score": 70,
+          "hypeLevel": "TRENDING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0.018457106453647825
+        },
+        "sentiment": {
+          "buyPercent": 80,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772229392569,
+      "isSafe": false
+    },
+    "4QUfR9bJjELe18395oKfuoEkQgzFt2as83iJSJ27pump": {
+      "address": "4QUfR9bJjELe18395oKfuoEkQgzFt2as83iJSJ27pump",
+      "name": "Land",
+      "symbol": "Land",
+      "decimals": 6,
+      "logoURI": "https://desperate-moccasin-minnow.myfilebase.com/ipfs/QmTPMUCQG9LoyZdZgj82m6noimK4coM61iw6ERvRwTMjxB",
+      "priceUsd": 0.00002647771,
+      "priceChange24h": -83.39,
+      "volume24h": 292959.38,
+      "liquidityUsd": 13708.88,
+      "fdv": 25472,
+      "mcap": 25472,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {
+        "website": "https://landcoin.site/",
+        "twitter": "https://x.com/i/communities/2027113815649738802"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 45.57,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 10,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 45.57
+        },
+        "socialSentiment": {
+          "score": 70,
+          "hypeLevel": "TRENDING"
+        },
+        "volumeVelocity": {
+          "score": 10,
+          "status": "STAGNANT",
+          "ratio": 0.3245234870479225
+        },
+        "sentiment": {
+          "buyPercent": 80,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246433503,
+      "isSafe": false
+    },
+    "tiZt3pcUPpXoJeqNqPYENpzuX4eGMvrQMW372JQpump": {
+      "address": "tiZt3pcUPpXoJeqNqPYENpzuX4eGMvrQMW372JQpump",
+      "name": "nextape",
+      "symbol": "nextape",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/QmVrAXYWKeGBDfcHLw9GLEsqjxCPwvEvvMUq4iRZ523xm6",
+      "priceUsd": 0.0006378,
+      "priceChange24h": 1235,
+      "volume24h": 11015723.26,
+      "liquidityUsd": 76791.58,
+      "fdv": 637866,
+      "mcap": 637866,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {
+        "website": "https://nextape.io",
+        "twitter": "https://x.com/NextApe_io",
+        "telegram": "https://t.me/nextapeio"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 7.98,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 95,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 7.98
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 39,
+          "status": "STABLE",
+          "ratio": 1.2090689759942788
+        },
+        "sentiment": {
+          "buyPercent": 95,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772201978613
+    },
+    "HPxCeckDNWkEwg7VA7sErcRDim7mRXC6FPXyrxZVxYoN": {
+      "address": "HPxCeckDNWkEwg7VA7sErcRDim7mRXC6FPXyrxZVxYoN",
+      "name": "$CAT@@@1",
+      "symbol": "CAT",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreibcplq4msg4sqrcq2wptbajiuntokdpkvc53tw4opfjljkzrfohga",
+      "priceUsd": 0,
+      "priceChange24h": 0,
+      "volume24h": 0,
+      "liquidityUsd": 0,
+      "fdv": 0,
+      "mcap": 0,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 99.99,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 6.67,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": true,
+          "clusterSize": 10,
+          "riskLevel": "HIGH",
+          "top10Percent": 99.99
+        },
+        "socialSentiment": {
+          "score": 0,
+          "hypeLevel": "DORMANT"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 95
+        }
+      },
+      "lastUpdated": 1772202040731
+    },
+    "3okqCqwKtoyWr5fn5oJXaNyxEib1WiWbPqVA9Ls5jjXh": {
+      "address": "3okqCqwKtoyWr5fn5oJXaNyxEib1WiWbPqVA9Ls5jjXh",
+      "name": "CatxSolCoin",
+      "symbol": "CAT",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreibcplq4msg4sqrcq2wptbajiuntokdpkvc53tw4opfjljkzrfohga",
+      "priceUsd": 0,
+      "priceChange24h": 0,
+      "volume24h": 0,
+      "liquidityUsd": 0,
+      "fdv": 0,
+      "mcap": 0,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 99.98,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 4.21,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": true,
+          "clusterSize": 10,
+          "riskLevel": "HIGH",
+          "top10Percent": 99.98
+        },
+        "socialSentiment": {
+          "score": 0,
+          "hypeLevel": "DORMANT"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 95
+        }
+      },
+      "lastUpdated": 1772202041133
+    },
+    "7nePAcJhg88s1KFJptgaBvzYgHaUDzddgU65Etvtpump": {
+      "address": "7nePAcJhg88s1KFJptgaBvzYgHaUDzddgU65Etvtpump",
+      "name": "NotInRetardEducation",
+      "symbol": "NIRE",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreifqhn3dz5uaqkgkc53c42pbe46q2qivb7osflsng5aiw6coisniqi",
+      "priceUsd": 0.000028931194,
+      "priceChange24h": -40.28,
+      "volume24h": 74119.97,
+      "liquidityUsd": 27452.18,
+      "fdv": 28582,
+      "mcap": 28582,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {
+        "website": "https://www.notinretardeducation.com/",
+        "twitter": "https://x.com/i/communities/2026604008186450109/",
+        "telegram": "https://t.me/NotInRetardEducation0"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 72.99,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 4,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": true,
+          "clusterSize": 10,
+          "riskLevel": "HIGH",
+          "top10Percent": 72.99
+        },
+        "socialSentiment": {
+          "score": 70,
+          "hypeLevel": "TRENDING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 80,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772245257151,
+      "isSafe": false
+    },
+    "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump": {
+      "address": "4fSWEw2wbYEUCcMtitzmeGUfqinoafXxkhqZrA9Gpump",
+      "name": "level941",
+      "symbol": "Pigeon",
+      "decimals": 6,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/eac4af8656148eb230ac19b54c134a0f02348dd4062b31019711128f1e2f4961?width=800&height=800&quality=90",
+      "priceUsd": 0.007903,
+      "priceChange24h": 26.61,
+      "volume24h": 3222226.9,
+      "liquidityUsd": 357294.3,
+      "fdv": 7902906,
+      "mcap": 7902906,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {
+        "website": "https://www.941pigeon.fun/",
+        "twitter": "https://x.com/level941"
+      },
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246442878
+    },
+    "3kLPjmrjwjHbB2yUzqVtZLN1YnYJHbmdVuDF3dfDpump": {
+      "address": "3kLPjmrjwjHbB2yUzqVtZLN1YnYJHbmdVuDF3dfDpump",
+      "name": "Clawmit",
+      "symbol": "CWT",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafybeifhgghaaok2pjvey74fv5pklsj7cqascmonxvoq423f6fwypamxji",
+      "priceUsd": 0.000008419493,
+      "priceChange24h": 516,
+      "volume24h": 19945.06,
+      "liquidityUsd": 0,
+      "fdv": 15109.74,
+      "mcap": 15109.74,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 60.98,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 7,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": true,
+          "clusterSize": 5,
+          "riskLevel": "MEDIUM",
+          "top10Percent": 60.98
+        },
+        "socialSentiment": {
+          "score": 30,
+          "hypeLevel": "DORMANT"
+        },
+        "volumeVelocity": {
+          "score": 100,
+          "status": "BREAKOUT",
+          "ratio": 6.242050913860375
+        },
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 80
+        }
+      },
+      "isSafe": false,
+      "lastUpdated": 1772210717809
+    },
+    "A1DJm7w8d2GJxmSvLC3oyUcmBXxts7fKprsGX1W17bKM": {
+      "address": "A1DJm7w8d2GJxmSvLC3oyUcmBXxts7fKprsGX1W17bKM",
+      "name": "zkrollup ENgine FABRICFND_COIN",
+      "symbol": "robo",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreigrkvp6q4ub3w4xrq4v7uhemrcvju734nti4xpmyfqfkttf5p3vuu",
+      "priceUsd": 0.00048579002,
+      "priceChange24h": 1052,
+      "volume24h": 17958740.45,
+      "liquidityUsd": 81141.59,
+      "fdv": 486166,
+      "mcap": 486166,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 31.7,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 6,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 31.7
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 95,
+          "sellPercent": 50
+        }
+      },
+      "isSafe": false,
+      "lastUpdated": 1772211201955
+    },
+    "9nKuN1h8Y6kY1SChqbzZHtMwCfhtcteimh7wKQ4ey6Ta": {
+      "address": "9nKuN1h8Y6kY1SChqbzZHtMwCfhtcteimh7wKQ4ey6Ta",
+      "name": "LEDGEr INSTRUCTIon SENTIO_COIN",
+      "symbol": "st",
+      "decimals": 6,
+      "logoURI": "https://ipfs.io/ipfs/bafkreiccjxyubfpisawhy7ph2m2e7dpniixqwquj2ryqizrdpg7whwbxxq",
+      "priceUsd": 0.00055178406,
+      "priceChange24h": 1207,
+      "volume24h": 16579582.91,
+      "liquidityUsd": 86472.35,
+      "fdv": 551891,
+      "mcap": 551891,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {},
+      "advancedMetrics": {
+        "top10HolderPercent": 32.99,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 5,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 32.99
+        },
+        "socialSentiment": {
+          "score": 100,
+          "hypeLevel": "MOONING"
+        },
+        "volumeVelocity": {
+          "score": 0,
+          "status": "STAGNANT",
+          "ratio": 0
+        },
+        "sentiment": {
+          "buyPercent": 95,
+          "sellPercent": 50
+        }
+      },
+      "isSafe": false,
+      "lastUpdated": 1772211202170
+    },
+    "EZnFX6wukLgQ1KRDbvgg57bCimo77DZ5cHB98JoJpump": {
+      "address": "EZnFX6wukLgQ1KRDbvgg57bCimo77DZ5cHB98JoJpump",
+      "name": "am i broke",
+      "symbol": "broke",
+      "decimals": 6,
+      "logoURI": "https://edge.uxento.io/image/GKgH78y931fo8B6Y3eVpeJV3PYfdAj5Jwc9CJtRApump",
+      "priceUsd": 0.00004688839,
+      "priceChange24h": -75.72,
+      "volume24h": 669766.74,
+      "liquidityUsd": 18603.48,
+      "fdv": 44344,
+      "mcap": 44344,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {
+        "website": "https://x.com/Raindropsmedia1/status/2026728810004062406?s=20",
+        "twitter": "https://x.com/i/communities/2026931958987538917"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 41.79,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 85,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 41.79
+        },
+        "socialSentiment": {
+          "score": 70,
+          "hypeLevel": "TRENDING"
+        },
+        "volumeVelocity": {
+          "score": 53,
+          "status": "ACCELERATING",
+          "ratio": 1.6151170813444289
+        },
+        "sentiment": {
+          "buyPercent": 80,
+          "sellPercent": 50
+        }
+      },
+      "isSafe": false,
+      "lastUpdated": 1772233323117
+    },
+    "NV2RYH954cTJ3ckFUpvfqaQXU4ARqqDH3562nFSpump": {
+      "address": "NV2RYH954cTJ3ckFUpvfqaQXU4ARqqDH3562nFSpump",
+      "name": "パンチ",
+      "symbol": "Punch",
+      "decimals": 6,
+      "logoURI": "https://metadata.rapidlaunch.io/images/5058a272-31c9-4244-8670-31e9094ad1a2.png",
+      "priceUsd": 0.014173587,
+      "priceChange24h": -25.95,
+      "volume24h": 9740331.09,
+      "liquidityUsd": 584297.48,
+      "fdv": 13846192,
+      "mcap": 13846192,
+      "holders": 0,
+      "tier": "Basic",
+      "socials": {
+        "website": "https://punchonsolana.fun/",
+        "twitter": "https://x.com/punch_ganbare?s=21&t=ruzx1xkKsZ3vDPRkeDVwPg"
+      },
+      "advancedMetrics": {
+        "top10HolderPercent": 18.36,
+        "devWalletStatus": "holding",
+        "lpBurnStatus": "unverified",
+        "slippage1k": 0.5,
+        "slippage10k": 2.5,
+        "snipeVolumePercent": 85,
+        "mintAuthority": "renounced",
+        "freezeAuthority": "renounced",
+        "metadataMutable": true,
+        "holderIntelligence": {
+          "clusterDetected": false,
+          "clusterSize": 0,
+          "riskLevel": "LOW",
+          "top10Percent": 18.36
+        },
+        "socialSentiment": {
+          "score": 70,
+          "hypeLevel": "TRENDING"
+        },
+        "volumeVelocity": {
+          "score": 29,
+          "status": "STABLE",
+          "ratio": 0.8872483911155361
+        },
+        "sentiment": {
+          "buyPercent": 80,
+          "sellPercent": 50
+        }
+      },
+      "isSafe": false,
+      "lastUpdated": 1772246424501
+    },
+    "ABTZw146nJeRBbsxHqxtZasNnwMJBKaYrfxVk6zSJGip": {
+      "address": "ABTZw146nJeRBbsxHqxtZasNnwMJBKaYrfxVk6zSJGip",
+      "name": "The Survivalist Rabbit",
+      "symbol": "Rabbit",
+      "priceUsd": 0.0001902,
+      "priceChange24h": 468,
+      "volume24h": 1960441.54,
+      "liquidityUsd": 36951.4,
+      "fdv": 190284,
+      "mcap": 190284,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/nkGzu2CCTo8loy4x?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246442811
+    },
+    "AnvacL8c4PDLyrQ92bbhfxMYtnckRja3dj6p6Yzepump": {
+      "address": "AnvacL8c4PDLyrQ92bbhfxMYtnckRja3dj6p6Yzepump",
+      "name": "Macro Strategy",
+      "symbol": "MACRO",
+      "priceUsd": 0.001702,
+      "priceChange24h": -24.85,
+      "volume24h": 1013758.39,
+      "liquidityUsd": 106363.77,
+      "fdv": 1702068,
+      "mcap": 1702068,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/khcTqHs7dG3Qw_uF?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246442816
+    },
+    "AVF9F4C4j8b1Kh4BmNHqybDaHgnZpJ7W7yLvL7hUpump": {
+      "address": "AVF9F4C4j8b1Kh4BmNHqybDaHgnZpJ7W7yLvL7hUpump",
+      "name": "Lobstar",
+      "symbol": "Lobstar",
+      "priceUsd": 0.001888,
+      "priceChange24h": -32.78,
+      "volume24h": 1158125.72,
+      "liquidityUsd": 201272.94,
+      "fdv": 1888508,
+      "mcap": 1888508,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/AeVl4qS8tQ58VClG?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246442820
+    },
+    "Cc841PdMQUNWq989BszMHcjipGw89CBxDygiweb1pump": {
+      "address": "Cc841PdMQUNWq989BszMHcjipGw89CBxDygiweb1pump",
+      "name": "BELLATOR",
+      "symbol": "BELLATOR",
+      "priceUsd": 0.0005169,
+      "priceChange24h": 1436,
+      "volume24h": 2683824.64,
+      "liquidityUsd": 62691.97,
+      "fdv": 516940,
+      "mcap": 516940,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/24a-MitaS3TXNpjm?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246442875
+    },
+    "8jiVXftnn2ZG6bugK7HAH5j2G3D6TpsG521gqsWwpump": {
+      "address": "8jiVXftnn2ZG6bugK7HAH5j2G3D6TpsG521gqsWwpump",
+      "name": "Autism Coin",
+      "symbol": "AUTISM",
+      "priceUsd": 0.0008905,
+      "priceChange24h": -33.01,
+      "volume24h": 1204345.68,
+      "liquidityUsd": 93902.52,
+      "fdv": 890499,
+      "mcap": 890499,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/2j1F8Jkhj7eq8bak?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246442881
+    },
+    "412zDygnwP9DzitnQVgRKUFFTDmrYScFch6P2k39pump": {
+      "address": "412zDygnwP9DzitnQVgRKUFFTDmrYScFch6P2k39pump",
+      "name": "Jellybean",
+      "symbol": "Jellybean",
+      "priceUsd": 0.003741,
+      "priceChange24h": 1250,
+      "volume24h": 11576685.4,
+      "liquidityUsd": 213437.12,
+      "fdv": 3741275,
+      "mcap": 3741275,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/ATDK9W7gUGyZCGJB?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443005
+    },
+    "DzppeRRAjPpvcEE541aTN7Xm8ERjA9nBW8KDawfWpump": {
+      "address": "DzppeRRAjPpvcEE541aTN7Xm8ERjA9nBW8KDawfWpump",
+      "name": "dark pippin",
+      "symbol": "dippin",
+      "priceUsd": 0.0001511,
+      "priceChange24h": 330,
+      "volume24h": 2244881.89,
+      "liquidityUsd": 32720.37,
+      "fdv": 151145,
+      "mcap": 151145,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/iF4et_99MY4b4DFk?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443014
+    },
+    "6ydMmFRaNt4AHBjgvSogbBvcxnTrX3QzUe2AEzVppump": {
+      "address": "6ydMmFRaNt4AHBjgvSogbBvcxnTrX3QzUe2AEzVppump",
+      "name": "Pippkin The Horse ",
+      "symbol": "Pippkin",
+      "priceUsd": 0.002352,
+      "priceChange24h": -45.39,
+      "volume24h": 1090331.41,
+      "liquidityUsd": 141886.97,
+      "fdv": 2326128,
+      "mcap": 2326128,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/VAnXFqywHy8wAFqm?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443015
+    },
+    "v8ic5ww8fy6ejkq4Cr5CVpYnstaXjMsRGJZSWn5SS1t": {
+      "address": "v8ic5ww8fy6ejkq4Cr5CVpYnstaXjMsRGJZSWn5SS1t",
+      "name": "Pombon",
+      "symbol": "Pombon",
+      "priceUsd": 0.0009165,
+      "priceChange24h": 2638,
+      "volume24h": 6404349.54,
+      "liquidityUsd": 88931.57,
+      "fdv": 916526,
+      "mcap": 916526,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/zsiEBCTzwGg5elkH?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443028
+    },
+    "8opvqaWysX1oYbXuTL8PHaoaTiXD69VFYAX4smPebonk": {
+      "address": "8opvqaWysX1oYbXuTL8PHaoaTiXD69VFYAX4smPebonk",
+      "name": "WAR",
+      "symbol": "WAR",
+      "priceUsd": 0.007633,
+      "priceChange24h": -49.04,
+      "volume24h": 1490174.48,
+      "liquidityUsd": 360325.08,
+      "fdv": 7633767,
+      "mcap": 7633767,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/752cc956b95f852fccc5b37cd27e36a7282b22d1d238dfd8ab7ff36f8b7000e2?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443038
+    },
+    "7opAGer4hk78N7VtYjk2bVif6SzvPkBm8PzQAvzspump": {
+      "address": "7opAGer4hk78N7VtYjk2bVif6SzvPkBm8PzQAvzspump",
+      "name": "The Great Replacement",
+      "symbol": "Replacement",
+      "priceUsd": 0.0001062,
+      "priceChange24h": -24.42,
+      "volume24h": 869498.85,
+      "liquidityUsd": 29597.47,
+      "fdv": 106210,
+      "mcap": 106210,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/AqUqT9rSUmHLVXyo?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443053
+    },
+    "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump": {
+      "address": "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+      "name": "Fartcoin ",
+      "symbol": "Fartcoin ",
+      "priceUsd": 0.1587,
+      "priceChange24h": -7.07,
+      "volume24h": 1097949.58,
+      "liquidityUsd": 6500028.49,
+      "fdv": 158706107,
+      "mcap": 158706107,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/9af5672845c89585e9ff1e3b26a640090324aa4d92222052d1043e60ef8182de?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443055
+    },
+    "4daoTLufDmV3ods48Zh8rymaZKBLtgEvuH9qALYLbonk": {
+      "address": "4daoTLufDmV3ods48Zh8rymaZKBLtgEvuH9qALYLbonk",
+      "name": "just memecoin",
+      "symbol": "memecoin",
+      "priceUsd": 0.00139,
+      "priceChange24h": 39.46,
+      "volume24h": 669617.21,
+      "liquidityUsd": 218454.65,
+      "fdv": 1390211,
+      "mcap": 1390211,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/0052e2e3f41c955ac2394decfa0f58d68a57aca74e37f24355196f3eafe5111d?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443058
+    },
+    "gorkrgj6k4K449Qa4eF1NaWC5cNLQtMsVEikhpGn7fC": {
+      "address": "gorkrgj6k4K449Qa4eF1NaWC5cNLQtMsVEikhpGn7fC",
+      "name": "gork",
+      "symbol": "gork",
+      "priceUsd": 0.0007583,
+      "priceChange24h": -14.71,
+      "volume24h": 1183966.68,
+      "liquidityUsd": 113508.72,
+      "fdv": 757428,
+      "mcap": 757428,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/aac6268b84f7268572a2fe6e76631902cee5959091ef52d63095561402570208?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443062
+    },
+    "9AvytnUKsLxPxFHFqS6VLxaxt5p6BhYNr53SD2Chpump": {
+      "address": "9AvytnUKsLxPxFHFqS6VLxaxt5p6BhYNr53SD2Chpump",
+      "name": "The Official 67 Coin",
+      "symbol": "67",
+      "priceUsd": 0.00139,
+      "priceChange24h": -5.16,
+      "volume24h": 196219.29,
+      "liquidityUsd": 213019.58,
+      "fdv": 1389813,
+      "mcap": 1389813,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/cbdc4c6ea4ad0890cc51bd9d03d5e0f273edb5acdd92ce728244711999b5825d?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443063
+    },
+    "a3W4qutoEJA4232T2gwZUfgYJTetr96pU4SJMwppump": {
+      "address": "a3W4qutoEJA4232T2gwZUfgYJTetr96pU4SJMwppump",
+      "name": "The White Whale",
+      "symbol": "WhiteWhale",
+      "priceUsd": 0.04443,
+      "priceChange24h": -13.2,
+      "volume24h": 487207.78,
+      "liquidityUsd": 917427.31,
+      "fdv": 42193877,
+      "mcap": 42193877,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/46023f12cc0f15eb355d1c2432714fc6cb52e2215695af82a1fcc8a503a265aa?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443065
+    },
+    "3QiLyYuFpWr6BrGCdhpbwYK3WJguWFLBVGTLgzXLpump": {
+      "address": "3QiLyYuFpWr6BrGCdhpbwYK3WJguWFLBVGTLgzXLpump",
+      "name": "Beginning Pikachu",
+      "symbol": " Pikachu",
+      "priceUsd": 0.00006664,
+      "priceChange24h": 84.83,
+      "volume24h": 2261480.85,
+      "liquidityUsd": 22376.64,
+      "fdv": 66647,
+      "mcap": 66647,
+      "logoURI": "https://cdn.dexscreener.com/cms/images/mkLqs_LhbW_HhTA2?width=800&height=800&quality=90",
+      "advancedMetrics": {
+        "lpBurnStatus": "unverified",
+        "mintAuthority": "active",
+        "freezeAuthority": "active",
+        "sentiment": {
+          "buyPercent": 50,
+          "sellPercent": 50
+        }
+      },
+      "lastUpdated": 1772246443403
+    }
+  }
+}
