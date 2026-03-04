@@ -89,7 +89,8 @@ export async function GET(req: NextRequest) {
                     return NextResponse.json([]);
                 }
             case 'new': geckoPath = 'networks/solana/new_pools'; break;
-            case 'gainers': geckoPath = 'networks/solana/pools?sort=h24_price_change_usd_desc'; break;
+            case 'gainers': geckoPath = 'networks/solana/trending_pools'; break;
+            case 'losers': geckoPath = 'networks/solana/trending_pools'; break;
             default: geckoPath = 'networks/solana/trending_pools';
         }
 
@@ -190,7 +191,13 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        const filteredTokens = enhancedTokens.filter(Boolean);
+        let filteredTokens = enhancedTokens.filter(Boolean);
+
+        if (type === 'gainers') {
+            filteredTokens.sort((a, b) => b.priceChange24h - a.priceChange24h);
+        } else if (type === 'losers') {
+            filteredTokens.sort((a, b) => a.priceChange24h - b.priceChange24h);
+        }
 
         // 4. Update Cache & Return
         discoveryCache[cacheKey] = { data: filteredTokens, timestamp: Date.now() };

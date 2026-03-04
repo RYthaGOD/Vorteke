@@ -23,7 +23,7 @@ export interface PortfolioItem {
 
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 
-type DiscoveryType = 'trending' | 'new' | 'gainers' | 'top100' | 'pumpfun' | 'captured';
+type DiscoveryType = 'trending' | 'new' | 'gainers' | 'losers' | 'top100' | 'pumpfun' | 'captured';
 
 export default function Home() {
     const router = useRouter();
@@ -351,6 +351,7 @@ export default function Home() {
                                         { id: 'new', label: 'NEW_PAIRS' },
                                         { id: 'pumpfun', label: 'PUMP_FUN' },
                                         { id: 'gainers', label: 'GAINERS' },
+                                        { id: 'losers', label: 'TOP_LOSERS' },
                                         { id: 'top100', label: 'TOP_100' }
                                     ].map((tab) => (
                                         <button
