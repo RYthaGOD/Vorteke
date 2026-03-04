@@ -53,6 +53,9 @@ importers:
       axios:
         specifier: ^1.13.5
         version: 1.13.6
+      bs58:
+        specifier: ^6.0.0
+        version: 6.0.0
       exenv:
         specifier: ^1.2.2
         version: 1.2.2
