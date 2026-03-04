@@ -7,6 +7,7 @@ export interface DecodedSwap {
     amountUsd: number;
     tokenAmount: number;
     signer: string;
+    blockTime?: number;
 }
 
 /**
@@ -111,7 +112,8 @@ export async function decodeVortexSwap(
             amountSol: parseFloat(computedSol.toFixed(6)),
             amountUsd: parseFloat(amountUsd.toFixed(2)),
             tokenAmount: Math.abs(tokenNetChange),
-            signer: signerPubkeys[0] // Return primary signer for address tracking
+            signer: signerPubkeys[0], // Return primary signer for address tracking
+            blockTime: tx.blockTime || undefined
         };
     } catch (e) {
         console.error("DECODER_FAILURE:", e);

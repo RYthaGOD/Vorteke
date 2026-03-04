@@ -1,79 +1,74 @@
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
-dotenv.config();
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import {
+    createV1,
+    pluginAuthority,
+    ruleSet,
+    createCollectionV1,
+} from '@metaplex-foundation/mpl-core';
+import { createNoopSigner, generateSigner, signerIdentity } from '@metaplex-foundation/umi';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
-import { createCollection } from '@metaplex-foundation/mpl-core';
-import { generateSigner, keypairIdentity } from '@metaplex-foundation/umi';
+import { fromWeb3JsKeypair, fromWeb3JsPublicKey } from '@metaplex-foundation/umi-web3js-adapters';
 import * as fs from 'fs';
+import * as dotenv from 'dotenv';
 
-/**
- * VORTEX ELITE - METAPLEX CORE COLLECTION GENERATOR
- * Uses the highly optimized Metaplex Core standard for the Elite Pass.
- */
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
+dotenv.config();
+
+const RPC = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com';
 
 async function main() {
-    console.log("INITIALIZING METAPLEX UMI...");
-    // Using Testnet to bypass Devnet airdrop failures
-    const rpc = 'https://api.testnet.solana.com';
-    const umi = createUmi(rpc);
-    const conn = new Connection(rpc, 'confirmed');
+    console.log("🚀 INITIATING VORTEKE ELITE COLLECTION GENERATION...");
 
-    // 1. Identify Authority Keypair
-    const walletFile = process.env.AUTHORITY_KEYPAIR_PATH || './admin-key.json';
-    if (!fs.existsSync(walletFile)) {
-        console.error(`[!] ERROR: Keypair not found at ${walletFile}`);
-        process.exit(1);
+    // 1. Setup Umi
+    const umi = createUmi(RPC);
+
+    // Load local authority keypair
+    // Note: For actual deployment, the user points to their id.json
+    const keypairPath = process.env.AUTHORITY_KEYPAIR_PATH || './authority.json';
+    if (!fs.existsSync(keypairPath)) {
+        console.error("❌ AUTHORITY_KEYPAIR_NOT_FOUND at ", keypairPath);
+        console.log("Please ensure AUTHORITY_KEYPAIR_PATH is set in .env");
+        return;
     }
 
-    const secretKey = new Uint8Array(JSON.parse(fs.readFileSync(walletFile, 'utf8')));
-    const keypair = umi.eddsa.createKeypairFromSecretKey(secretKey);
-    umi.use(keypairIdentity(keypair));
+    const secretKey = Uint8Array.from(JSON.parse(fs.readFileSync(keypairPath, 'utf-8')));
+    const keypair = Keypair.fromSecretKey(secretKey);
+    const umiKeypair = fromWeb3JsKeypair(keypair);
 
-    console.log(`AUTHORITY PUBKEY: ${keypair.publicKey}`);
+    umi.use(signerIdentity(umiKeypair));
 
-    let funded = false;
-    for (let i = 0; i < 3; i++) {
-        try {
-            console.log(`[+] Requesting Testnet Airdrop to fund deployment (Attempt ${i + 1})...`);
-            const sig = await conn.requestAirdrop(new PublicKey(keypair.publicKey), LAMPORTS_PER_SOL);
-            await conn.confirmTransaction(sig, 'confirmed');
-            console.log(`[+] Airdrop successful.`);
-            funded = true;
-            break;
-        } catch (e) {
-            console.warn(`[!] Airdrop attempt failed. Retrying in 2 seconds...`);
-            await new Promise(r => setTimeout(r, 2000));
-        }
-    }
+    console.log("Using Authority:", keypair.publicKey.toBase58());
 
-    if (!funded) {
-        console.error(`[!] FATAL: Could not fund wallet from faucet. Exiting...`);
-        process.exit(1);
-    }
+    // 2. Create Collection
+    const collectionSigner = generateSigner(umi);
 
-    // 2. Generate new Collection Mint Signer
-    const collectionMint = generateSigner(umi);
-
-    console.log(`\nGENERATING NEW CORE COLLECTION...`);
-    console.log(`TARGET MINT: ${collectionMint.publicKey}`);
+    console.log("Creating Collection Mint:", collectionSigner.publicKey.toString());
 
     try {
-        await createCollection(umi, {
-            collection: collectionMint,
-            name: 'Vortex Elite Pass',
-            // Defaulting to a high-fidelity IPFS/Arweave JSON metadata URI for the Elite Pass Collection
-            uri: 'https://vortex.com/metadata/elite-pass-collection.json',
+        const tx = await createCollectionV1(umi, {
+            collection: collectionSigner,
+            name: 'Vorteke Elite Pass',
+            uri: 'https://vortexsol.app/api/metadata/elite-collection', // Placeholder for Arweave/IPFS
+            plugins: [
+                {
+                    type: 'Royalties',
+                    basisPoints: 500, // 5%
+                    creators: [
+                        { address: fromWeb3JsPublicKey(keypair.publicKey), percentage: 100 }
+                    ],
+                    ruleSet: ruleSet('None'),
+                }
+            ]
         }).sendAndConfirm(umi);
 
-        console.log(`\n[+] SUCCESS: Elite NFT Collection Created!`);
-        console.log(`\n========================================================`);
-        console.log(`Update your .env and .env.local with:`);
-        console.log(`NEXT_PUBLIC_ELITE_NFT_COLLECTION=${collectionMint.publicKey}`);
-        console.log(`========================================================\n`);
+        console.log("✅ COLLECTION_CREATED_SUCCESSFULLY!");
+        console.log("TX_SIGNATURE:", tx.signature.toString());
+        console.log("COLLECTION_ADDRESS:", collectionSigner.publicKey.toString());
 
-    } catch (e) {
-        console.error("\n[!] FATAL EXECUTION ERROR:", e);
+        console.log("\n--- NEXT STEPS ---");
+        console.log(`1. Update NEXT_PUBLIC_ELITE_NFT_COLLECTION in .env with: ${collectionSigner.publicKey.toString()}`);
+        console.log("2. Run the asset minting script to generate the 1500 passes.");
+    } catch (err) {
+        console.error("❌ COLLECTION_CREATION_FAILED:", err);
     }
 }
 

@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
             headers: {
                 'Accept': 'application/json'
             },
-            next: { revalidate: 60 } // Cache for 1 minute
-        });
+            next: { revalidate: 60 }
+        } as any);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));

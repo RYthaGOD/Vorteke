@@ -69,3 +69,29 @@ export const VortexButton: React.FC<{
             </button>
         );
     };
+
+export const Modal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    children: ReactNode;
+    size?: 'sm' | 'md' | 'lg';
+}> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+    if (!isOpen) return null;
+
+    const sizeClass = size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-4xl' : 'max-w-2xl';
+
+    return (
+        <div className="vortex-modal-overlay">
+            <div className={`vortex-modal-container ${sizeClass} animate-slide-up`}>
+                <div className="vortex-modal-header">
+                    <h2 className="vortex-h3 vortex-m-0">{title}</h2>
+                    <button onClick={onClose} className="vortex-modal-close">×</button>
+                </div>
+                <div className="vortex-modal-body">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};

@@ -30,8 +30,8 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className="hud-flicker" suppressHydrationWarning>
-                <div className="vortex-scanlines"></div>
+            <body suppressHydrationWarning>
+                {/* <div className="vortex-scanlines"></div> */}
                 <Providers>
                     <SolanaProvider>
                         {children}

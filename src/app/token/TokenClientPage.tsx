@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { fetchTokenData, getInitialChartData, subscribeToTokenChart, subscribeToLiveStream, TokenInfo, VortexTx, formatCurrency, registerRecentlyViewed, ChartTick, Timeframe } from '@/lib/dataService';
+import { getDiscoveryList, fetchTokenData, resolveSearch, getQuickRecon, getUserPortfolio, getRecentlyViewed, TokenInfo, formatCurrency, formatCompact, formatPercent, Timeframe, ChartTick, VortexTx, registerRecentlyViewed, getInitialChartData, subscribeToTokenChart, subscribeToLiveStream } from '@/lib/dataService';
 import {
     ArrowLeft, X, ExternalLink, Zap, ShieldAlert, Globe, Cpu, Users, Info, Settings, Activity, RefreshCcw, ShieldCheck, Check, TrendingUp, Layers, AlertTriangle, Camera, Send, Loader2, ArrowUpRight
 } from 'lucide-react';
@@ -86,10 +86,16 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
 
     return (
         <div className="app-container">
-            <GlobalNotification />
 
             <div className="vortex-container-centered">
                 <main className="vortex-token-page">
+                    {/* Banner Layer */}
+                    {token?.bannerURI && (
+                        <div className="vortex-token-banner vortex-mb-4 vortex-border-radius-md overflow-hidden vortex-border border-vortex-cyan">
+                            <img src={token.bannerURI} alt="Space Banner" className="vortex-full-width vortex-obj-cover" style={{ maxHeight: '200px' }} />
+                        </div>
+                    )}
+
                     {/* HUD Header - Always visible, skeletons if loading */}
                     <VortexPanel className="vortex-mb-4" glowColor="cyan">
                         {tokenLoading && !token ? (
@@ -113,8 +119,8 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                         <ArrowLeft size={16} />
                                     </button>
                                     <div className="vortex-flex-start vortex-gap-4">
-                                        {token.logoURI ? (
-                                            <img src={token.logoURI} alt="" className="vortex-logo-md vortex-border-radius-full" />
+                                        {token.iconURI || token.logoURI ? (
+                                            <img src={token.iconURI || token.logoURI} alt="" className="vortex-logo-md vortex-border-radius-full" />
                                         ) : (
                                             <div className="vortex-logo-icon vortex-logo-md"></div>
                                         )}

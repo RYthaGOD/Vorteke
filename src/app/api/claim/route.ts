@@ -122,7 +122,9 @@ export async function PATCH(request: NextRequest) {
             where: { address },
             data: {
                 socials: metadata.socials || existing.socials,
-                customDescription: metadata.customDescription || existing.customDescription
+                customDescription: metadata.customDescription || existing.customDescription,
+                bannerURI: metadata.bannerURI || existing.bannerURI,
+                iconURI: metadata.iconURI || existing.iconURI
             }
         });
 

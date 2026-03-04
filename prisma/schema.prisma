@@ -31,6 +31,8 @@ model Enhancement {
     owner             String?
     socials           Json?
     customDescription String?
+    bannerURI         String?
+    iconURI           String?
     lastPaymentTx     String?   @unique
     lastPaymentTime   DateTime?
 

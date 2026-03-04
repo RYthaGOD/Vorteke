@@ -26,8 +26,8 @@ export async function GET(req: NextRequest) {
 
             // Search via DexScreener directly for high-fidelity results
             const searchRes = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${query}`, {
-                next: { revalidate: 30 } // Vercel Data Cache
-            });
+                next: { revalidate: 30 }
+            } as any);
             const searchData = await searchRes.json();
 
             // Map and enrich, enforcing absolute 'solana' chain isolation to prevent unhandled Base58 decode failures
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
                     // Optimized: Search DexScreener specifically for pump.fun identified assets
                     const pumpRes = await fetch('https://api.dexscreener.com/latest/dex/search?q=pump.fun', {
                         next: { revalidate: 60 }
-                    });
+                    } as any);
                     if (!pumpRes.ok) throw new Error('DEX_PUMP_SEARCH_DOWN');
                     const pumpData = await pumpRes.json();
 
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
         try {
             const geckoRes = await fetch(`${baseUrl}/${geckoPath}`, {
                 next: { revalidate: 30 } // Vercel Data Cache
-            });
+            } as any);
             if (geckoRes.ok) {
                 geckoData = await geckoRes.json();
             } else {
@@ -115,28 +115,33 @@ export async function GET(req: NextRequest) {
         let enhancedTokens: any[] = [];
         const neededAddresses: string[] = [];
 
-        // DB Pass
-        const existingRecords = await prisma.token.findMany({
-            where: { address: { in: addressesToFetch } }
-        });
-        const existingMap = new Map();
-        existingRecords.forEach((r: any) => existingMap.set(r.address, r));
+        // DB Pass (Hardened against connection failure)
+        let existingMap = new Map();
+        try {
+            const existingRecords = await prisma.token.findMany({
+                where: { address: { in: addressesToFetch } }
+            });
+            existingRecords.forEach((r: any) => existingMap.set(r.address, r));
 
-        for (const addr of addressesToFetch) {
-            const existing = existingMap.get(addr);
-            if (existing && Date.now() - existing.lastUpdated.getTime() < 60000) {
-                enhancedTokens.push(existing);
-            } else {
-                neededAddresses.push(addr);
+            for (const addr of addressesToFetch) {
+                const existing = existingMap.get(addr);
+                if (existing && (Date.now() - new Date(existing.lastUpdated).getTime() < 60000)) {
+                    enhancedTokens.push(existing);
+                } else {
+                    neededAddresses.push(addr);
+                }
             }
+        } catch (dbErr) {
+            console.warn("DB_RECON_FAILURE, falling back to batch API", dbErr);
+            neededAddresses.push(...addressesToFetch);
         }
 
         // Batch Fetch Pass
         if (neededAddresses.length > 0) {
             try {
                 const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${neededAddresses.join(',')}`, {
-                    next: { revalidate: 30 } // Vercel Data Cache prevents thundering herd
-                });
+                    next: { revalidate: 30 }
+                } as any);
                 const dexData = await res.json();
 
                 if (dexData.pairs) {

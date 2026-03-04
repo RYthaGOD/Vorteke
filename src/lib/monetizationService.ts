@@ -15,6 +15,8 @@ export interface TokenEnhancement {
         website?: string;
     };
     customDescription?: string;
+    bannerURI?: string;
+    iconURI?: string;
 }
 
 // In production, these are defined by the treasury environment or VORTEX DAO
@@ -95,31 +97,41 @@ export const fetchTokenEnhancement = async (address: string): Promise<TokenEnhan
     }
 };
 
-export const purchaseEnhancement = async (address: string, tier: TokenTier, wallet: string): Promise<string | null> => {
-    // Silent in production
-
+export const purchaseEnhancement = async (address: string, tier: TokenTier, wallet: string, useVtx: boolean = false): Promise<string | null> => {
     try {
         const usdcAmount = tier === 'Elite' ? 120 : 30; // 30 USDC or 120 USDC
-
-        // Fetch live SOL equivalent from Jupiter (USDC to SOL)
         const usdcMint = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
         const solMint = 'So11111111111111111111111111111111111111112';
-        const usdcLamports = usdcAmount * 1_000_000; // USDC has 6 decimals
 
-        const jupQuoteRes = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${usdcMint}&outputMint=${solMint}&amount=${usdcLamports}&slippageBps=50`);
+        // If using VTX, we apply a 50% discount on the USD value
+        const targetUsdValue = useVtx ? usdcAmount * 0.5 : usdcAmount;
+        const inputAmountLamports = targetUsdValue * 1_000_000; // USDC decimals
+
+        // Fetch quote for the target payment asset
+        const outputMint = useVtx ? (process.env.NEXT_PUBLIC_VTX_MINT || '') : solMint;
+
+        if (useVtx && !outputMint) {
+            throw new Error("VTX_MINT_NOT_CONFIGURED");
+        }
+
+        const jupQuoteRes = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${usdcMint}&outputMint=${outputMint}&amount=${inputAmountLamports}&slippageBps=50`);
         const jupQuote = await jupQuoteRes.json();
 
         if (!jupQuote.outAmount) throw new Error("JUPITER_QUOTE_FAILED");
 
-        // Convert outAmount (Lamports) to SOL for the backend
-        const dynamicSolAmount = Number(jupQuote.outAmount) / 1_000_000_000; // SOL has 9 decimals
-
-        // Dynamic pricing computed
+        // outAmount is in absolute lamports/atoms for the specific mint
+        const amount = Number(jupQuote.outAmount);
 
         const resp = await fetch('/api/pay/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wallet, amount: dynamicSolAmount, address, tier })
+            body: JSON.stringify({
+                wallet,
+                amount, // This is now raw lamports/atoms
+                address,
+                tier,
+                isVtx: useVtx
+            })
         });
 
         if (!resp.ok) throw new Error("PAYMENT_INIT_FAILED");

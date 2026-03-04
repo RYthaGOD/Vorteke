@@ -2,7 +2,8 @@
 import React, { useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
+import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
 
@@ -23,7 +24,6 @@ export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
 
             for (const ep of RPC_ENDPOINTS) {
                 try {
-                    // Small timeout to quickly cycle out dead/throttled RPCs
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
@@ -37,8 +37,8 @@ export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
                     clearTimeout(timeoutId);
 
                     if (res.ok) {
-                        if (endpoint !== ep) setEndpoint(ep);
-                        break; // Found a healthy node
+                        setEndpoint(prev => (prev !== ep ? ep : prev));
+                        break;
                     }
                 } catch (e) {
                     console.warn(`[VORTEX_RPC] Node ${ep} unavailable. Rotating...`);
@@ -47,10 +47,9 @@ export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
         };
 
         pingEndpoints();
-        // Periodically verify the active node isn't rate limiting us
         const interval = setInterval(pingEndpoints, 60000);
         return () => clearInterval(interval);
-    }, [endpoint]);
+    }, []);
 
     const wallets = useMemo(
         () => [

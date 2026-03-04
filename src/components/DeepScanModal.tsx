@@ -1,11 +1,12 @@
 'use client';
-import React, { useState } from 'react';
-import { X, ShieldAlert, Cpu, Check, Activity, Search, AlertTriangle, Key } from 'lucide-react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, VersionedTransaction } from '@solana/web3.js';
-import { RPC_ENDPOINTS } from '@/lib/constants';
+import React, { useState, useEffect } from 'react';
+import { Shield, Zap, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Modal, VortexButton } from './DesignSystem';
 import { purchaseDeepScan, verifyPayment } from '@/lib/monetizationService';
-import { useNotificationStore } from '@/lib/store';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { RPC_ENDPOINTS } from '@/lib/constants';
+import { notify } from '@/lib/store';
 
 interface DeepScanModalProps {
     isOpen: boolean;
@@ -14,179 +15,136 @@ interface DeepScanModalProps {
     tokenAddress: string;
 }
 
-const mockTopHolders = [
-    { address: '8Fkx...P2Z9', balance: '4.2', fundedBy: 'KuCoin 3', tags: ['DEV_FUNDED', 'SNIPER'] },
-    { address: '3Tqp...m9Qw', balance: '3.8', fundedBy: 'Binance', tags: ['WHALE'] },
-    { address: '9xRq...z1kL', balance: '3.1', fundedBy: 'Mexc', tags: ['BOT'] },
-    { address: '4Pzy...c7Nm', balance: '2.9', fundedBy: 'KuCoin 3', tags: ['DEV_FUNDED', 'SNIPER'] },
-    { address: '7Kjm...v5Xq', balance: '2.5', fundedBy: 'Raydium', tags: [] },
-    { address: '5Wpn...b4Hj', balance: '2.1', fundedBy: 'KuCoin 3', tags: ['DEV_FUNDED'] }
-];
-
 export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: DeepScanModalProps) {
-    const wallet = useWallet();
-    const notify = useNotificationStore((state) => state.notify);
+    const { publicKey, signTransaction, sendTransaction } = useWallet();
+    const [status, setStatus] = useState<'IDLE' | 'INITIATING' | 'SIGNING' | 'VERIFYING' | 'SUCCESS' | 'ERROR'>('IDLE');
+    const [error, setError] = useState<string | null>(null);
 
-    const [isScanning, setIsScanning] = useState(false);
-    const [scanComplete, setScanComplete] = useState(false);
-    const [progress, setProgress] = useState(0);
-
-    if (!isOpen) return null;
-
-    const handleDeepScan = async () => {
-        if (!wallet.connected || !wallet.publicKey || !wallet.signTransaction) {
-            notify('error', 'WALLET_DISCONNECTED: Connection required to initialize scan.');
+    const handleinitiateScan = async () => {
+        if (!publicKey || !signTransaction) {
+            notify("WALLET_NOT_CONNECTED", "Please connect your wallet to proceed.", "error");
             return;
         }
 
-        setIsScanning(true);
-        setProgress(10);
-
         try {
-            // 1. Fetch Transaction from Backend (or check for Elite Bypass)
-            const transactionBase64 = await purchaseDeepScan(tokenAddress, wallet.publicKey.toString());
+            setStatus('INITIATING');
+            setError(null);
 
-            if (transactionBase64 === 'ELITE_BYPASS') {
-                setProgress(100);
-                setScanComplete(true);
-                notify('success', 'ELITE_OVERRIDE: Intelligence unlocked instantly.');
+            // 1. Initiate Payment
+            const txData = await purchaseDeepScan(tokenAddress, publicKey.toBase58());
+
+            if (txData === 'ELITE_BYPASS') {
+                setStatus('SUCCESS');
+                notify("ELITE_ACCESS_GRANTED", "Bypassing scan fee via Elite Pass.", "success");
                 return;
             }
 
-            if (!transactionBase64) throw new Error("Could not initialize scan payment.");
-            setProgress(30);
+            if (!txData) {
+                throw new Error("Failed to initiate payment transaction.");
+            }
 
-            // 2. Deserialize Transaction
-            const transactionBuf = Buffer.from(transactionBase64, 'base64');
-            const transaction = VersionedTransaction.deserialize(transactionBuf);
+            // 2. Decode and Sign
+            setStatus('SIGNING');
+            const connection = new Connection(RPC_ENDPOINTS[0], 'confirmed');
 
-            // 3. User Signs Transaction
-            setProgress(50);
-            notify('info', 'AWAITING_SIGNATURE: Approve the 0.02 SOL scan fee.');
-            const signedTx = await wallet.signTransaction(transaction);
+            // Handle both legacy and versioned transactions
+            const buffer = Buffer.from(txData, 'base64');
+            let signature: string;
 
-            // 4. Send Transaction
-            setProgress(70);
-            const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY || RPC_ENDPOINTS[0];
-            const connection = new Connection(endpoint, 'confirmed');
+            try {
+                // Try versioned first
+                const vt = VersionedTransaction.deserialize(buffer);
+                signature = await sendTransaction(vt, connection);
+            } catch (e) {
+                // Fallback to legacy
+                const tx = Transaction.from(buffer);
+                signature = await sendTransaction(tx, connection);
+            }
 
-            const rawTransaction = signedTx.serialize();
-            const signature = await connection.sendRawTransaction(rawTransaction, {
-                skipPreflight: false,
-                maxRetries: 3
-            });
+            // 3. Verify
+            setStatus('VERIFYING');
+            const isVerified = await verifyPayment(signature, tokenAddress, 'DeepScan', publicKey.toBase58());
 
-            // 5. Verify Payment on Backend
-            setProgress(90);
-            const isVerified = await verifyPayment(signature, tokenAddress, 'DeepScan', wallet.publicKey.toString());
+            if (isVerified) {
+                setStatus('SUCCESS');
+                notify("DEEP_SCAN_UNLOCKED", "Holder intelligence clusters are now visible.", "success");
+            } else {
+                throw new Error("Payment verification failed on-chain.");
+            }
 
-            if (!isVerified) throw new Error("Payment verification failed. Intel locked.");
-
-            setProgress(100);
-            setScanComplete(true);
-            notify('success', 'SCAN_COMPLETE: Encrypted intelligence unlocked.');
         } catch (e: any) {
             console.error("DEEP_SCAN_ERROR:", e);
-            notify('error', e.message || 'Scan initialization failed.');
-            setIsScanning(false);
-            setProgress(0);
+            setError(e.message || "An unexpected error occurred.");
+            setStatus('ERROR');
         }
     };
 
     return (
-        <div className="vortex-modal-overlay">
-            <div className="vortex-modal-content vortex-w-max-3xl">
-                <div className="vortex-flex-between vortex-mb-4">
-                    <div className="vortex-flex-start vortex-gap-2">
-                        <Search size={20} className="text-vortex-cyan" />
-                        <h2 className="vortex-card-title vortex-text-lg vortex-m-0">DEEP_BUNDLE_SCAN</h2>
-                    </div>
-                    <button className="vortex-icon-btn" onClick={onClose}><X size={20} /></button>
-                </div>
+        <Modal isOpen={isOpen} onClose={onClose} title="DEEP_SCAN_PROTOCOL" size="md">
+            <div className="vortex-flex-column vortex-gap-6 vortex-p-4">
+                {status === 'IDLE' || status === 'ERROR' ? (
+                    <>
+                        <div className="vortex-flex-center vortex-mb-2">
+                            <div className="pulse-container-cyan">
+                                <Shield size={48} className="text-vortex-cyan" />
+                            </div>
+                        </div>
 
-                {!scanComplete ? (
-                    <div className="vortex-flex-column vortex-gap-4">
-                        <div className="vortex-p-4 vortex-bg-obsidian-soft vortex-border-radius-md vortex-border vortex-border-dashed border-vortex-cyan">
-                            <p className="vortex-text-sm vortex-text-muted vortex-m-0 vortex-mb-2">
-                                Surface-level metrics show the percentage of supply clustered in the launch block. A <span className="text-vortex-cyan">Deep Bundle Scan</span> decrypts the exact wallets, tracing their funding sources to expose hidden developer clusters, sniper bot networks, and insider rings.
+                        <div className="vortex-text-center">
+                            <h3 className="vortex-h3 text-vortex-white vortex-mb-2">Execute Holder Intelligence Sweep</h3>
+                            <p className="vortex-text-sm vortex-text-muted">
+                                Uncover hidden coordination clusters, dev wallet distributions, and wash trading patterns for <span className="text-vortex-cyan">{tokenSymbol}</span>.
                             </p>
-                            <div className="vortex-text-xs vortex-text-muted">Target Asset: <span className="vortex-text-bold text-vortex-bright">{tokenSymbol}</span></div>
                         </div>
 
-                        <div className="vortex-grid-3 vortex-gap-4">
-                            <div className="vortex-panel vortex-border-cyan vortex-p-3">
-                                <Key size={16} className="text-vortex-cyan vortex-mb-2" />
-                                <div className="vortex-text-tiny vortex-text-bold">UNMASK WALLETS</div>
-                                <div className="vortex-text-tiny vortex-text-muted">Reveal exact supply of the top 50 cluster wallets.</div>
+                        <div className="vortex-info-box vortex-bg-obsidian-2">
+                            <div className="vortex-flex-between vortex-mb-2">
+                                <span className="vortex-text-tiny vortex-text-bold">NETWORK_FEE</span>
+                                <span className="vortex-text-tiny text-vortex-cyan">0.02 SOL</span>
                             </div>
-                            <div className="vortex-panel vortex-border-cyan vortex-p-3">
-                                <AlertTriangle size={16} className="text-vortex-yellow vortex-mb-2" />
-                                <div className="vortex-text-tiny vortex-text-bold">FUNDING TRACING</div>
-                                <div className="vortex-text-tiny vortex-text-muted">Identify if multiple wallets were funded by the same CEX address.</div>
-                            </div>
-                            <div className="vortex-panel vortex-border-cyan vortex-p-3">
-                                <Cpu size={16} className="text-vortex-cyan vortex-mb-2" />
-                                <div className="vortex-text-tiny vortex-text-bold">SNIPER DETECTION</div>
-                                <div className="vortex-text-tiny vortex-text-muted">Automatically flag known MEV and sniper bot contracts.</div>
+                            <div className="vortex-flex-between">
+                                <span className="vortex-text-tiny vortex-text-bold">ACCESS_DURATION</span>
+                                <span className="vortex-text-tiny text-vortex-cyan">PERMANENT_FOR_THIS_TOKEN</span>
                             </div>
                         </div>
 
-                        {isScanning ? (
-                            <div className="vortex-p-6 vortex-text-center vortex-bg-obsidian-soft vortex-border-radius-md">
-                                <Activity size={32} className="vortex-text-cyan vortex-animate-pulse vortex-m-auto vortex-mb-4" />
-                                <div className="vortex-text-sm vortex-text-bold vortex-mb-2">EXECUTING DEEP SCAN SEQUENCE</div>
-                                <div className="vortex-progress-bg vortex-progress-sm vortex-mb-2">
-                                    <div className="vortex-progress-fill vortex-bg-cyan transition-width" style={{ width: `${progress}%` }}></div>
-                                </div>
-                                <div className="vortex-text-tiny vortex-text-muted vortex-font-mono">{progress}% - VERIFYING_TRANSACTION_PAYMENT...</div>
+                        {error && (
+                            <div className="vortex-error-box vortex-flex-start vortex-gap-2">
+                                <AlertTriangle size={14} className="text-vortex-red" />
+                                <span className="vortex-text-xs">{error}</span>
                             </div>
-                        ) : (
-                            <button className="btn-vortex btn-vortex-primary vortex-bg-cyan vortex-w-full vortex-text-lg vortex-py-4" onClick={handleDeepScan}>
-                                INITIATE SCAN (0.02 SOL)
-                            </button>
                         )}
+
+                        <VortexButton
+                            variant="primary"
+                            className="vortex-full-width vortex-bg-cyan text-vortex-obsidian"
+                            onClick={handleinitiateScan}
+                        >
+                            <Zap size={16} className="vortex-mr-2" />
+                            AUTHORIZE SCAN
+                        </VortexButton>
+                    </>
+                ) : status === 'SUCCESS' ? (
+                    <div className="vortex-flex-column vortex-flex-center vortex-py-8 vortex-gap-4">
+                        <CheckCircle2 size={64} className="text-vortex-cyan animate-pulse" />
+                        <div className="vortex-text-center">
+                            <h3 className="vortex-h3 text-vortex-white">SCAN_COMPLETE</h3>
+                            <p className="vortex-text-sm vortex-text-muted">Advanced metrics have been injected into the Recom Suite.</p>
+                        </div>
+                        <VortexButton variant="ghost" onClick={onClose} className="vortex-mt-4">
+                            CLOSE_TERMINAL
+                        </VortexButton>
                     </div>
                 ) : (
-                    <div className="vortex-flex-column vortex-gap-4 animate-fade-in">
-                        <div className="vortex-p-3 vortex-bg-green vortex-bg-opacity-20 vortex-border vortex-border-vortex-green vortex-text-green vortex-text-center vortex-border-radius-md">
-                            <Check size={24} className="vortex-m-auto vortex-mb-2" />
-                            <div className="vortex-text-bold">SCAN_COMPLETE: INTELLIGENCE_DECRYPTED</div>
-                        </div>
-
-                        <div className="vortex-panel">
-                            <h3 className="vortex-text-sm vortex-text-bold vortex-mb-3">TOP CLUSTERED WALLETS</h3>
-                            <div className="vortex-table-container">
-                                <table className="vortex-table vortex-w-full">
-                                    <thead>
-                                        <tr>
-                                            <th className="vortex-text-left vortex-text-tiny vortex-text-muted vortex-p-2">ADDRESS</th>
-                                            <th className="vortex-text-right vortex-text-tiny vortex-text-muted vortex-p-2">SUPPLY %</th>
-                                            <th className="vortex-text-left vortex-text-tiny vortex-text-muted vortex-p-2">FUNDING SOURCE</th>
-                                            <th className="vortex-text-right vortex-text-tiny vortex-text-muted vortex-p-2">FLAGS</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {mockTopHolders.map((holder, idx) => (
-                                            <tr key={idx} className="vortex-border-b border-vortex-obsidian">
-                                                <td className="vortex-p-2 vortex-font-mono vortex-text-sm">{holder.address}</td>
-                                                <td className="vortex-p-2 vortex-text-right vortex-text-sm text-vortex-cyan">{holder.balance}%</td>
-                                                <td className="vortex-p-2 vortex-text-sm text-vortex-muted">{holder.fundedBy}</td>
-                                                <td className="vortex-p-2 vortex-text-right">
-                                                    <div className="vortex-flex-end vortex-gap-1">
-                                                        {holder.tags.map(tag => (
-                                                            <span key={tag} className={`recon-tag-safe vortex-text-tiny ${tag === 'DEV_FUNDED' ? 'vortex-text-red border-vortex-red' : ''}`}>{tag}</span>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                    <div className="vortex-flex-column vortex-flex-center vortex-py-12 vortex-gap-6">
+                        <Loader2 size={48} className="text-vortex-cyan animate-spin" />
+                        <div className="vortex-text-center">
+                            <h3 className="vortex-h3 text-vortex-white">{status}...</h3>
+                            <p className="vortex-text-xs vortex-text-muted vortex-ls-widest">DO_NOT_REFRESH_SYSTEM</p>
                         </div>
                     </div>
                 )}
             </div>
-        </div>
+        </Modal>
     );
 }

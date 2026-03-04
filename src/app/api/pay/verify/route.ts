@@ -5,12 +5,46 @@ import { TREASURY_ENHANCEMENTS, RPC_ENDPOINTS } from '@/lib/constants';
 
 export const maxDuration = 60; // Prevent Vercel 10-second serverless timeout during RPC congestion
 
+// In-Memory Rate Limiter (Fallback for Serverless/Edge before Upstash Redis)
+const RATE_LIMIT_MAP = new Map<string, { count: number, resetTime: number }>();
+const MAX_REQUESTS_PER_MINUTE = 15;
+
+function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const windowMs = 60 * 1000; // 1 minute
+
+    if (!RATE_LIMIT_MAP.has(ip)) {
+        RATE_LIMIT_MAP.set(ip, { count: 1, resetTime: now + windowMs });
+        return true;
+    }
+
+    const record = RATE_LIMIT_MAP.get(ip)!;
+    if (now > record.resetTime) {
+        RATE_LIMIT_MAP.set(ip, { count: 1, resetTime: now + windowMs });
+        return true;
+    }
+
+    if (record.count >= MAX_REQUESTS_PER_MINUTE) {
+        return false;
+    }
+
+    record.count += 1;
+    return true;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const { signature, address, tier, wallet } = await request.json();
 
         if (!signature || !address || !tier || !wallet) {
             return NextResponse.json({ error: 'MISSING_PARAMETERS' }, { status: 400 });
+        }
+
+        // Apply Layer-7 DDoS Defense (Rate Limiting)
+        const ip = request.headers.get('x-forwarded-for') || 'unknown';
+        if (!checkRateLimit(ip)) {
+            console.warn(`RATE_LIMIT_BREACH: IP [${ip}] blocked from payment verification endpoint.`);
+            return NextResponse.json({ error: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY || RPC_ENDPOINTS[0];

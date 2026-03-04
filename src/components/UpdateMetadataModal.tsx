@@ -21,6 +21,8 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
     const [twitter, setTwitter] = useState(token.socials?.twitter || '');
     const [telegram, setTelegram] = useState(token.socials?.telegram || '');
     const [description, setDescription] = useState(token.customDescription || '');
+    const [bannerURI, setBannerURI] = useState(token.bannerURI || '');
+    const [iconURI, setIconURI] = useState(token.iconURI || '');
 
     const handleSave = async () => {
         if (!publicKey || !signMessage) {
@@ -45,7 +47,9 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
                 timestamp,
                 {
                     socials: { website, twitter, telegram },
-                    customDescription: description
+                    customDescription: description,
+                    bannerURI,
+                    iconURI
                 }
             );
 
@@ -77,50 +81,71 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
                 </div>
 
                 <div className="vortex-flex-column vortex-gap-4">
-                    <div className="vortex-input-group">
-                        <label className="vortex-label"><Globe size={14} className="vortex-mr-2 inline" /> Website URL</label>
-                        <input
-                            type="text"
-                            className="vortex-input-field"
-                            value={website}
-                            onChange={(e) => setWebsite(e.target.value)}
-                            placeholder="https://yourproject.com"
-                        />
+                    <div className="vortex-grid-2 vortex-gap-4">
+                        <div className="vortex-input-group">
+                            <label className="vortex-label">Website URL</label>
+                            <input
+                                type="text"
+                                className="vortex-input-field"
+                                value={website}
+                                onChange={(e) => setWebsite(e.target.value)}
+                                placeholder="https://..."
+                            />
+                        </div>
+                        <div className="vortex-input-group">
+                            <label className="vortex-label">Twitter / X</label>
+                            <input
+                                type="text"
+                                className="vortex-input-field"
+                                value={twitter}
+                                onChange={(e) => setTwitter(e.target.value)}
+                                placeholder="https://x.com/..."
+                            />
+                        </div>
                     </div>
 
                     <div className="vortex-input-group">
-                        <label className="vortex-label"><ExternalLink size={14} className="vortex-mr-2 inline" /> Twitter / X</label>
-                        <input
-                            type="text"
-                            className="vortex-input-field"
-                            value={twitter}
-                            onChange={(e) => setTwitter(e.target.value)}
-                            placeholder="https://x.com/yourproject"
-                        />
-                    </div>
-
-                    <div className="vortex-input-group">
-                        <label className="vortex-label"><MessageCircle size={14} className="vortex-mr-2 inline" /> Telegram</label>
+                        <label className="vortex-label">Telegram</label>
                         <input
                             type="text"
                             className="vortex-input-field"
                             value={telegram}
                             onChange={(e) => setTelegram(e.target.value)}
-                            placeholder="https://t.me/yourproject"
+                            placeholder="https://t.me/..."
                         />
+                    </div>
+
+                    <div className="vortex-grid-2 vortex-gap-4">
+                        <div className="vortex-input-group">
+                            <label className="vortex-label">Banner Image URI</label>
+                            <input
+                                type="text"
+                                className="vortex-input-field"
+                                value={bannerURI}
+                                onChange={(e) => setBannerURI(e.target.value)}
+                                placeholder="https://.../banner.png"
+                            />
+                        </div>
+                        <div className="vortex-input-group">
+                            <label className="vortex-label">Custom Icon URI</label>
+                            <input
+                                type="text"
+                                className="vortex-input-field"
+                                value={iconURI}
+                                onChange={(e) => setIconURI(e.target.value)}
+                                placeholder="https://.../icon.png"
+                            />
+                        </div>
                     </div>
 
                     <div className="vortex-input-group">
                         <label className="vortex-label">Project Description</label>
                         <textarea
-                            className="vortex-input-field vortex-min-h-32"
+                            className="vortex-input-field vortex-min-h-24"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Explain your project to the Vortex community..."
+                            placeholder="Explain your project..."
                         />
-                        <span className="vortex-text-tiny vortex-text-muted vortex-mt-1">
-                            Describe your utility, roadmap, or current achievements.
-                        </span>
                     </div>
 
                     <div className="vortex-grid-2 vortex-gap-3 vortex-mt-4">
@@ -131,11 +156,6 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
                             {submitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} className="vortex-mr-2" />}
                             SAVE_CHANGES
                         </button>
-                    </div>
-
-                    <div className="vortex-flex-center vortex-gap-2 vortex-text-muted vortex-text-tiny vortex-mt-2">
-                        <ShieldCheck size={12} />
-                        Requires ownership verification via wallet signature.
                     </div>
                 </div>
             </div>

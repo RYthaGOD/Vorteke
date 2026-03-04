@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Settings, Globe, MessageCircle, ExternalLink, Info, Edit3 } from 'lucide-react';
+import { Settings, Globe, MessageCircle, ExternalLink, Info, Edit3, Check } from 'lucide-react';
 import { TokenInfo } from '@/lib/dataService';
 import { UpdateMetadataModal } from './UpdateMetadataModal';
 
@@ -44,6 +44,20 @@ export function DeveloperControlPanel({ token, onUpdate, notify }: DeveloperCont
                         <div className="vortex-flex-between">
                             <span className="vortex-text-xs vortex-text-muted truncate">{token.socials?.telegram || 'NOT_SET'}</span>
                             {token.socials?.telegram && <MessageCircle size={12} className="text-vortex-cyan" />}
+                        </div>
+                    </div>
+                    <div className="vortex-input-container vortex-flex-column vortex-gap-1">
+                        <span className="vortex-label vortex-text-tiny">Banner</span>
+                        <div className="vortex-flex-between">
+                            <span className="vortex-text-xs vortex-text-muted truncate">{token.bannerURI ? 'VERIFIED_BANNER' : 'NOT_SET'}</span>
+                            {token.bannerURI && <Check size={12} className="text-vortex-cyan" />}
+                        </div>
+                    </div>
+                    <div className="vortex-input-container vortex-flex-column vortex-gap-1">
+                        <span className="vortex-label vortex-text-tiny">Custom Icon</span>
+                        <div className="vortex-flex-between">
+                            <span className="vortex-text-xs vortex-text-muted truncate">{token.iconURI ? 'VERIFIED_ICON' : 'NOT_SET'}</span>
+                            {token.iconURI && <Check size={12} className="text-vortex-cyan" />}
                         </div>
                     </div>
                 </div>

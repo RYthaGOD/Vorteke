@@ -10,6 +10,17 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { MobileNav } from '@/components/MobileNav';
 import { useNotificationStore } from '@/lib/store';
 
+export interface PortfolioItem {
+    address: string;
+    symbol: string;
+    name: string;
+    logoURI?: string;
+    priceUsd: number;
+    balance: number;
+    valueUsd: number;
+    pnlPercent: number;
+}
+
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 
 type DiscoveryType = 'trending' | 'new' | 'gainers' | 'top100' | 'pumpfun' | 'captured';
@@ -192,7 +203,7 @@ export default function Home() {
                                         <p className="vortex-text-xs vortex-text-muted vortex-text-center">No active tactical assets detected.</p>
                                     ) : (
                                         <ul className="vortex-sidebar-list vortex-list-reset">
-                                            {portfolio.map((item) => (
+                                            {portfolio.map((item: any) => (
                                                 <li key={item.address} className="vortex-mb-2">
                                                     <button className="vortex-list-item-clickable vortex-full-width" onClick={() => router.push(`/token/${item.address}`)}>
                                                         <div className="vortex-flex-between">
@@ -385,7 +396,6 @@ export default function Home() {
                                                         key={token.address}
                                                         className="clickable-row glitch-text"
                                                         onClick={() => router.push(`/token/${token.address}`)}
-                                                        tabIndex={0}
                                                         onKeyDown={(e) => {
                                                             if (e.key === 'Enter' || e.key === ' ') {
                                                                 e.preventDefault();
