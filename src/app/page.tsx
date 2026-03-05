@@ -23,7 +23,7 @@ export interface PortfolioItem {
 
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 
-type DiscoveryType = 'trending' | 'new' | 'gainers' | 'losers' | 'top100' | 'pumpfun' | 'captured';
+type DiscoveryType = 'trending' | 'new' | 'gainers' | 'losers' | 'top100' | 'pumpfun' | 'captured' | 'verified';
 
 export default function Home() {
     const router = useRouter();
@@ -389,13 +389,14 @@ export default function Home() {
 
                                 <div className="vortex-flex vortex-gap-2 vortex-border-b vortex-border-vortex vortex-mb-2 vortex-overflow-x-auto">
                                     {[
+                                        { id: 'verified', label: 'VERIFIED' },
                                         { id: 'trending', label: 'TRENDING' },
                                         { id: 'new', label: 'NEW_PAIRS' },
                                         { id: 'pumpfun', label: 'PUMP_FUN' },
                                         { id: 'gainers', label: 'GAINERS' },
                                         { id: 'losers', label: 'TOP_LOSERS' },
                                         { id: 'top100', label: 'TOP_100' }
-                                    ].map((tab) => (
+                                    ].map((tab: any) => (
                                         <button
                                             key={tab.id}
                                             onClick={() => setActiveTab(tab.id as DiscoveryType)}
@@ -450,7 +451,12 @@ export default function Home() {
                                                             <div className="vortex-flex-start vortex-gap-3">
                                                                 <img src={token.logoURI} alt="" className="vortex-logo-mini vortex-border-radius-full" />
                                                                 <div className="vortex-flex-column">
-                                                                    <span className="vortex-text-sm vortex-text-bold">{token.symbol}/SOL</span>
+                                                                    <div className="vortex-flex-start vortex-gap-2">
+                                                                        <span className="vortex-text-sm vortex-text-bold">{token.symbol}/SOL</span>
+                                                                        {token.tier && token.tier !== 'Basic' && (
+                                                                            <ShieldCheck size={14} className="text-vortex-cyan animate-pulse" />
+                                                                        )}
+                                                                    </div>
                                                                     <span className="vortex-text-tiny vortex-text-muted">{token.name}</span>
                                                                 </div>
                                                             </div>

@@ -145,9 +145,9 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                             <div className="vortex-flex-start vortex-gap-3">
                                                 <h1 className="vortex-card-title vortex-m-0 vortex-text-lg">{token.name} <span className="vortex-text-muted">({token.symbol})</span></h1>
                                                 {token.tier === 'Elite' ? (
-                                                    <span className="badge-vortex badge-verified"><ShieldCheck size={12} /> ELITE_VERIFIED</span>
+                                                    <span className="badge-vortex badge-verified"><ShieldCheck size={12} className="vortex-mr-1" /> VORTEX_ELITE_VERIFIED</span>
                                                 ) : token.tier === 'Enhanced' ? (
-                                                    <span className="badge-vortex badge-safe text-vortex-cyan">ENHANCED_PROFILE</span>
+                                                    <span className="badge-vortex badge-safe text-vortex-cyan"><ShieldCheck size={12} className="vortex-mr-1" /> VORTEX_VERIFIED</span>
                                                 ) : (
                                                     <span className="badge-vortex vortex-bg-obsidian-soft text-vortex-muted border-vortex-muted">UNCLAIMED_ASSET</span>
                                                 )}
