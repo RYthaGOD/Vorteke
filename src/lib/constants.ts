@@ -4,6 +4,7 @@
 
 export const HELIUS_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC || '';
 export const HELIUS_API_KEY = HELIUS_RPC.split('api-key=')[1] || '';
+export const JUPITER_API_KEY = process.env.NEXT_PUBLIC_JUPITER_API_KEY || '';
 
 export const RPC_ENDPOINTS = [
     HELIUS_RPC,

@@ -4,9 +4,10 @@ const domainThrottleMap = new Map<string, number>();
 /**
  * Throttled fetch implementation to respect external API rate limits.
  */
-export const throttledFetch = async (url: string, delay: number = 2000): Promise<any> => {
+export const throttledFetch = async (url: string, options: RequestInit & { delay?: number } = {}): Promise<any> => {
     let retries = 0;
     const maxRetries = 3;
+    const delay = options.delay ?? 2000;
 
     // Extract domain for global rate limiting per domain
     const domain = new URL(url.startsWith('/') ? `http://localhost${url}` : url).hostname;
@@ -20,7 +21,7 @@ export const throttledFetch = async (url: string, delay: number = 2000): Promise
 
         try {
             domainThrottleMap.set(domain, Date.now());
-            const res = await fetch(url);
+            const res = await fetch(url, options);
 
             if (res.status === 429) {
                 retries++;

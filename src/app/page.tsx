@@ -64,6 +64,7 @@ export default function Home() {
     const [showOverlay, setShowOverlay] = useState(false);
     const [focusedIndex, setFocusedIndex] = useState(-1);
     const [mounted, setMounted] = useState(false);
+    const [recentTokens, setRecentTokens] = useState<TokenInfo[]>([]);
     const searchRef = useRef<HTMLDivElement>(null);
 
     // Trending suggestions query (enabled only on focus)
@@ -77,6 +78,7 @@ export default function Home() {
 
     useEffect(() => {
         setMounted(true);
+        setRecentTokens(getRecentlyViewed());
     }, []);
 
     const handleSearchFocus = () => {
@@ -253,6 +255,38 @@ export default function Home() {
                                                         <div className={`${t.priceChange24h >= 0 ? 'text-vortex-yellow' : 'text-vortex-red'} vortex-text-sm vortex-text-bold`}>
                                                             {t.priceChange24h >= 0 ? '+' : ''}{(t.priceChange24h || 0).toFixed(1)}%
                                                         </div>
+                                                    </div>
+                                                </button>
+                                            </li>
+                                        ))
+                                    )}
+                                </ul>
+                            </VortexPanel>
+                            <VortexPanel title="RECENT_RECURRENCE" subTitle="HISTORY_STREAM" variant="glass">
+                                <ul className="vortex-sidebar-list vortex-list-reset">
+                                    {recentTokens.length === 0 ? (
+                                        <div className="vortex-p-4 vortex-text-center vortex-opacity-30">
+                                            <Clock size={20} className="vortex-m-auto vortex-mb-2" />
+                                            <p className="vortex-text-tiny">NO_RECENT_HISTORY</p>
+                                        </div>
+                                    ) : (
+                                        recentTokens.map((t) => (
+                                            <li key={t.address} className="vortex-mb-2">
+                                                <button className="vortex-list-item-clickable vortex-full-width" onClick={() => router.push(`/token/${t.address}`)}>
+                                                    <div className="vortex-flex-between">
+                                                        <div className="vortex-flex-start vortex-gap-2">
+                                                            <img
+                                                                src={t.logoURI || `https://dd.dexscreener.com/ds-data/tokens/solana/${t.address}.png`}
+                                                                alt=""
+                                                                className="vortex-logo-mini vortex-border-radius-full"
+                                                                onError={(e) => { (e.target as HTMLImageElement).src = '/logo-placeholder.png'; }}
+                                                            />
+                                                            <div className="vortex-flex-column vortex-align-start">
+                                                                <div className="vortex-text-bold vortex-text-sm">{t.symbol}/SOL</div>
+                                                                <div className="vortex-text-tiny vortex-text-muted">{t.name.slice(0, 15)}</div>
+                                                            </div>
+                                                        </div>
+                                                        <ArrowUpRight size={14} className="vortex-opacity-30" />
                                                     </div>
                                                 </button>
                                             </li>

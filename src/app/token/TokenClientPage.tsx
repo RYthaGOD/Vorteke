@@ -144,9 +144,20 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                     </div>
                                 </div>
                                 <div className="vortex-flex-column vortex-align-end">
-                                    <div className="vortex-text-2xl vortex-font-bold text-vortex-cyan">{formatCurrency(token.priceUsd, 6)}</div>
-                                    <div className={`${token.priceChange24h >= 0 ? 'text-vortex-yellow' : 'text-vortex-red'} vortex-text-sm vortex-text-bold`}>
-                                        {token.priceChange24h >= 0 ? 'â–²' : 'â–¼'} {Math.abs(token.priceChange24h).toFixed(2)}% <span className="vortex-text-muted vortex-font-normal">(24h)</span>
+                                    <div className="vortex-flex-start vortex-gap-3">
+                                        <div className="vortex-flex-column vortex-align-end">
+                                            <div className="vortex-text-2xl vortex-font-bold text-vortex-cyan">{formatCurrency(token.priceUsd, 6)}</div>
+                                            <div className={`${token.priceChange24h >= 0 ? 'text-vortex-yellow' : 'text-vortex-red'} vortex-text-sm vortex-text-bold`}>
+                                                {token.priceChange24h >= 0 ? 'â–²' : 'â–¼'} {Math.abs(token.priceChange24h).toFixed(2)}% <span className="vortex-text-muted vortex-font-normal">(24h)</span>
+                                            </div>
+                                        </div>
+                                        <div className="vortex-divider-v vortex-h-8"></div>
+                                        <div className="vortex-text-center">
+                                            <div className="vortex-text-tiny vortex-text-muted">MARKET_CAP</div>
+                                            <div className="vortex-text-lg vortex-font-bold text-vortex-bright">
+                                                {formatCompact(token.mcap || 0)}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

@@ -5,7 +5,7 @@ import { captureException, logger } from './logger';
 import { detectBundle as modularDetectBundle } from './vortex/security';
 import { decodeVortexSwap } from './solana/txDecoder';
 import { getResilientConnection } from './solana/connection';
-import { HELIUS_RPC, HELIUS_API_KEY } from './constants';
+import { HELIUS_RPC, HELIUS_API_KEY, JUPITER_API_KEY } from './constants';
 
 // Modularized Service Layer Imports
 import { fetchHeliusMetadata, getMetaplexMetadata } from './vortex/token/metadata';
@@ -301,7 +301,9 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
                 if (!res.value) throw new Error("ACCOUNT_NOT_FOUND");
                 return { ...res, endpoint };
             }),
-            throttledFetch(`https://api.jup.ag/price/v2?ids=${address}`).then((data: any) => data).catch(() => ({ data: {} })),
+            throttledFetch(`https://api.jup.ag/price/v2?ids=${address}`, {
+                headers: JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}
+            }).then((data: any) => data).catch(() => ({ data: {} })),
             throttledFetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`).then((data: DexScreenerResponse) => data).catch(() => ({ pairs: [] as DexScreenerPair[] })),
             fetchHeliusMetadata(address) as Promise<any>
         ]);
@@ -513,7 +515,8 @@ export const subscribeToLiveStream = (address: string, onTx: (tx: VortexTx) => v
             const pubkey = new PublicKey(address);
 
             if (!wsConn) {
-                const endpoint = HELIUS_RPC || RPC_ENDPOINTS[0] || 'https://api.mainnet-beta.solana.com';
+                // Prioritize Helius for WebSockets to avoid 403 Forbidden on public RPC
+                const endpoint = HELIUS_RPC || RPC_ENDPOINTS.find(e => e.includes('helius')) || RPC_ENDPOINTS[0] || 'https://api.mainnet-beta.solana.com';
                 wsConn = new Connection(endpoint, 'confirmed');
             }
 
