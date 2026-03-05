@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Zap, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
 import { Modal, VortexButton } from './DesignSystem';
 import { purchaseDeepScan, verifyPayment } from '@/lib/monetizationService';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { RPC_ENDPOINTS } from '@/lib/constants';
 import { notify } from '@/lib/store';
@@ -16,15 +16,18 @@ interface DeepScanModalProps {
 }
 
 export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: DeepScanModalProps) {
-    const { publicKey, signTransaction, sendTransaction } = useWallet();
+    const { publicKey, connected } = useVortexAuth();
+    const { signTransaction, sendTransaction } = useWallet();
     const [status, setStatus] = useState<'IDLE' | 'INITIATING' | 'SIGNING' | 'VERIFYING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [error, setError] = useState<string | null>(null);
 
     const handleinitiateScan = async () => {
-        if (!publicKey || !signTransaction) {
+        if (!publicKey) {
             notify("WALLET_NOT_CONNECTED", "Please connect your wallet to proceed.", "error");
             return;
         }
+
+        if (status === 'SUCCESS') return;
 
         try {
             setStatus('INITIATING');

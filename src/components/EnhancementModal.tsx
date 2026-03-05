@@ -3,19 +3,13 @@ import React, { useState } from 'react';
 import { X, Zap, ShieldCheck, Check, Flame, Percent } from 'lucide-react';
 import { purchaseEnhancement, claimProject, verifyPayment } from '@/lib/monetizationService';
 import { Transaction, VersionedTransaction } from '@solana/web3.js';
-import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import bs58 from 'bs58';
-
-interface EnhancementModalProps {
-    address: string;
-    onClose: () => void;
-    onPurchase: () => void;
-    notify: (type: 'success' | 'error' | 'info', msg: string) => void;
-}
+import { useVortexAuth } from '@/hooks/useVortexAuth';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 
 export function EnhancementModal({ address, onClose, onPurchase, notify }: EnhancementModalProps) {
     const { connection } = useConnection();
-    const { publicKey, signMessage, sendTransaction } = useWallet();
+    const { publicKey, connected } = useVortexAuth();
+    const { signMessage, sendTransaction } = useWallet();
     const [claiming, setClaiming] = useState(false);
     const [upgrading, setUpgrading] = useState(false);
     const [useVtx, setUseVtx] = useState(true);
