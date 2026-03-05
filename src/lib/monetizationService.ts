@@ -55,7 +55,18 @@ export const verifyEliteAccess = async (walletAddress: string): Promise<boolean>
         const endpoint = RPC_ENDPOINTS[0] || 'https://api.mainnet-beta.solana.com';
         const conn = new Connection(endpoint, 'confirmed');
 
-        // Check for specific SPL Token holding (VORTEX Pass)
+        // 1. Check for temporary internal access (Test/Promo bypass)
+        try {
+            const eliteResp = await fetch(`/api/auth/elite-check?wallet=${walletAddress}`);
+            if (eliteResp.ok) {
+                const eliteData = await eliteResp.json();
+                if (eliteData.isElite) return true;
+            }
+        } catch (e) {
+            console.warn("INTERNAL_ELITE_CHECK_FAILED, falling back to on-chain...");
+        }
+
+        // 2. Check for specific SPL Token holding (VORTEX Pass)
         const tokens = await conn.getParsedTokenAccountsByOwner(pubkey, {
             programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
         });
@@ -65,7 +76,7 @@ export const verifyEliteAccess = async (walletAddress: string): Promise<boolean>
             return (info.mint === ELITE_COLLECTION_MINT && info.tokenAmount.uiAmount > 0);
         });
 
-        // For development/demo, we also allow admin override or specific dev wallets
+        // 3. Admin override or legacy bypass
         return hasPass || walletAddress === VORTEX_ADMIN_KEY;
     } catch (e) {
         console.error("ELITE_VERIFICATION_FAILURE:", e);

@@ -47,3 +47,12 @@ model Claim {
     timestamp DateTime
     createdAt DateTime @default(now())
 }
+
+model TestAccess {
+    wallet    String   @id
+    tier      String   @default("Elite")
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+
+    @@index([expiresAt])
+}
