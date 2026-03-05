@@ -1,13 +1,13 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
 import { verifyEliteAccess } from '@/lib/monetizationService';
+import { useVortexAuth } from '@/hooks/useVortexAuth';
 import EliteDashboard from '@/components/EliteDashboard';
 import { Loader2, ShieldAlert } from 'lucide-react';
 
 export default function ElitePage() {
-    const { publicKey, connected } = useWallet();
+    const { publicKey, connected } = useVortexAuth();
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
     const router = useRouter();
 

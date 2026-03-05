@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getDiscoveryList, fetchTokenData, resolveSearch, getQuickRecon, getUserPortfolio, getRecentlyViewed, TokenInfo, formatCurrency, formatCompact, formatPercent } from '@/lib/dataService';
 import { Search, Filter, ArrowUpRight, Activity, Zap, TrendingUp, Clock, BarChart3, ShieldCheck, ShieldAlert, Loader2, Wallet, TrendingDown } from 'lucide-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { MobileNav } from '@/components/MobileNav';
 import { useNotificationStore } from '@/lib/store';
 
@@ -27,7 +27,7 @@ type DiscoveryType = 'trending' | 'new' | 'gainers' | 'losers' | 'top100' | 'pum
 
 export default function Home() {
     const router = useRouter();
-    const { publicKey, connected } = useWallet();
+    const { publicKey, connected } = useVortexAuth();
     const [activeTab, setActiveTab] = useState<DiscoveryType>('trending');
     const notify = useNotificationStore(state => state.notify);
 
