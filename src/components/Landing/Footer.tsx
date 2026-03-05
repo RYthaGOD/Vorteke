@@ -25,8 +25,8 @@ export function Footer() {
 
                     <div className="footer-group">
                         <h4>TACTICAL_SOCIALS</h4>
-                        <a href="https://x.com/moneybagfin" target="_blank" className="social-link">
-                            <Twitter size={14} /> @moneybagfin (Lead Dev)
+                        <a href="https://x.com/moneybag_fin" target="_blank" className="social-link">
+                            <Twitter size={14} /> @moneybag_fin (Lead Dev)
                         </a>
                         <a href="https://x.com/SusanooSOL" target="_blank" className="social-link">
                             <Twitter size={14} /> @SusanooSOL (Ops)
