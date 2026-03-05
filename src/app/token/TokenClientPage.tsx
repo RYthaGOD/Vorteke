@@ -155,7 +155,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                         <div className="vortex-text-center">
                                             <div className="vortex-text-tiny vortex-text-muted">MARKET_CAP</div>
                                             <div className="vortex-text-lg vortex-font-bold text-vortex-bright">
-                                                {formatCompact(token.mcap || 0)}
+                                                {token.mcap > 0 ? formatCompact(token.mcap) : 'CALCULATING...'}
                                             </div>
                                         </div>
                                     </div>

@@ -2415,3 +2415,27 @@ h3,
 .is-capturing canvas {
   filter: brightness(1.1) contrast(1.1);
 }
+
+/* VORTEX UTILITIES */
+.vortex-divider-v {
+  width: 1px;
+  height: 100%;
+  margin: 0 1rem;
+  background: rgba(0, 243, 255, 0.2);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
+}
+
+.vortex-h-8 {
+  height: 2rem;
+}
+
+.vortex-h-12 {
+  height: 3rem;
+}
+
+.vortex-glass-morph {
+  background: rgba(10, 11, 14, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 243, 255, 0.1);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+}

@@ -317,8 +317,11 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
         const pair = dexJson?.pairs?.[0];
 
         // Ensure we have a valid decimal count even if RPC fails
-        const decimals = parsedData?.decimals || pair?.baseToken?.decimals || helius?.decimals || 9;
-        const supply = parseFloat(parsedData?.supply || '0') / Math.pow(10, decimals);
+        const decimals = helius?.decimals || pair?.baseToken?.decimals || parsedData?.decimals || 9;
+
+        // Circulation Detection: Helius DAS is the ultimate source of truth for supply
+        const supply = helius?.supply ? (helius.supply / Math.pow(10, decimals)) :
+            (parsedData?.supply ? (parseFloat(parsedData.supply) / Math.pow(10, decimals)) : 1000000000);
 
         // 2. Resolve Metadata with Hierarchical Priority
         // Priority: Helius DAS > DexScreener > RPC Parsed > Default
@@ -347,10 +350,11 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
         // If logo is missing and metaplex URI exists, we could fetch it (deferred for perf or done here)
         // For now, we use the DexScreener predictable URL as a strong fallback
 
-        // 3. Resolve Price and Market Data
+        // 3. Resolve Price and Market Data (Ultra-resilient fallback chain)
         const jupPrice = parseFloat(priceJson?.data?.[address]?.price || '0');
         const dexPrice = parseFloat(pair?.priceUsd || '0');
-        const currentPrice = helius?.priceUsd || jupPrice || dexPrice || 0;
+        const currentPrice = helius?.priceUsd || dexPrice || jupPrice || 0;
+        const mcap = pair?.marketCap || pair?.fdv || (currentPrice * supply);
 
         // 4. Volume Velocity & Social Proxy
         const v5m = pair?.volume?.m5 || 0;
@@ -385,7 +389,7 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
             volume24h: pair?.volume?.h24 || 0,
             liquidityUsd: pair?.liquidity?.usd || 0,
             fdv: pair?.fdv || (currentPrice * supply) || 0,
-            mcap: pair?.marketCap || pair?.fdv || (currentPrice * supply) || 0,
+            mcap: mcap || 0,
             holders: pair?.holders || 0, // Fallback to 0, resolved in details if possible
             owner: enhancement?.owner,
             tier: enhancement?.tier || 'Basic',
@@ -516,7 +520,7 @@ export const subscribeToLiveStream = (address: string, onTx: (tx: VortexTx) => v
 
             if (!wsConn) {
                 // Prioritize Helius for WebSockets to avoid 403 Forbidden on public RPC
-                const endpoint = HELIUS_RPC || RPC_ENDPOINTS.find(e => e.includes('helius')) || RPC_ENDPOINTS[0] || 'https://api.mainnet-beta.solana.com';
+                const endpoint = HELIUS_RPC || RPC_ENDPOINTS.find((e: string) => e.includes('helius')) || RPC_ENDPOINTS[0] || 'https://api.mainnet-beta.solana.com';
                 wsConn = new Connection(endpoint, 'confirmed');
             }
 

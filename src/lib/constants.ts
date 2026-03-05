@@ -10,6 +10,8 @@ export const RPC_ENDPOINTS = [
     HELIUS_RPC,
     process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY,
     process.env.NEXT_PUBLIC_SOLANA_RPC_SECONDARY,
+    'https://rpc.ankr.com/solana',
+    'https://solana-api.projectserum.com',
     'https://api.mainnet-beta.solana.com'
 ].filter((url): url is string => !!url);
 
