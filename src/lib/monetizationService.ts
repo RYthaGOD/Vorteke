@@ -170,12 +170,12 @@ export const purchaseDeepScan = async (address: string, wallet: string): Promise
     }
 };
 
-export const verifyPayment = async (signature: string, address: string, tier: TokenTier, wallet: string): Promise<boolean> => {
+export const verifyPayment = async (signature: string, address: string, tier: TokenTier, wallet: string, isVtx: boolean = false): Promise<boolean> => {
     try {
         const res = await fetch('/api/pay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ signature, address, tier, wallet })
+            body: JSON.stringify({ signature, address, tier, wallet, isVtx })
         });
         return res.ok;
     } catch {
