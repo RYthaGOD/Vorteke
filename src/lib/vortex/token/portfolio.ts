@@ -61,36 +61,46 @@ export const getUserPortfolio = async (userPublicKey: string): Promise<Portfolio
 
     try {
         const pubkey = new PublicKey(userPublicKey);
-        const tokenAccounts = await getResilientConnection(c => c.getParsedTokenAccountsByOwner(pubkey, {
-            programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
-        }));
 
+        // 1. Fetch Parallel from BOTH Legacy and Token-2022 programs
+        const [splAccounts, spl2022Accounts] = await Promise.all([
+            getResilientConnection(c => c.getParsedTokenAccountsByOwner(pubkey, {
+                programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+            })),
+            getResilientConnection(c => c.getParsedTokenAccountsByOwner(pubkey, {
+                programId: new PublicKey('TokenzQ9bzh9P8xN9m4K5Ad13q6pB3fbtgGfGTo2f8f')
+            })).catch(() => ({ value: [] })) // Fallback for nodes that don't support it
+        ]);
+
+        const allAccounts = [...splAccounts.value, ...spl2022Accounts.value];
+
+        // 2. Resolve Metadata in optimized parallel batches
         const holdings = await Promise.all(
-            tokenAccounts.value
-                .filter((acc: { account: { data: { parsed: { info: { tokenAmount: { uiAmount: number } } } } } }) => acc.account.data.parsed.info.tokenAmount.uiAmount > 0)
-                .slice(0, 50)
-                .map(async (acc: { account: { data: { parsed: { info: { mint: string, tokenAmount: { uiAmount: number } } } } } }) => {
-                    const mint = acc.account.data.parsed.info.mint;
-                    const balance = acc.account.data.parsed.info.tokenAmount.uiAmount;
+            allAccounts
+                .filter(acc => (acc.account.data as any).parsed.info.tokenAmount.uiAmount > 0)
+                .slice(0, 40)
+                .map(async (acc) => {
+                    const info = (acc.account.data as any).parsed.info;
+                    const mint = info.mint;
+                    const balance = info.tokenAmount.uiAmount;
 
                     try {
-                        const info = await fetchTokenData(mint);
+                        const token = await fetchTokenData(mint);
                         return {
                             address: mint,
-                            symbol: info.symbol,
-                            name: info.name,
-                            logoURI: info.logoURI,
-                            priceUsd: info.priceUsd,
+                            symbol: token.symbol,
+                            name: token.name,
+                            logoURI: token.logoURI,
+                            priceUsd: token.priceUsd,
                             balance,
-                            valueUsd: balance * info.priceUsd,
-                            pnlPercent: info.priceChange24h
+                            valueUsd: balance * token.priceUsd,
+                            pnlPercent: token.priceChange24h
                         };
-                    } catch {
+                    } catch (err) {
                         return {
                             address: mint,
-                            symbol: 'UNKNOWN',
-                            name: 'Unknown Asset',
-                            logoURI: undefined,
+                            symbol: 'SOL_ASSET',
+                            name: 'Unknown Token',
                             priceUsd: 0,
                             balance,
                             valueUsd: 0,
@@ -100,7 +110,7 @@ export const getUserPortfolio = async (userPublicKey: string): Promise<Portfolio
                 })
         );
 
-        return holdings.sort((a: any, b: any) => b.valueUsd - a.valueUsd);
+        return holdings.sort((a, b) => b.valueUsd - a.valueUsd);
     } catch (e) {
         console.error("Portfolio fetch error:", e);
         return [];

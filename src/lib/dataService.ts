@@ -28,7 +28,6 @@ export {
     throttledFetch, sleep,
     detectBundle
 };
-export type { Timeframe, ChartTick };
 
 /**
  * Helius Priority Fee API
