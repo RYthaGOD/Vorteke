@@ -11,6 +11,7 @@ import { HELIUS_RPC, HELIUS_API_KEY, JUPITER_API_KEY } from './constants';
 import { fetchHeliusMetadata, getMetaplexMetadata } from './vortex/token/metadata';
 import { verifyLPBurn, getHolderConcentration, getSocialSentiment } from './vortex/token/metrics';
 import { getInitialChartData, subscribeToTokenChart, Timeframe, ChartTick } from './vortex/token/charts';
+export type { Timeframe, ChartTick };
 import { getDiscoveryList } from './vortex/token/discovery';
 import { resolveSearch } from './vortex/token/search';
 import { getQuickRecon, getUserPortfolio } from './vortex/token/portfolio';
@@ -353,7 +354,9 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
         const jupPrice = parseFloat(priceJson?.data?.[address]?.price || '0');
         const dexPrice = parseFloat(pair?.priceUsd || '0');
         const currentPrice = helius?.priceUsd || dexPrice || jupPrice || 0;
-        const mcap = pair?.marketCap || pair?.fdv || (currentPrice * supply);
+
+        // Guard against zero-division or missing supply in MCAP calculation
+        const mcap = pair?.marketCap || pair?.fdv || (currentPrice * (supply || 1000000000));
 
         // 4. Volume Velocity & Social Proxy
         const v5m = pair?.volume?.m5 || 0;

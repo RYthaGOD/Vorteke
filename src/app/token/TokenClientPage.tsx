@@ -84,6 +84,23 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
     // Add a mount check to prevent hard SSR mismatch loops during hydration
     if (!isMounted) return null;
 
+    // Tactical Failure Recovery Layer
+    if (error && !token) {
+        return (
+            <div className="app-container">
+                <div className="vortex-container-centered">
+                    <VortexPanel className="vortex-p-8 vortex-center-column" glowColor="none">
+                        <ShieldAlert className="vortex-text-red vortex-mb-4" size={48} />
+                        <h2 className="vortex-h2 vortex-mb-2">UPLINK_FAILURE</h2>
+                        <p className="vortex-text-muted vortex-mb-6">The neural mesh is struggling to resolve this asset. This is likely due to RPC rate limiting.</p>
+                        <VortexButton onClick={() => refetchToken()}>RETRY_CONNECTION</VortexButton>
+                    </VortexPanel>
+                </div>
+                <MobileNav />
+            </div>
+        );
+    }
+
     return (
         <div className="app-container">
 
