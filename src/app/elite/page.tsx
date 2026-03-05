@@ -1,10 +1,15 @@
-'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { verifyEliteAccess } from '@/lib/monetizationService';
 import { useVortexAuth } from '@/hooks/useVortexAuth';
 import EliteDashboard from '@/components/EliteDashboard';
 import { Loader2, ShieldAlert } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const WalletMultiButton = dynamic(
+    async () => (await import('@solana/wallet-adapter-react-ui')).WalletMultiButton,
+    { ssr: false }
+);
 
 export default function ElitePage() {
     const { publicKey, connected } = useVortexAuth();
@@ -44,38 +49,45 @@ export default function ElitePage() {
                         This terminal requires Vortex Elite authorization.
                         Hold an Elite Pass NFT or gain Admin approval to proceed.
                     </p>
-                    <div className="vortex-flex-column vortex-gap-2 vortex-mb-6">
-                        <input
-                            type="password"
-                            placeholder="ENTER_ACCESS_CODE"
-                            className="vortex-input-field vortex-text-center vortex-w-full"
-                            onKeyDown={async (e) => {
-                                if (e.key === 'Enter') {
-                                    const code = (e.target as HTMLInputElement).value;
-                                    if (code === 'VORTEKE' && publicKey) {
-                                        try {
-                                            const res = await fetch('/api/auth/provision', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ wallet: publicKey.toBase58(), code })
-                                            });
-                                            if (res.ok) {
-                                                setIsVerified(true);
-                                            } else {
-                                                alert('INVALID_ACCESS_CODE');
+
+                    {!connected ? (
+                        <div className="vortex-flex-column vortex-center vortex-gap-4 vortex-mb-6">
+                            <p className="vortex-text-xs vortex-text-muted">CONNECT_WALLET_TO_VERIFY</p>
+                            <WalletMultiButton className="vortex-wallet-btn" />
+                        </div>
+                    ) : (
+                        <div className="vortex-flex-column vortex-gap-2 vortex-mb-6">
+                            <input
+                                type="password"
+                                placeholder="ENTER_ACCESS_CODE"
+                                className="vortex-input-field vortex-text-center vortex-w-full"
+                                onKeyDown={async (e) => {
+                                    if (e.key === 'Enter') {
+                                        const code = (e.target as HTMLInputElement).value;
+                                        if (code === 'VORTEKE' && publicKey) {
+                                            try {
+                                                const res = await fetch('/api/auth/provision', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ wallet: publicKey.toBase58(), code })
+                                                });
+                                                if (res.ok) {
+                                                    setIsVerified(true);
+                                                } else {
+                                                    alert('INVALID_ACCESS_CODE');
+                                                }
+                                            } catch {
+                                                alert('PROVISIONING_ERROR');
                                             }
-                                        } catch {
-                                            alert('PROVISIONING_ERROR');
+                                            (e.target as HTMLInputElement).value = '';
                                         }
-                                        (e.target as HTMLInputElement).value = '';
-                                    } else if (!publicKey) {
-                                        alert('WALLET_NOT_CONNECTED');
                                     }
-                                }
-                            }}
-                        />
-                        <span className="vortex-text-tiny vortex-text-muted">Press ENTER to verify.</span>
-                    </div>
+                                }}
+                            />
+                            <span className="vortex-text-tiny vortex-text-muted">Press ENTER to verify.</span>
+                        </div>
+                    )}
+
                     <button className="btn-vortex btn-vortex-primary vortex-w-full" onClick={() => router.push('/')}>
                         RETURN_TO_BASE
                     </button>

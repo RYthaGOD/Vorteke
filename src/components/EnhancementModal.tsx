@@ -169,34 +169,38 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                             <span className="vortex-text-xs vortex-text-bold">BURN_PROTOCOL_ENFORCED</span>
                         </div>
                         <div className="vortex-flex-start vortex-gap-2">
-                            <input
-                                type="password"
-                                placeholder="ACCESS_CODE"
-                                className="vortex-input-field vortex-text-tiny vortex-w-24 vortex-h-6"
-                                onKeyDown={async (e) => {
-                                    if (e.key === 'Enter') {
-                                        const code = (e.target as HTMLInputElement).value;
-                                        if (code === 'VORTEKE' && publicKey) {
-                                            try {
-                                                const res = await fetch('/api/auth/provision', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ wallet: publicKey.toBase58(), code })
-                                                });
-                                                if (res.ok) {
-                                                    notify('success', 'ELITE_ACCESS_GRANTED: 7-Day Window Active.');
-                                                    onPurchase();
-                                                } else {
-                                                    notify('error', 'INVALID_ACCESS_CODE');
+                            {!connected ? (
+                                <span className="vortex-text-tiny vortex-text-muted">CONNECT_WALLET_FOR_ACCESS</span>
+                            ) : (
+                                <input
+                                    type="password"
+                                    placeholder="ACCESS_CODE"
+                                    className="vortex-input-field vortex-text-tiny vortex-w-24 vortex-h-6"
+                                    onKeyDown={async (e) => {
+                                        if (e.key === 'Enter') {
+                                            const code = (e.target as HTMLInputElement).value;
+                                            if (code === 'VORTEKE' && publicKey) {
+                                                try {
+                                                    const res = await fetch('/api/auth/provision', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ wallet: publicKey.toBase58(), code })
+                                                    });
+                                                    if (res.ok) {
+                                                        notify('success', 'ELITE_ACCESS_GRANTED: 7-Day Window Active.');
+                                                        onPurchase();
+                                                    } else {
+                                                        notify('error', 'INVALID_ACCESS_CODE');
+                                                    }
+                                                } catch {
+                                                    notify('error', 'PROVISIONING_ERROR');
                                                 }
-                                            } catch {
-                                                notify('error', 'PROVISIONING_ERROR');
+                                                (e.target as HTMLInputElement).value = '';
                                             }
-                                            (e.target as HTMLInputElement).value = '';
                                         }
-                                    }
-                                }}
-                            />
+                                    }}
+                                />
+                            )}
                         </div>
                     </div>
                     <p className="vortex-text-tiny vortex-text-muted">
@@ -272,6 +276,6 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                     border-radius: 4px;
                 }
             `}</style>
-        </div>
+        </div >
     );
 }

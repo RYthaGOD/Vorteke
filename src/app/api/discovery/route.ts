@@ -145,12 +145,15 @@ export async function GET(req: NextRequest) {
 
         // 2. Fetch Base Pools from GeckoTerminal
         let geckoData: any = { data: [] };
+        let poolAddresses: string[] = [];
+
         try {
             const geckoRes = await fetch(`${baseUrl}/${geckoPath}`, {
                 next: { revalidate: 30 } // Vercel Data Cache
             } as any);
             if (geckoRes.ok) {
                 geckoData = await geckoRes.json();
+                poolAddresses = geckoData.data?.map((p: any) => p.relationships?.base_token?.data?.id?.split('_')[1]).filter(Boolean) || [];
             } else {
                 console.warn(`GECKO_FAILURE: ${geckoRes.status}`);
             }
@@ -158,7 +161,22 @@ export async function GET(req: NextRequest) {
             console.warn("GECKO_FETCH_NETWORK_FAIL", e);
         }
 
-        const poolAddresses = geckoData.data?.map((p: any) => p.relationships?.base_token?.data?.id?.split('_')[1]).filter(Boolean) || [];
+        // 2.5 FALLBACK LOGIC: If Gecko fails (rate limits, etc) and we have no pools, use DexScreener token profiles
+        if (poolAddresses.length === 0) {
+            console.warn('GECKO_NO_POOLS, FALLING BACK TO DEXSCREENER PROFILES');
+            try {
+                const fallbackRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', { next: { revalidate: 30 } } as any);
+                if (fallbackRes.ok) {
+                    const fallbackData = await fallbackRes.json();
+                    poolAddresses = (fallbackData || [])
+                        .filter((t: any) => t.chainId === 'solana' && t.tokenAddress)
+                        .map((t: any) => t.tokenAddress);
+                }
+            } catch (fallbackErr) {
+                console.error("TOTAL_DISCOVERY_FAILURE", fallbackErr);
+            }
+        }
+
         const addressesToFetch = poolAddresses.slice(0, 30); // DexScreener supports max 30 per explicit request
 
         // 3. Multi-Source Enhancement (Batching: 1 request instead of 30)
