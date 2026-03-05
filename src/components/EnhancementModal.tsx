@@ -5,6 +5,14 @@ import { purchaseEnhancement, claimProject, verifyPayment } from '@/lib/monetiza
 import { Transaction, VersionedTransaction } from '@solana/web3.js';
 import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import bs58 from 'bs58';
+
+interface EnhancementModalProps {
+    address: string;
+    onClose: () => void;
+    onPurchase: () => void;
+    notify: (type: 'success' | 'error' | 'info', msg: string) => void;
+}
 
 export function EnhancementModal({ address, onClose, onPurchase, notify }: EnhancementModalProps) {
     const { connection } = useConnection();
