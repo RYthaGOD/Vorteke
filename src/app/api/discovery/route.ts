@@ -61,16 +61,16 @@ export async function GET(req: NextRequest) {
             case 'top100': geckoPath = 'networks/solana/pools'; break;
             case 'pumpfun':
                 try {
-                    // Optimized: Search DexScreener specifically for pump.fun identified assets
-                    const pumpRes = await fetch('https://api.dexscreener.com/latest/dex/search?q=pump.fun', {
+                    // Pump.fun tokens via DexScreener pairs on pumpswap dex
+                    const pumpRes = await fetch('https://api.dexscreener.com/latest/dex/pairs/solana/pumpfun', {
                         next: { revalidate: 60 }
                     } as any);
                     if (!pumpRes.ok) throw new Error('DEX_PUMP_SEARCH_DOWN');
                     const pumpData = await pumpRes.json();
 
                     const pTokens = (pumpData.pairs || [])
-                        .filter((p: any) => p.chainId === 'solana' && (p.baseToken.name.includes('pump') || p.baseToken.symbol.includes('pump') || p.url.includes('pump')))
-                        .slice(0, 20)
+                        .filter((p: any) => p.chainId === 'solana')
+                        .slice(0, 25)
                         .map((p: any) => ({
                             address: p.baseToken.address,
                             name: p.baseToken.name,
@@ -79,17 +79,66 @@ export async function GET(req: NextRequest) {
                             priceChange24h: p.priceChange?.h24 || 0,
                             volume24h: p.volume?.h24 || 0,
                             liquidityUsd: p.liquidity?.usd || 0,
+                            mcap: p.fdv || 0,
                             logoURI: p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${p.baseToken.address}.png`,
-                            tier: 'Elite',
                             securityTags: ['PUMP_ORIGIN', 'BONDING_CURVE']
                         }));
                     return NextResponse.json(pTokens);
                 } catch (e) {
-                    console.warn("PUMP_FETCH_FAIL, falling back to empty list", e);
-                    return NextResponse.json([]);
+                    console.warn("PUMP_FETCH_FAIL, falling back to trending", e);
+                    // Fall through to gecko trending as fallback
+                    geckoPath = 'networks/solana/trending_pools';
+                    break;
                 }
             case 'new': geckoPath = 'networks/solana/new_pools'; break;
-            case 'gainers': geckoPath = 'networks/solana/trending_pools'; break;
+            case 'gainers':
+                try {
+                    // DexScreener gainers: trending Solana pairs with highest positive 24h shift
+                    const gainRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', {
+                        next: { revalidate: 60 }
+                    } as any);
+                    if (!gainRes.ok) throw new Error('GAIN_FETCH_FAIL');
+                    const gainData = await gainRes.json();
+
+                    // Get up to 30 addresses from the token profiles feed
+                    const addresses = (gainData || [])
+                        .filter((t: any) => t.chainId === 'solana' && t.tokenAddress)
+                        .slice(0, 30)
+                        .map((t: any) => t.tokenAddress)
+                        .join(',');
+
+                    if (!addresses) throw new Error('NO_GAIN_ADDRS');
+
+                    const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`, {
+                        next: { revalidate: 60 }
+                    } as any);
+                    const pairsData = await pairsRes.json();
+
+                    const seen = new Set();
+                    const gainTokens = (pairsData.pairs || [])
+                        .filter((p: any) => p.chainId === 'solana' && !seen.has(p.baseToken.address) && seen.add(p.baseToken.address))
+                        .sort((a: any, b: any) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0))
+                        .slice(0, 25)
+                        .map((p: any) => ({
+                            address: p.baseToken.address,
+                            name: p.baseToken.name,
+                            symbol: p.baseToken.symbol,
+                            priceUsd: parseFloat(p.priceUsd || '0'),
+                            priceChange24h: p.priceChange?.h24 || 0,
+                            volume24h: p.volume?.h24 || 0,
+                            liquidityUsd: p.liquidity?.usd || 0,
+                            mcap: p.fdv || 0,
+                            logoURI: p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${p.baseToken.address}.png`,
+                            securityTags: ['GAINER', 'HOT_SIGNAL']
+                        }));
+
+                    discoveryCache[cacheKey] = { data: gainTokens, timestamp: Date.now() };
+                    return NextResponse.json(gainTokens);
+                } catch (e) {
+                    console.warn("GAINERS_FETCH_FAIL, falling back to trending sorted", e);
+                    geckoPath = 'networks/solana/trending_pools';
+                    break;
+                }
             case 'losers': geckoPath = 'networks/solana/trending_pools'; break;
             default: geckoPath = 'networks/solana/trending_pools';
         }

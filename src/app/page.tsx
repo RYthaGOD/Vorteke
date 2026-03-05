@@ -238,12 +238,20 @@ export default function Home() {
                                             <li key={t.address} className="vortex-mb-2">
                                                 <button className="vortex-list-item-clickable vortex-full-width" onClick={() => router.push(`/token/${t.address}`)}>
                                                     <div className="vortex-flex-between">
-                                                        <div className="vortex-flex-column vortex-align-start">
-                                                            <div className="vortex-text-bold vortex-text-sm">{t.symbol}</div>
-                                                            <div className="vortex-text-tiny vortex-text-muted">MCAP {formatCompact(t.mcap)}</div>
+                                                        <div className="vortex-flex-start vortex-gap-2">
+                                                            <img
+                                                                src={t.logoURI || `https://dd.dexscreener.com/ds-data/tokens/solana/${t.address}.png`}
+                                                                alt={t.symbol}
+                                                                className="vortex-logo-mini vortex-border-radius-full"
+                                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                                            />
+                                                            <div className="vortex-flex-column vortex-align-start">
+                                                                <div className="vortex-text-bold vortex-text-sm">{t.symbol || '???'}/SOL</div>
+                                                                <div className="vortex-text-tiny vortex-text-muted">MCAP {formatCompact(t.mcap || 0)}</div>
+                                                            </div>
                                                         </div>
                                                         <div className={`${t.priceChange24h >= 0 ? 'text-vortex-yellow' : 'text-vortex-red'} vortex-text-sm vortex-text-bold`}>
-                                                            {t.priceChange24h >= 0 ? '+' : ''}{t.priceChange24h.toFixed(1)}%
+                                                            {t.priceChange24h >= 0 ? '+' : ''}{(t.priceChange24h || 0).toFixed(1)}%
                                                         </div>
                                                     </div>
                                                 </button>
