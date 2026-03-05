@@ -56,3 +56,10 @@ model TestAccess {
 
     @@index([expiresAt])
 }
+
+model DeepScanRecord {
+    signature String   @id
+    address   String
+    wallet    String
+    createdAt DateTime @default(now())
+}

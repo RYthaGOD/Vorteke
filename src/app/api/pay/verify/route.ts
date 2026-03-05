@@ -51,12 +51,21 @@ export async function POST(request: NextRequest) {
         const connection = new Connection(endpoint, 'confirmed');
 
         // 0. Anti-Double-Spend Check (CRITICAL)
-        const existingPayment = await prisma.enhancement.findFirst({
-            where: { lastPaymentTx: signature }
-        });
+        if (tier === 'DeepScan') {
+            const existingScan = await prisma.deepScanRecord.findUnique({
+                where: { signature }
+            });
+            if (existingScan) {
+                return NextResponse.json({ error: 'TRANSACTION_ALREADY_CLAIMED' }, { status: 403 });
+            }
+        } else {
+            const existingPayment = await prisma.enhancement.findFirst({
+                where: { lastPaymentTx: signature }
+            });
 
-        if (existingPayment) {
-            return NextResponse.json({ error: 'TRANSACTION_ALREADY_CLAIMED' }, { status: 403 });
+            if (existingPayment) {
+                return NextResponse.json({ error: 'TRANSACTION_ALREADY_CLAIMED' }, { status: 403 });
+            }
         }
 
         // 1. Fetch and Verify Transaction
@@ -143,7 +152,11 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Update Global Database
-        if (tier !== 'DeepScan') {
+        if (tier === 'DeepScan') {
+            await prisma.deepScanRecord.create({
+                data: { signature, address, wallet }
+            });
+        } else {
             await prisma.enhancement.upsert({
                 where: { address },
                 update: {

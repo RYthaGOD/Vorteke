@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import { MobileNav } from '@/components/MobileNav';
 import { GlobalNotification } from '@/components/GlobalNotification';
 import { BundlePanel } from '@/components/BundlePanel';
+import { SwapPanel } from '@/components/SwapPanel';
 import { DeveloperControlPanel } from '@/components/DeveloperControlPanel';
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 import { useNotificationStore } from '@/lib/store';
@@ -249,21 +250,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
 
                                 {/* Sidebar: Execution Zone */}
                                 <div className="vortex-col-span-4 vortex-flex-column vortex-gap-6">
-                                    <VortexPanel title="EXECUTE_SWAP" subTitle={`SOL <> ${token.symbol}`} glowColor="cyan">
-                                        <div className="vortex-input-group vortex-mb-4">
-                                            <div className="vortex-flex-between vortex-mb-1">
-                                                <span className="vortex-text-tiny vortex-text-muted uppercase">Amount_SOL</span>
-                                                <span className="vortex-text-tiny vortex-text-muted">Bal: 0.00</span>
-                                            </div>
-                                            <input type="number" className="vortex-input-field vortex-full-width" placeholder="0.0" />
-                                        </div>
-                                        <VortexButton
-                                            className="vortex-full-width vortex-py-4 vortex-text-bold vortex-ls-wide"
-                                            onClick={() => notify('success', 'SWAP_ROUTING_INITIATED')}
-                                        >
-                                            INITIALIZE_SWAP
-                                        </VortexButton>
-                                    </VortexPanel>
+                                    <SwapPanel token={token} notify={notify} />
 
                                     <VortexPanel title="LIVE_TRANSACTIONS" subTitle="STREAM_ACTIVE" variant="glass" className="vortex-flex-1">
                                         <div className="vortex-tx-stream-container">
@@ -345,6 +332,22 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                                 <div
                                                     className={`vortex-progress-fill ${token.advancedMetrics?.volumeVelocity?.status === 'BREAKOUT' ? 'vortex-bg-green animate-pulse' : 'vortex-bg-cyan'}`}
                                                     style={{ width: `${Math.max(0, Math.min(100, token.advancedMetrics?.volumeVelocity?.score || 0))}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="vortex-metric-card vortex-mt-4">
+                                            <span className="vortex-text-tiny vortex-text-muted">HOLDER_CONCENTRATION</span>
+                                            <div className="vortex-flex-between vortex-mt-1">
+                                                <span className="vortex-text-bright vortex-text-bold">{token.advancedMetrics?.top10HolderPercent || 0}%</span>
+                                                <span className={`vortex-text-tiny ${token.advancedMetrics?.holderIntelligence?.riskLevel === 'HIGH' ? 'text-vortex-red' : token.advancedMetrics?.holderIntelligence?.riskLevel === 'MEDIUM' ? 'text-vortex-yellow' : 'vortex-text-muted'}`}>
+                                                    TOP_10_SUPPLY
+                                                </span>
+                                            </div>
+                                            <div className="vortex-progress-bg vortex-progress-sm vortex-mt-1">
+                                                <div
+                                                    className={`vortex-progress-fill ${token.advancedMetrics?.holderIntelligence?.riskLevel === 'HIGH' ? 'vortex-bg-red' : token.advancedMetrics?.holderIntelligence?.riskLevel === 'MEDIUM' ? 'vortex-bg-yellow' : 'vortex-bg-cyan'}`}
+                                                    style={{ width: `${Math.max(0, Math.min(100, token.advancedMetrics?.top10HolderPercent || 0))}%` }}
                                                 />
                                             </div>
                                         </div>
