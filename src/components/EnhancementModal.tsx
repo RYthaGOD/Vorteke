@@ -161,13 +161,45 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                 </div>
 
                 <div className="vortex-input-container">
-                    <div className="vortex-flex-start vortex-gap-2 vortex-mb-2">
-                        <ShieldCheck size={16} className="text-vortex-yellow" />
-                        <span className="vortex-text-xs vortex-text-bold">BURN_PROTOCOL_ENFORCED</span>
+                    <div className="vortex-flex-between vortex-mb-2">
+                        <div className="vortex-flex-start vortex-gap-2">
+                            <ShieldCheck size={16} className="text-vortex-yellow" />
+                            <span className="vortex-text-xs vortex-text-bold">BURN_PROTOCOL_ENFORCED</span>
+                        </div>
+                        <div className="vortex-flex-start vortex-gap-2">
+                            <input
+                                type="password"
+                                placeholder="ACCESS_CODE"
+                                className="vortex-input-field vortex-text-tiny vortex-w-24 vortex-h-6"
+                                onKeyDown={async (e) => {
+                                    if (e.key === 'Enter') {
+                                        const code = (e.target as HTMLInputElement).value;
+                                        if (code === 'VORTEKE' && publicKey) {
+                                            try {
+                                                const res = await fetch('/api/auth/provision', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ wallet: publicKey.toBase58(), code })
+                                                });
+                                                if (res.ok) {
+                                                    notify('success', 'ELITE_ACCESS_GRANTED: 7-Day Window Active.');
+                                                    onPurchase();
+                                                } else {
+                                                    notify('error', 'INVALID_ACCESS_CODE');
+                                                }
+                                            } catch {
+                                                notify('error', 'PROVISIONING_ERROR');
+                                            }
+                                            (e.target as HTMLInputElement).value = '';
+                                        }
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
                     <p className="vortex-text-tiny vortex-text-muted">
-                        $VTX payments triggers an SPL-Token Burn instruction. This reduces supply permanently.
-                        Solana mainnet network fees apply to all operations.
+                        $VTX payments trigger on-chain burns.
+                        Testing with access codes bypasses payments for 7 days.
                     </p>
                 </div>
             </div>
