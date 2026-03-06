@@ -298,21 +298,17 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
         const mintPubkey = new PublicKey(address);
 
         // 1. Fetch Parallel Data with Helius DAS as Primary Intelligence
-        const [rpcResult, priceResult, dexResult, heliusResult] = await Promise.allSettled([
+        const [rpcResult, dexResult, heliusResult] = await Promise.allSettled([
             getResilientConnection(async (c, endpoint) => {
                 const res = await c.getParsedAccountInfo(mintPubkey);
                 if (!res.value) throw new Error("ACCOUNT_NOT_FOUND");
                 return { ...res, endpoint };
             }),
-            throttledFetch(`https://api.jup.ag/price/v2?ids=${address}`, {
-                headers: JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}
-            }).then((data: any) => data).catch(() => ({ data: {} })),
             throttledFetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`).then((data: DexScreenerResponse) => data).catch(() => ({ pairs: [] as DexScreenerPair[] })),
             fetchHeliusMetadata(address) as Promise<any>
         ]);
 
         const mintInfo = rpcResult.status === 'fulfilled' ? rpcResult.value : null;
-        const priceJson = priceResult.status === 'fulfilled' ? priceResult.value : { data: {} };
         const dexJson = dexResult.status === 'fulfilled' ? dexResult.value : { pairs: [] };
         const helius = heliusResult.status === 'fulfilled' ? heliusResult.value : null;
 
@@ -354,9 +350,8 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
         // For now, we use the DexScreener predictable URL as a strong fallback
 
         // 3. Resolve Price and Market Data (Ultra-resilient fallback chain)
-        const jupPrice = parseFloat(priceJson?.data?.[address]?.price || '0');
         const dexPrice = parseFloat(pair?.priceUsd || '0');
-        const currentPrice = helius?.priceUsd || dexPrice || jupPrice || 0;
+        const currentPrice = helius?.priceUsd || dexPrice || 0;
 
         // Guard against zero-division or missing supply in MCAP calculation
         const mcap = pair?.marketCap || pair?.fdv || (currentPrice * (supply || 1000000000));

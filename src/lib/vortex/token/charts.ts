@@ -13,11 +13,7 @@ export interface ChartTick {
 export type Timeframe = '1S' | '1M' | '5M' | '15M' | '1H' | '1D';
 
 /**
- * Fetches real historical OHLCV data. 
- * NOTE: GeckoTerminal free OHLCV for Solana currently returns 404 for all endpoints.
- * Implementing a realistic synthetic backfill anchored to the live current price 
- * so the chart component does not crash and timeframes remain functional, 
- * after which the real-time websocket polling engine takes over seamlessly.
+ * Fetches real historical OHLCV data from Birdeye API via secure backend proxy.
  */
 export const getInitialChartData = async (
     address: string,
@@ -25,68 +21,86 @@ export const getInitialChartData = async (
     timeframe: Timeframe = '1M'
 ): Promise<ChartTick[]> => {
     try {
-        if (!currentPrice) currentPrice = 0.0001; // fallback baseline
-
-        let aggregateMinutes = 1;
+        let type = '1m';
         let limit = 100;
 
         switch (timeframe) {
-            case '1S': aggregateMinutes = 1 / 60; limit = 60; break;
-            case '1M': aggregateMinutes = 1; limit = 100; break;
-            case '5M': aggregateMinutes = 5; limit = 100; break;
-            case '15M': aggregateMinutes = 15; limit = 100; break;
-            case '1H': aggregateMinutes = 60; limit = 100; break;
-            case '1D': aggregateMinutes = 1440; limit = 90; break;
+            case '1S': type = '1m'; limit = 60; break; // Birdeye lowest is 1m
+            case '1M': type = '1m'; limit = 100; break;
+            case '5M': type = '5m'; limit = 100; break;
+            case '15M': type = '15m'; limit = 100; break;
+            case '1H': type = '1H'; limit = 100; break;
+            case '1D': type = '1D'; limit = 90; break;
         }
 
-        const ticks: ChartTick[] = [];
-        const intervalSeconds = Math.max(1, Math.floor(aggregateMinutes * 60));
-        let timeCursor = Math.floor(Date.now() / 1000) - (limit * intervalSeconds);
+        // Calculate time range (Birdeye uses UNIX SECONDS)
+        const time_to = Math.floor(Date.now() / 1000);
 
-        // Dynamic volatility factor based on timeframe (longer timeframe = larger candle wicks)
-        const volBase = 0.005 * Math.sqrt(Math.max(1, aggregateMinutes));
-        let simPrice = currentPrice * (1 + (Math.random() * 0.1 - 0.05)); // Start history slightly offset
+        let intervalSeconds = 60;
+        if (type === '5m') intervalSeconds = 300;
+        if (type === '15m') intervalSeconds = 900;
+        if (type === '1H') intervalSeconds = 3600;
+        if (type === '1D') intervalSeconds = 86400;
 
-        // Deterministic pseudo-randomness for chart stability
-        let seed = parseInt(address.slice(0, 8), 16) || 12345;
-        const random = () => {
-            const x = Math.sin(seed++) * 10000;
-            return x - Math.floor(x);
-        };
+        const time_from = time_to - (limit * intervalSeconds);
 
-        for (let i = 0; i < limit; i++) {
-            // Trend smoothly towards the real currentPrice as we approach the present moment
-            const progress = i / limit;
-            const trendCorrection = (currentPrice - simPrice) * Math.pow(progress, 2) * 0.5;
-
-            const change = simPrice * (random() * volBase * 2 - volBase) + trendCorrection;
-            const open = Math.max(0.000000001, simPrice);
-            const close = Math.max(0.000000001, open + change);
-            const high = Math.max(open, close) * (1 + random() * volBase * 0.5);
-            const low = Math.min(open, close) * (1 - random() * volBase * 0.5);
-
-            ticks.push({
-                time: timeCursor,
-                open: parseFloat(open.toFixed(10)),
-                high: parseFloat(high.toFixed(10)),
-                low: parseFloat(low.toFixed(10)),
-                close: parseFloat(close.toFixed(10)),
-                volume: Math.floor(random() * 500000 * aggregateMinutes)
-            });
-
-            simPrice = close;
-            timeCursor += intervalSeconds;
+        const res = await fetch(`/api/proxy/birdeye?address=${address}&type=${type}&time_from=${time_from}&time_to=${time_to}`);
+        if (!res.ok) {
+            console.warn("BIRDEYE_PROXY_FAIL", await res.text());
+            throw new Error("BIRDEYE_UNAVAILABLE");
         }
 
-        // Force the final candle to definitively match the real live currentPrice
-        const last = ticks[ticks.length - 1];
-        last.close = currentPrice;
-        if (currentPrice > last.high) last.high = currentPrice;
-        if (currentPrice < last.low) last.low = currentPrice;
+        const json = await res.json();
+        const items = json?.data?.items || [];
 
-        return ticks;
+        if (items.length === 0) {
+            return [{ time: Math.floor(Date.now() / 1000), open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice, volume: 0 }];
+        }
+
+        // Map Birdeye response to Lightweight ChartTick format
+        const fetchedTicks: ChartTick[] = items.map((item: any) => ({
+            time: item.unixTime, // Birdeye returns unixTime in seconds natively
+            open: parseFloat((item.o || currentPrice).toFixed(10)),
+            high: parseFloat((item.h || currentPrice).toFixed(10)),
+            low: parseFloat((item.l || currentPrice).toFixed(10)),
+            close: parseFloat((item.c || currentPrice).toFixed(10)),
+            volume: parseFloat(item.v || 0)
+        })).sort((a: any, b: any) => a.time - b.time);
+
+        // Fill gap logic (Birdeye skips missing candles if volume is 0)
+        const synthesized: ChartTick[] = [];
+        for (let i = 0; i < fetchedTicks.length; i++) {
+            const current = fetchedTicks[i];
+            const prev = synthesized[synthesized.length - 1];
+            if (prev) {
+                let fillTime = prev.time + intervalSeconds;
+                while (fillTime < current.time) {
+                    synthesized.push({
+                        time: fillTime,
+                        open: prev.close,
+                        high: prev.close,
+                        low: prev.close,
+                        close: prev.close,
+                        volume: 0
+                    });
+                    fillTime += intervalSeconds;
+                }
+            }
+            synthesized.push(current);
+        }
+
+        // Ensure the last candle respects the true live price
+        if (synthesized.length > 0 && currentPrice > 0) {
+            const last = synthesized[synthesized.length - 1];
+            last.close = currentPrice;
+            if (currentPrice > last.high) last.high = currentPrice;
+            if (currentPrice < last.low) last.low = currentPrice;
+        }
+
+        return synthesized;
     } catch (e: any) {
         console.error("CHART_INIT_FAILURE:", e);
+        // Fallback flatline so the component doesn't crash fully
         return [{ time: Math.floor(Date.now() / 1000), open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice, volume: 0 }];
     }
 };

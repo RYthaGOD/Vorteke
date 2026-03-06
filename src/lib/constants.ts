@@ -1,19 +1,15 @@
 /**
- * VORTEX Global System Constants
+ * VORTEX Global constants and configuration
  */
-
-export const HELIUS_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC || '';
-export const HELIUS_API_KEY = HELIUS_RPC.split('api-key=')[1] || '';
+export const HELIUS_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY || '';
+export const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
 export const JUPITER_API_KEY = process.env.NEXT_PUBLIC_JUPITER_API_KEY || '';
 
+// System-wide RPC fallback topology
 export const RPC_ENDPOINTS = [
     HELIUS_RPC,
-    process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY,
-    process.env.NEXT_PUBLIC_SOLANA_RPC_SECONDARY,
-    'https://rpc.ankr.com/solana',
-    'https://solana-api.projectserum.com',
     'https://api.mainnet-beta.solana.com'
-].filter((url): url is string => !!url);
+].filter(Boolean);
 
 export const PROTECTED_MINT_ADDRESSES = [
     'So11111111111111111111111111111111111111112', // Wrapped SOL
