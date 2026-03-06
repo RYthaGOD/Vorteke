@@ -300,9 +300,14 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
         // 1. Fetch Parallel Data with Helius DAS as Primary Intelligence
         const [rpcResult, dexResult, heliusResult] = await Promise.allSettled([
             getResilientConnection(async (c, endpoint) => {
-                const res = await c.getParsedAccountInfo(mintPubkey);
-                if (!res.value) throw new Error("ACCOUNT_NOT_FOUND");
-                return { ...res, endpoint };
+                try {
+                    const res = await c.getParsedAccountInfo(mintPubkey);
+                    if (!res.value) return { value: null, endpoint };
+                    return { ...res, endpoint };
+                } catch (e) {
+                    console.warn("RPC_ACCOUNT_INFO_FAIL", e);
+                    return { value: null, endpoint };
+                }
             }),
             throttledFetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`).then((data: DexScreenerResponse) => data).catch(() => ({ pairs: [] as DexScreenerPair[] })),
             fetchHeliusMetadata(address) as Promise<any>

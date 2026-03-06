@@ -2,10 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { Connection, LAMPORTS_PER_SOL, PublicKey, VersionedTransaction, TransactionMessage, AddressLookupTableAccount, SystemProgram } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { TokenInfo, throttledFetch } from '@/lib/dataService';
-import { JUPITER_QUOTE_API, SOL_MINT, TREASURY_SWAPS, PROTOCOL_FLAT_FEE_LAMPORTS, JITO_TIP_ACCOUNTS, JITO_DEFAULT_TIP_LAMPORTS } from '@/lib/constants';
-import { getDflowQuote, DflowQuote } from '@/lib/solana/dflowService';
-import { verifyEliteAccess } from '@/lib/monetizationService';
+import { SOL_MINT, TREASURY_SWAPS, PROTOCOL_FLAT_FEE_LAMPORTS, JITO_TIP_ACCOUNTS, JITO_DEFAULT_TIP_LAMPORTS } from '@/lib/constants';
 import { captureException } from '@/lib/logger';
+
+interface DflowQuote {
+    inputMint: string;
+    outputMint: string;
+    inputAmount: string;
+    outputAmount: string;
+    priceImpact: string;
+    route: any;
+}
 
 /**
  * Hook for managing SOL and Token balances.
@@ -53,6 +60,9 @@ export function useSwapBalances(token: TokenInfo) {
 /**
  * Hook for Jupiter V6 Quote resolution.
  */
+/**
+ * Hook for Jupiter V6 Quote resolution.
+ */
 export function useSwapQuote(
     token: TokenInfo,
     amount: string,
@@ -60,7 +70,6 @@ export function useSwapQuote(
     swapMode: 'BUY' | 'SELL'
 ) {
     const [quote, setQuote] = useState<any>(null);
-    const [dflowQuote, setDflowQuote] = useState<DflowQuote | null>(null);
     const [loading, setLoading] = useState(false);
 
     const inputMint = swapMode === 'BUY' ? SOL_MINT : token.address;
@@ -71,7 +80,6 @@ export function useSwapQuote(
     useEffect(() => {
         if (!amount || isNaN(parseFloat(amount))) {
             setQuote(null);
-            setDflowQuote(null);
             return;
         }
 
@@ -83,12 +91,18 @@ export function useSwapQuote(
                 const inputAmount = Math.floor(parseFloat(amount) * Math.pow(10, inputDecimals));
                 const slippageBps = slippage === 'Auto' ? 100 : parseFloat(slippage) * 100;
 
-                const quoteResponse = await fetch(
-                    `${JUPITER_QUOTE_API}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${inputAmount}&slippageBps=${slippageBps}`,
-                    { signal: abortController.signal }
-                );
+                const query = new URLSearchParams({
+                    inputMint,
+                    outputMint,
+                    amount: inputAmount.toString(),
+                    slippageBps: slippageBps.toString()
+                });
 
-                if (!quoteResponse.ok) throw new Error('Jupiter API failure');
+                const quoteResponse = await fetch(`/api/proxy/jup-quote?${query.toString()}`, {
+                    signal: abortController.signal
+                });
+
+                if (!quoteResponse.ok) throw new Error('JUPITER_OFFLINE');
                 const data = await quoteResponse.json();
 
                 if (data.outAmount) {
@@ -101,8 +115,6 @@ export function useSwapQuote(
 
                     if (!abortController.signal.aborted) {
                         setQuote(jupQuote);
-                        const dfQuote = await getDflowQuote(inputMint, outputMint, parseFloat(amount));
-                        setDflowQuote(dfQuote);
                     }
                 }
             } catch (e: any) {
@@ -119,13 +131,11 @@ export function useSwapQuote(
         };
     }, [amount, token.address, slippage, swapMode, inputMint, outputMint, inputDecimals, outputDecimals]);
 
-    return { quote, dflowQuote, loading };
+    return { quote, loading };
 }
 
 /**
  * Hook for managing transaction execution flow.
- * FIX: Removed internal verifyEliteAccess call — isElite now comes from the parent
- * which already has it from useVortexAuth. Eliminates duplicate RPC round-trip.
  */
 export function useSwapExecution(
     token: TokenInfo,
@@ -150,9 +160,6 @@ export function useSwapExecution(
         setExecStatus('INITIALIZING...');
 
         try {
-            const inputMint = swapMode === 'BUY' ? SOL_MINT : token.address;
-            const outputMint = swapMode === 'BUY' ? token.address : SOL_MINT;
-
             const swapConfig: any = {
                 quoteResponse: quote.raw,
                 userPublicKey: publicKey.toString(),

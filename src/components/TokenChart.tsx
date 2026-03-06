@@ -1,16 +1,18 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createChart, ColorType, Time } from 'lightweight-charts';
 import { ChartTick, Timeframe } from '@/lib/dataService';
 
 interface TokenChartProps {
+    address: string;
     initialData: ChartTick[];
     realtimeData: ChartTick | null;
     timeframe: Timeframe;
     onTimeframeChange: (tf: Timeframe | any) => void;
 }
 
-export function TokenChart({ initialData, realtimeData, timeframe, onTimeframeChange }: TokenChartProps) {
+export function TokenChart({ address, initialData, realtimeData, timeframe, onTimeframeChange }: TokenChartProps) {
+    const [useIframe, setUseIframe] = useState(false);
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<any>(null);
     const seriesRef = useRef<any>(null);
@@ -284,8 +286,16 @@ export function TokenChart({ initialData, realtimeData, timeframe, onTimeframeCh
 
     return (
         <div className="vortex-relative vortex-full-size vortex-chart-h">
-            {/* Timeframe Selector HUD */}
+            {/* Control Bar HUD */}
             <div className="vortex-abs-top-right vortex-p-4 vortex-z-10 vortex-flex vortex-gap-2">
+                <button
+                    className={`btn-vortex-mini ${useIframe ? 'active text-vortex-cyan' : 'vortex-text-muted'} vortex-text-tiny`}
+                    onClick={() => setUseIframe(!useIframe)}
+                    title="Toggle Reliability Mode (DexScreener Embed)"
+                >
+                    {useIframe ? 'ENGINE: LIVE_EMBED' : 'ENGINE: CANVAS_NATIVE'}
+                </button>
+                <div className="vortex-divider-v vortex-mx-1" style={{ height: '14px', alignSelf: 'center' }}></div>
                 {['1S', '1M', '5M', '15M', '1H', '1D'].map(tf => (
                     <button
                         key={tf}
@@ -297,19 +307,31 @@ export function TokenChart({ initialData, realtimeData, timeframe, onTimeframeCh
                 ))}
             </div>
 
-            <div
-                ref={chartContainerRef}
-                className="vortex-full-size"
-                role="img"
-                aria-label="Interactive Token Price Chart"
-            />
+            {useIframe ? (
+                <div className="vortex-full-size vortex-bg-obsidian">
+                    <iframe
+                        src={`https://dexscreener.com/solana/${address}?embed=1&theme=dark&trades=0&info=0`}
+                        style={{ width: '100%', height: '100%', border: '0' }}
+                        title="Market View"
+                    />
+                </div>
+            ) : (
+                <div
+                    ref={chartContainerRef}
+                    className="vortex-full-size"
+                    role="img"
+                    aria-label="Interactive Token Price Chart"
+                />
+            )}
 
-            {/* Indicator Legend HUD */}
-            <div
-                ref={legendRef}
-                className="vortex-abs-top-left vortex-p-4 vortex-z-10"
-                style={{ pointerEvents: 'none' }}
-            />
+            {/* Indicator Legend HUD (Native Canvas only) */}
+            {!useIframe && (
+                <div
+                    ref={legendRef}
+                    className="vortex-abs-top-left vortex-p-4 vortex-z-10"
+                    style={{ pointerEvents: 'none' }}
+                />
+            )}
         </div>
     );
 }

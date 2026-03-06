@@ -215,6 +215,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                             </div>
                                         ) : (
                                             <TokenChart
+                                                address={address}
                                                 initialData={initialData}
                                                 realtimeData={realtimeData}
                                                 timeframe={timeframe}

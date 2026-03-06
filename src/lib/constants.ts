@@ -4,6 +4,8 @@
 export const HELIUS_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY || '';
 export const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
 export const JUPITER_API_KEY = process.env.NEXT_PUBLIC_JUPITER_API_KEY || '';
+export const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY || '';
+export const DFLOW_API_KEY = process.env.DFLOW_API_KEY || '';
 
 // System-wide RPC fallback topology
 export const RPC_ENDPOINTS = [

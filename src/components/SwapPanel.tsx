@@ -6,7 +6,6 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { LAMPORTS_PER_SOL, PublicKey, VersionedTransaction, TransactionMessage, AddressLookupTableAccount, SystemProgram } from '@solana/web3.js';
 import { JUPITER_QUOTE_API, SOL_MINT, TREASURY_SWAPS, PROTOCOL_FLAT_FEE_SOL, PROTOCOL_FLAT_FEE_LAMPORTS } from '@/lib/constants';
 import { captureException } from '@/lib/logger';
-import { getDflowQuote, DflowQuote } from '@/lib/solana/dflowService';
 import { verifyEliteAccess } from '@/lib/monetizationService';
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 
@@ -34,7 +33,7 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
 
     const { isElite } = useVortexAuth();
     const { balance, tokenBalance } = useSwapBalances(token);
-    const { quote, dflowQuote, loading } = useSwapQuote(token, amount, slippage, swapMode);
+    const { quote, loading } = useSwapQuote(token, amount, slippage, swapMode);
     // FIX: Pass isElite from useVortexAuth instead of letting useSwapExecution re-fetch it
     const { executeSwap, executing, execStatus } = useSwapExecution(token, notify, isElite);
 
