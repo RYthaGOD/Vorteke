@@ -134,7 +134,8 @@ export const purchaseEnhancement = async (address: string, tier: TokenTier, wall
             throw new Error("VTX_MINT_NOT_CONFIGURED");
         }
 
-        const jupQuoteRes = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${usdcMint}&outputMint=${outputMint}&amount=${inputAmountLamports}&slippageBps=50`);
+        // Use internal proxy to avoid CORS and protect reliability
+        const jupQuoteRes = await fetch(`/api/proxy/jup-quote?inputMint=${usdcMint}&outputMint=${outputMint}&amount=${inputAmountLamports}&slippageBps=50`);
         const jupQuote = await jupQuoteRes.json();
 
         if (!jupQuote.outAmount) throw new Error("JUPITER_QUOTE_FAILED");

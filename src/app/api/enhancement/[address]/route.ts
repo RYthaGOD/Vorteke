@@ -19,8 +19,22 @@ export async function GET(
             where: { address }
         });
 
-        // Default system enhancements could be merged here in the future
-        return NextResponse.json(enhancement || { address, tier: 'Basic' });
+        if (!enhancement) {
+            return NextResponse.json({ address, tier: 'Basic' });
+        }
+
+        // Sanitize socials to avoid malformed JSON breaking the frontend
+        const rawSocials = enhancement.socials as any || {};
+        const sanitizedSocials = {
+            twitter: typeof rawSocials.twitter === 'string' ? rawSocials.twitter : undefined,
+            telegram: typeof rawSocials.telegram === 'string' ? rawSocials.telegram : undefined,
+            website: typeof rawSocials.website === 'string' ? rawSocials.website : undefined,
+        };
+
+        return NextResponse.json({
+            ...enhancement,
+            socials: sanitizedSocials
+        });
     } catch (e) {
         return NextResponse.json({ error: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
     }

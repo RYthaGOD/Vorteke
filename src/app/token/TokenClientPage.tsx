@@ -147,6 +147,18 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                         ) : null}
                     </VortexPanel>
 
+                    {/* C1 Fix: High-fidelity Profile Banner */}
+                    {token?.bannerURI && (
+                        <VortexPanel className="vortex-mb-4 vortex-p-0 overflow-hidden vortex-banner-h" glowColor="cyan">
+                            <img
+                                src={token.bannerURI}
+                                alt={`${token.symbol} Official Banner`}
+                                className="vortex-image-cover vortex-full-size"
+                                onError={(e) => (e.currentTarget.style.display = 'none')}
+                            />
+                        </VortexPanel>
+                    )}
+
                     {token?.advancedMetrics?.transferFeeBps ? (
                         <div className="vortex-mb-4 vortex-p-4 vortex-bg-red vortex-bg-opacity-10 vortex-border vortex-border-vortex-red vortex-border-radius-md animate-pulse">
                             <div className="vortex-flex-start vortex-gap-3">
@@ -317,6 +329,16 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* Project Intel Brief (Enhanced Only) */}
+                                        {token.customDescription && (
+                                            <div className="vortex-mt-6 vortex-p-4 vortex-intel-brief vortex-border-radius-sm">
+                                                <div className="vortex-intel-title vortex-mb-2">PROJECT_INTEL_BRIEF</div>
+                                                <p className="vortex-text-xs vortex-text-muted leading-relaxed">
+                                                    {token.customDescription}
+                                                </p>
+                                            </div>
+                                        )}
 
                                         <div className="vortex-metric-card vortex-mt-4 vortex-relative">
                                             <span className="vortex-text-tiny vortex-text-muted">HOLDER_CONCENTRATION</span>

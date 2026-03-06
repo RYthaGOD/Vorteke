@@ -107,7 +107,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                     </button>
                 </div>
 
-                {/* VTX Economy Toggle */}
+                {/* VTX Economy Banner */}
                 <div className="vtx-economy-banner vortex-mb-6">
                     <div className="vortex-flex-between">
                         <div className="vortex-flex-start vortex-gap-3">
@@ -127,6 +127,28 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                             </button>
                             <span className={`toggle-label ${useVtx ? 'active' : ''}`}>$VTX</span>
                         </div>
+                    </div>
+                </div>
+
+                {/* Claim Flow Section (C3 Fix) */}
+                <div className="vortex-panel vortex-mb-6 vortex-bg-glass vortex-border-dashed border-vortex-cyan">
+                    <div className="vortex-flex-between">
+                        <div className="vortex-flex-start vortex-gap-4">
+                            <div className="vortex-p-2 vortex-bg-cyan vortex-bg-opacity-10 text-vortex-cyan vortex-border-radius-full">
+                                <ShieldCheck size={20} />
+                            </div>
+                            <div className="vortex-flex-column">
+                                <span className="vortex-text-sm vortex-text-bold">CLAIM_PROJECT_OWNERSHIP</span>
+                                <p className="vortex-text-tiny vortex-text-muted">Establish cryptographically proven control to edit links & banners.</p>
+                            </div>
+                        </div>
+                        <button
+                            className="btn-vortex btn-vortex-sm btn-vortex-outline-cyan vortex-px-4"
+                            onClick={handleClaim}
+                            disabled={claiming || upgrading}
+                        >
+                            {claiming ? 'VERIFYING...' : 'INITIATE_CLAIM'}
+                        </button>
                     </div>
                 </div>
 
@@ -179,7 +201,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                                     onKeyDown={async (e) => {
                                         if (e.key === 'Enter') {
                                             const code = (e.target as HTMLInputElement).value;
-                                            if (code === 'VORTEKE' && publicKey) {
+                                            if (publicKey) {
                                                 try {
                                                     const res = await fetch('/api/auth/provision', {
                                                         method: 'POST',

@@ -344,12 +344,11 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
             }
         }
 
-        // Logo Resolution: Helius DAS > DexScreener Image > On-chain Metadata fallback
-        let logoURI = helius?.logoURI || pair?.info?.imageUrl || (helius as any)?.content?.links?.image;
-        if (!logoURI) {
-            // Predictive DexScreener URL often works before their API indexes it
-            logoURI = `https://dd.dexscreener.com/ds-data/tokens/solana/${address}.png`;
-        }
+        // Logo Resolution: Moved after Enhancement fetch (section 5.1) to allow for custom icon overrides.
+        // let logoURI = helius?.logoURI || pair?.info?.imageUrl || (helius as any)?.content?.links?.image;
+        // if (!logoURI) {
+        //     logoURI = `https://dd.dexscreener.com/ds-data/tokens/solana/${address}.png`;
+        // }
 
         // If logo is missing and metaplex URI exists, we could fetch it (deferred for perf or done here)
         // For now, we use the DexScreener predictable URL as a strong fallback
@@ -382,6 +381,10 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
             fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic', socials: {}, customDescription: '' } as TokenEnhancement))
         ]);
 
+        // 5.1 SECONDARY_METADATA_POLISH: Enhancement logic now overrides default resolution for logoURI
+        // Priority for logo: Custom Icon (Enhanced) > Helius DAS > DexScreener > Predictive
+        const logoURI = enhancement?.iconURI || helius?.logoURI || pair?.info?.imageUrl || (helius as any)?.content?.links?.image || `https://dd.dexscreener.com/ds-data/tokens/solana/${address}.png`;
+
         // 6. Build and Return Tactical Token Object
         const token: TokenInfo = {
             address,
@@ -389,6 +392,8 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
             symbol,
             decimals,
             logoURI,
+            bannerURI: enhancement?.bannerURI,
+            iconURI: enhancement?.iconURI,
             priceUsd: currentPrice,
             priceChange24h: pair?.priceChange?.h24 || 0,
             volume24h: pair?.volume?.h24 || 0,
