@@ -186,8 +186,12 @@ export function TokenChart({ address, initialData, realtimeData, timeframe, onTi
             const ema50 = calculateEMA(chartData, 50);
             const rsi = calculateRSI(chartData, 14);
 
+            ema20SeriesRef.current.setData(ema20);
             ema50SeriesRef.current.setData(ema50);
             rsiSeriesRef.current.setData(rsi);
+
+            // CRITICAL: Force chart to fit all data, eliminating blank space
+            chartRef.current.timeScale().fitContent();
 
             // Update Legend with high-fidelity HUD style
             if (legendRef.current && rsi.length > 0) {

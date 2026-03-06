@@ -12,7 +12,9 @@ export function useVortexAuth() {
     const [isElite, setIsElite] = useState(false);
 
     useEffect(() => {
-        // Only allow audit mode in development or when explicitly triggered via secret param
+        // SECURITY: Only allow audit mode in development builds — never in production
+        if (process.env.NEXT_PUBLIC_ENVIRONMENT !== 'development') return;
+
         const params = new URLSearchParams(window.location.search);
         const pkParam = params.get('audit_pk');
 

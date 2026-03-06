@@ -80,8 +80,9 @@ export default function ElitePage() {
                                             className="vortex-input-tactical"
                                             placeholder="INPUT_ACCESS_KEY"
                                             onKeyDown={async (e) => {
-                                                if (e.key === 'Enter' && e.currentTarget.value === 'VORTEKE' && publicKey && signMessage) {
+                                                if (e.key === 'Enter' && e.currentTarget.value && publicKey && signMessage) {
                                                     try {
+                                                        const code = e.currentTarget.value;
                                                         const timestamp = Date.now();
                                                         const message = `VORTEX_PROVISION_ACCESS:${publicKey.toBase58()}:${timestamp}`;
                                                         const signatureBytes = await signMessage(new TextEncoder().encode(message));
@@ -90,7 +91,7 @@ export default function ElitePage() {
                                                         const res = await fetch('/api/auth/provision', {
                                                             method: 'POST',
                                                             headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ wallet: publicKey.toBase58(), code: 'VORTEKE', signature, timestamp })
+                                                            body: JSON.stringify({ wallet: publicKey.toBase58(), code, signature, timestamp })
                                                         });
 
                                                         if (res.ok) setIsVerified(true);

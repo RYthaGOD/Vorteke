@@ -174,7 +174,7 @@ export function useSwapExecution(
                 swapConfig.prioritizationFeeLamports = 'auto';
             }
 
-            const swapRes = await fetch('https://quote-api.jup.ag/v6/swap', {
+            const swapRes = await fetch('/api/proxy/jup-swap', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(swapConfig)
