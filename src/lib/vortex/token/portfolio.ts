@@ -23,13 +23,12 @@ export const getQuickRecon = async (tokenOrAddress: string | TokenInfo): Promise
     const address = typeof tokenOrAddress === 'string' ? tokenOrAddress : tokenOrAddress.address;
     const info = typeof tokenOrAddress === 'string' ? await fetchTokenData(tokenOrAddress) : tokenOrAddress;
 
-    const [bundle, lp, enhancement] = await Promise.all([
+    const [bundle, lp, enhancement, sentiment] = await Promise.all([
         detectBundle(address).catch(() => ({ isBundled: false, percentage: 0, riskLevel: 'LOW' as const })),
         verifyLPBurn(address).catch(() => 'unverified' as const),
-        fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic' as const, socials: {}, customDescription: '' }))
+        fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic' as const, socials: {}, customDescription: '' })),
+        getSocialSentiment(address, info.volume24h, info.priceChange24h, info.liquidityUsd).catch(() => ({ score: 50, hypeLevel: 'DORMANT' as const }))
     ]);
-
-    const sentiment = await getSocialSentiment(address, info.volume24h, info.priceChange24h, info.liquidityUsd).catch(() => ({ score: 50, hypeLevel: 'DORMANT' as const }));
 
     return {
         ...info,
@@ -55,8 +54,9 @@ export const getQuickRecon = async (tokenOrAddress: string | TokenInfo): Promise
 
 /**
  * Fetches user token holdings and resolves their metadata.
+ * Tier-based scaling: Basic users see 10, Elite users see 40.
  */
-export const getUserPortfolio = async (userPublicKey: string): Promise<PortfolioItem[]> => {
+export const getUserPortfolio = async (userPublicKey: string, isElite: boolean = false): Promise<PortfolioItem[]> => {
     if (!userPublicKey) return [];
 
     try {
@@ -68,17 +68,19 @@ export const getUserPortfolio = async (userPublicKey: string): Promise<Portfolio
                 programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
             })),
             getResilientConnection(c => c.getParsedTokenAccountsByOwner(pubkey, {
-                programId: new PublicKey('TokenzQ9bzh9P8xN9m4K5Ad13q6pB3fbtgGfGTo2f8f')
+                // FIX: Corrected Token-2022 program ID (was truncated/incorrect)
+                programId: new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
             })).catch(() => ({ value: [] })) // Fallback for nodes that don't support it
         ]);
 
         const allAccounts = [...splAccounts.value, ...spl2022Accounts.value];
+        const limit = isElite ? 40 : 10;
 
         // 2. Resolve Metadata in optimized parallel batches
         const holdings = await Promise.all(
             allAccounts
                 .filter(acc => (acc.account.data as any).parsed.info.tokenAmount.uiAmount > 0)
-                .slice(0, 40)
+                .slice(0, limit)
                 .map(async (acc) => {
                     const info = (acc.account.data as any).parsed.info;
                     const mint = info.mint;

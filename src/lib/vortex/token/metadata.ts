@@ -11,6 +11,9 @@ export interface HeliusAsset {
     attributes?: any[];
     decimals: number;
     priceUsd: number;
+    mintAuthority?: string;
+    freezeAuthority?: string;
+    supply?: number;
 }
 
 /**
@@ -42,7 +45,10 @@ export const fetchHeliusMetadata = async (address: string): Promise<HeliusAsset 
             description: result.content?.metadata?.description,
             attributes: result.content?.metadata?.attributes,
             decimals: result.token_info?.decimals || 9,
-            priceUsd: result.token_info?.price_info?.price_per_token || 0
+            priceUsd: result.token_info?.price_info?.price_per_token || 0,
+            mintAuthority: result.token_info?.mint_authority,
+            freezeAuthority: result.token_info?.freeze_authority,
+            supply: result.token_info?.supply
         };
     } catch (e) {
         console.warn("HELIUS_DAS_FAILURE:", e);

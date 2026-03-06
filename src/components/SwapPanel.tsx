@@ -21,6 +21,7 @@ interface QuoteInfo {
     feeBps: number;
 }
 
+import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { useSwapBalances, useSwapQuote, useSwapExecution } from '@/hooks/useSwap';
 
 export function SwapPanel({ token, notify }: SwapPanelProps) {
@@ -31,11 +32,21 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
     const [showHighImpactWarning, setShowHighImpactWarning] = useState(false);
     const highImpactConfirmed = useRef(false);
 
+    const { isElite } = useVortexAuth();
     const { balance, tokenBalance } = useSwapBalances(token);
     const { quote, dflowQuote, loading } = useSwapQuote(token, amount, slippage, swapMode);
-    const { executeSwap, executing, execStatus, isElite } = useSwapExecution(token, notify);
+    // FIX: Pass isElite from useVortexAuth instead of letting useSwapExecution re-fetch it
+    const { executeSwap, executing, execStatus } = useSwapExecution(token, notify, isElite);
+
+    const { connected } = useWallet();
 
     const handleExecute = async () => {
+        if (!connected) {
+            notify('error', 'AUTHORIZATION_REQUIRED: Connect wallet to execute order.');
+            // Add subtle haptic/visual feedback if needed, but notify is core
+            return;
+        }
+
         if (quote && quote.priceImpact > 15 && !highImpactConfirmed.current) {
             setShowHighImpactWarning(true);
             return;
@@ -47,6 +58,7 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
             highImpactConfirmed.current = false;
         }
     };
+
 
     return (
         <VortexPanel

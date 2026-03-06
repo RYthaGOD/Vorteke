@@ -34,6 +34,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'MISSING_ADDRESS' }, { status: 400 });
         }
 
+        // FIX: Validate that the address is a real Solana public key before upsert
+        try { new PublicKey(token.address); } catch {
+            return NextResponse.json({ error: 'INVALID_SOLANA_ADDRESS' }, { status: 400 });
+        }
+
         const data = {
             name: token.name || 'Unknown',
             symbol: token.symbol || 'UNK',
@@ -65,3 +70,4 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
     }
 }
+

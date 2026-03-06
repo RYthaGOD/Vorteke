@@ -2,6 +2,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 // @ts-ignore
 import nacl from 'tweetnacl';
 import { RPC_ENDPOINTS, PROTECTED_MINT_ADDRESSES, TREASURY_ENHANCEMENTS } from './constants';
+import { getResilientConnection } from './solana/connection';
 
 export type TokenTier = 'Basic' | 'Enhanced' | 'Elite' | 'DeepScan';
 
@@ -36,8 +37,8 @@ const saveEnhancements = (data: Record<string, TokenEnhancement>) => {
 
 // Default system enhancements
 const DEFAULT_ENHANCEMENTS: Record<string, TokenEnhancement> = {
-    'JUPyiwrYPRnK3B9kR4A9p7YQ8vLwK2qNCjY7MkW99Ld': {
-        address: 'JUPyiwrYPRnK3B9kR4A9p7YQ8vLwK2qNCjY7MkW99Ld',
+    'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': {
+        address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
         tier: 'Elite',
         socials: { twitter: 'https://x.com/JupiterExchange', website: 'https://jup.ag' },
         customDescription: 'The giant of Solana liquidity. Unified routing for every token.'
@@ -52,8 +53,6 @@ export const verifyEliteAccess = async (walletAddress: string): Promise<boolean>
     try {
         if (!walletAddress) return false;
         const pubkey = new PublicKey(walletAddress);
-        const endpoint = RPC_ENDPOINTS[0] || 'https://api.mainnet-beta.solana.com';
-        const conn = new Connection(endpoint, 'confirmed');
 
         // 1. Check for temporary internal access (Test/Promo bypass)
         try {
@@ -66,10 +65,12 @@ export const verifyEliteAccess = async (walletAddress: string): Promise<boolean>
             console.warn("INTERNAL_ELITE_CHECK_FAILED, falling back to on-chain...");
         }
 
-        // 2. Check for specific SPL Token holding (VORTEX Pass)
-        const tokens = await conn.getParsedTokenAccountsByOwner(pubkey, {
-            programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
-        });
+        // 2. FIX: Use getResilientConnection instead of bare new Connection()
+        const tokens = await getResilientConnection(c =>
+            c.getParsedTokenAccountsByOwner(pubkey, {
+                programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+            })
+        );
 
         const hasPass = tokens.value.some(t => {
             const info = t.account.data.parsed.info;
@@ -84,6 +85,8 @@ export const verifyEliteAccess = async (walletAddress: string): Promise<boolean>
     }
 };
 
+// FIX: Bounded LRU cache — max 100 entries to prevent unbounded memory growth
+const ENHANCEMENT_CACHE_MAX = 100;
 const enhancementCache = new Map<string, { data: TokenEnhancement, timestamp: number }>();
 
 /**
@@ -101,6 +104,12 @@ export const fetchTokenEnhancement = async (address: string): Promise<TokenEnhan
         const data = await res.json();
 
         const result = data || DEFAULT_ENHANCEMENTS[address] || { address, tier: 'Basic' as TokenTier };
+
+        // Enforce cache size cap: evict oldest entry if over limit
+        if (enhancementCache.size >= ENHANCEMENT_CACHE_MAX) {
+            const oldestKey = enhancementCache.keys().next().value;
+            if (oldestKey) enhancementCache.delete(oldestKey);
+        }
         enhancementCache.set(address, { data: result, timestamp: Date.now() });
         return result;
     } catch (e) {
@@ -165,11 +174,13 @@ export const purchaseDeepScan = async (address: string, wallet: string): Promise
         }
 
         const scanFeeSol = 0.02; // Flat 0.02 SOL for Deep Scan
+        // FIX: Convert to lamports (was sending raw float 0.02 which Math.floor'd to 0 = free scan exploit)
+        const scanFeeLamports = Math.floor(scanFeeSol * 1_000_000_000);
 
         const resp = await fetch('/api/pay/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wallet, amount: scanFeeSol, address, tier: 'DeepScan' })
+            body: JSON.stringify({ wallet, amount: scanFeeLamports, address, tier: 'DeepScan' })
         });
 
         if (!resp.ok) throw new Error("PAYMENT_INIT_FAILED");

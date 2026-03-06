@@ -5,6 +5,23 @@ import { prisma } from '@/lib/prisma';
 // Server-side cache to prevent upstream flooding during local dev
 let discoveryCache: Record<string, { data: any; timestamp: number }> = {};
 const CACHE_TTL = 30000; // 30 seconds
+const CACHE_MAX_KEYS = 20; // Max 20 keys to prevent unbounded memory growth
+
+// Prune stale or excess cache entries
+const pruneCache = () => {
+    const now = Date.now();
+    const keys = Object.keys(discoveryCache);
+    // Remove TTL-expired entries
+    keys.forEach(k => { if (now - discoveryCache[k].timestamp > CACHE_TTL) delete discoveryCache[k]; });
+    // If still over max, remove oldest
+    const remaining = Object.keys(discoveryCache);
+    if (remaining.length > CACHE_MAX_KEYS) {
+        remaining
+            .sort((a, b) => discoveryCache[a].timestamp - discoveryCache[b].timestamp)
+            .slice(0, remaining.length - CACHE_MAX_KEYS)
+            .forEach(k => delete discoveryCache[k]);
+    }
+};
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -139,7 +156,54 @@ export async function GET(req: NextRequest) {
                     geckoPath = 'networks/solana/trending_pools';
                     break;
                 }
-            case 'losers': geckoPath = 'networks/solana/trending_pools'; break;
+            case 'losers':
+                try {
+                    // FIX: Fetch real losers via DexScreener (mirrors Gainers but sorted ascending)
+                    const loserRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', {
+                        next: { revalidate: 60 }
+                    } as any);
+                    if (!loserRes.ok) throw new Error('LOSER_FETCH_FAIL');
+                    const loserProfileData = await loserRes.json();
+
+                    const loserAddresses = (loserProfileData || [])
+                        .filter((t: any) => t.chainId === 'solana' && t.tokenAddress)
+                        .slice(0, 30)
+                        .map((t: any) => t.tokenAddress)
+                        .join(',');
+
+                    if (!loserAddresses) throw new Error('NO_LOSER_ADDRS');
+
+                    const loserPairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${loserAddresses}`, {
+                        next: { revalidate: 60 }
+                    } as any);
+                    const loserPairsData = await loserPairsRes.json();
+
+                    const seenLosers = new Set();
+                    const loserTokens = (loserPairsData.pairs || [])
+                        .filter((p: any) => p.chainId === 'solana' && !seenLosers.has(p.baseToken.address) && seenLosers.add(p.baseToken.address))
+                        // Sort ASCENDING (biggest losers first)
+                        .sort((a: any, b: any) => (a.priceChange?.h24 || 0) - (b.priceChange?.h24 || 0))
+                        .slice(0, 25)
+                        .map((p: any) => ({
+                            address: p.baseToken.address,
+                            name: p.baseToken.name,
+                            symbol: p.baseToken.symbol,
+                            priceUsd: parseFloat(p.priceUsd || '0'),
+                            priceChange24h: p.priceChange?.h24 || 0,
+                            volume24h: p.volume?.h24 || 0,
+                            liquidityUsd: p.liquidity?.usd || 0,
+                            mcap: p.fdv || 0,
+                            logoURI: p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${p.baseToken.address}.png`,
+                            securityTags: ['LOSER', 'DECLINING_SIGNAL']
+                        }));
+
+                    discoveryCache[cacheKey] = { data: loserTokens, timestamp: Date.now() };
+                    return NextResponse.json(loserTokens);
+                } catch (e) {
+                    console.warn("LOSERS_FETCH_FAIL, falling back to trending sorted", e);
+                    geckoPath = 'networks/solana/trending_pools';
+                    break;
+                }
             default: geckoPath = 'networks/solana/trending_pools';
         }
 
@@ -266,7 +330,8 @@ export async function GET(req: NextRequest) {
             filteredTokens.sort((a, b) => a.priceChange24h - b.priceChange24h);
         }
 
-        // 4. Update Cache & Return
+        // 4. Update Cache & Return (prune before writing to enforce size cap)
+        pruneCache();
         discoveryCache[cacheKey] = { data: filteredTokens, timestamp: Date.now() };
         return NextResponse.json(filteredTokens);
 

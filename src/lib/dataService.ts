@@ -205,14 +205,17 @@ export const formatCurrency = (val: number, minimumDecimals: number = 2) => {
     if (val === 0) return '$0.00';
 
     // Industrial-grade dynamic decimal resolution for memecoins
-    // If the value is very small, we find the first non-zero digit
     let decimals = minimumDecimals;
     if (val < 1) {
         const str = val.toFixed(20);
         const match = str.match(/0\.0*[1-9]/);
         if (match) {
             const leadingZeros = match[0].length - 3; // count zeros after decimal point
+            // FIX: Ensure at least 4 significant digits for values 0.01-0.99 that have no leading zeros
             decimals = Math.max(minimumDecimals, leadingZeros + 4);
+        } else {
+            // For values like 0.15, 0.99 — show at least 4 decimal places for precision
+            decimals = Math.max(minimumDecimals, 4);
         }
     }
 
@@ -403,13 +406,13 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
             },
             advancedMetrics: {
                 top10HolderPercent: (holderIntel as any).top10Percent || 0,
-                devWalletStatus: 'holding', // In production, this would scan the deployer wallet balance
+                devWalletStatus: helius?.mintAuthority ? 'holding' : 'burnt',
                 lpBurnStatus: lp,
                 slippage1k: 0.5,
                 slippage10k: 2.5,
                 snipeVolumePercent: bundle.percentage,
-                mintAuthority: parsedData?.mintAuthority ? 'active' : 'renounced',
-                freezeAuthority: parsedData?.freezeAuthority ? 'active' : 'renounced',
+                mintAuthority: helius?.mintAuthority ? 'active' : 'renounced',
+                freezeAuthority: helius?.freezeAuthority ? 'active' : 'renounced',
                 metadataMutable: true,
                 transferFeeBps,
                 holderIntelligence: holderIntel,
@@ -424,7 +427,7 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
                     sellPercent: (sentiment.score <= 50) ? Math.min(95, 100 - sentiment.score + 10) : 50
                 }
             },
-            isSafe: lp === 'verified' && parsedData?.mintAuthority === undefined && ((holderIntel as any).top10Percent ?? 0) < 40
+            isSafe: lp === 'verified' && !helius?.mintAuthority && ((holderIntel as any).top10Percent ?? 0) < 40
         };
 
         // 7. Sync to Vortex Indexer (Background)
@@ -487,9 +490,6 @@ const getVortexTransaction = async (signature: string, tokenAddress: string): Pr
                 labels
             };
 
-            // Re-fetch blockTime if possible (expensive but more accurate)
-            const txDetails = await getResilientConnection(c => c.getSignatureStatuses([signature])) as any;
-
             transactionCache.set(signature, vTx);
             addToCache(signature, vTx);
             return vTx;
@@ -530,9 +530,10 @@ export const subscribeToLiveStream = (address: string, onTx: (tx: VortexTx) => v
                 pubkey,
                 async (logs, ctx) => {
                     if (!isActive || (typeof document !== 'undefined' && document.visibilityState === 'hidden') || processedSigs.has(logs.signature)) return;
-                    processedSigs.add(logs.signature);
 
-                    if (processedSigs.size > 1000) {
+                    // GLOBAL_FIX: Cap module-level processedSigs (was growing indefinitely)
+                    processedSigs.add(logs.signature);
+                    if (processedSigs.size > 5000) {
                         const firstSig = processedSigs.values().next().value;
                         if (firstSig) processedSigs.delete(firstSig);
                     }
@@ -561,6 +562,10 @@ export const subscribeToLiveStream = (address: string, onTx: (tx: VortexTx) => v
 
             backoffDelay = 2000; // Reset on success
             // console.debug(`WEBSOCKET_ENGAGED: Subscribed to ${address} logs.`);
+
+            // ELITE UX OVERRIDE: Pre-fetch historical transactions immediately so the UI doesn't hang
+            fetchHistoricalSignatures();
+
         } catch (e) {
             if (isActive) {
                 console.warn("WEBSOCKET_SUSPENDED: RPC uplink rejected connection. Retrying...", e);
@@ -568,6 +573,24 @@ export const subscribeToLiveStream = (address: string, onTx: (tx: VortexTx) => v
                 pollInterval = setTimeout(startSubscription, backoffDelay);
                 backoffDelay = Math.min(backoffDelay * 2, 60000);
             }
+        }
+    };
+
+    const fetchHistoricalSignatures = async () => {
+        if (!isActive) return;
+        try {
+            const pk = new PublicKey(address);
+            const sigs = await getResilientConnection(c => c.getSignaturesForAddress(pk, { limit: 15 }));
+
+            for (const sigInfo of sigs.reverse()) {
+                if (!processedSigs.has(sigInfo.signature)) {
+                    processedSigs.add(sigInfo.signature);
+                    const tx = await getVortexTransaction(sigInfo.signature, address);
+                    if (tx && isActive) onTx(tx);
+                }
+            }
+        } catch (e) {
+            console.warn("HISTORICAL_FETCH_FAILURE:", e);
         }
     };
 

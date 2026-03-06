@@ -52,16 +52,19 @@ export function FeatureCards() {
                         title={f.title}
                         subTitle="SYSTEM_MODULE"
                         glowColor={f.color as any}
+                        variant="glass"
+                        showCorners={true}
                     >
                         <div className="feature-content">
                             <div className="feature-icon">
                                 {f.icon}
                             </div>
-                            <p>{f.description}</p>
+                            <p className="vortex-text-xs vortex-text-muted">{f.description}</p>
                         </div>
                     </VortexPanel>
                 </div>
             ))}
+
 
             <style jsx>{`
                 .features-grid {

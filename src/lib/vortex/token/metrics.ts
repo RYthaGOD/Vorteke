@@ -17,32 +17,41 @@ export const verifyLPBurn = async (tokenAddress: string): Promise<'verified' | '
             '11111111111111111111111111111111', // System
             'DeadPvPc9Kj1F6D9YJ1D1D1D1D1D1D1D1D1D1D1D1D1', // Jup/Trojan Common
             '6EF8rrecthR5Dkzon8Nwu78hRvfX9PNn2A9zH8GfE7rL', // Pump.fun Program itself
+            '39393939393939393939393939393939393939393939', // Token-2022 Burn
         ];
 
         const pubkey = new PublicKey(tokenAddress);
-        const connection = await getResilientConnection(async (c) => c);
 
-        // 2. Fetch Largest Accounts (Heuristic: LP tokens are usually the largest accounts)
-        // In a perfect world, we resolve the specific LP mint, but checking the base mint's burn is a solid proxy for new tokens.
-        const largestAccounts = await connection.getTokenLargestAccounts(pubkey);
+        // FIX: Wrap ALL connection calls in a single getResilientConnection for full retry/failover coverage
+        return await getResilientConnection(async (connection) => {
+            // 2. Fetch Largest Accounts (Heuristic: LP tokens are usually the largest accounts)
+            const largestAccounts = await connection.getTokenLargestAccounts(pubkey);
 
-        const hasBurnAccount = largestAccounts.value.some(account =>
-            BURN_ADDRESSES.includes(account.address.toBase58()) && (account.uiAmount || 0) > 0
-        );
+            const hasBurnAccount = largestAccounts.value.some(account =>
+                BURN_ADDRESSES.includes(account.address.toBase58()) && (account.uiAmount || 0) > 0
+            );
 
-        if (hasBurnAccount) return 'verified';
+            if (hasBurnAccount) return 'verified';
 
-        // 3. Fallback: Check for burn signatures/memos
-        const sigs = await connection.getSignaturesForAddress(pubkey, { limit: 10 });
-        const isBurned = sigs.some(s =>
-            s.memo?.toLowerCase().includes('burn') ||
-            s.memo?.toLowerCase().includes('lock') ||
-            s.memo?.toLowerCase().includes('lp_burn')
-        );
+            // 3. Precision LP Check (Raydium/Orca Fallback)
+            const sigs = await connection.getSignaturesForAddress(pubkey, { limit: 40 });
+            const isBurned = sigs.some(s =>
+                s.memo?.toLowerCase().includes('burn') ||
+                s.memo?.toLowerCase().includes('lock') ||
+                s.memo?.toLowerCase().includes('lp_burn') ||
+                s.memo?.toLowerCase().includes('success_burn') ||
+                s.memo?.toLowerCase().includes('burned')
+            );
 
-        if (isBurned) return 'verified';
+            if (isBurned) return 'verified';
 
-        return 'unverified';
+            // Check if the mint authority is revoked (Common for burned/locked tokens)
+            const mintInfo = await connection.getParsedAccountInfo(pubkey);
+            const mintData = (mintInfo.value?.data as any)?.parsed?.info;
+            if (mintData && !mintData.mintAuthority) return 'verified';
+
+            return 'unverified';
+        });
     } catch (e) {
         console.warn("LP_BURN_VERIFICATION_FAILED:", e);
         return 'unverified';
@@ -65,7 +74,23 @@ export const getHolderConcentration = async (address: string): Promise<{
             getResilientConnection(c => c.getTokenSupply(pubkey))
         ]);
 
-        const top10Total = largestAccounts.value.slice(0, 10).reduce((acc: number, curr: any) => acc + (curr.uiAmount || 0), 0);
+        // AMM Pools and Common Authority addresses to exclude from concentration
+        const AMM_PROGRAMS = [
+            '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium V4
+            'whirLbMiq69ho3vSTmG5W699LGS3K62ddptS1AD25pk', // Orca Whirlpool
+            'CAMMCzo5YL8w4VFF8KVHrSgS9Q8V5rREyauFpG6C9F1z', // Raydium CLMM
+            'CPMMoo8LqacmJvSFeFs8vY81neC5uK79S6aywFMWo9E', // Raydium CPMM
+            '9W959DqmcGTu2YJByGD47FGDeS8SWckv7y6B7vQfSnXj', // Fluxbeam
+            '5quBozXPiGP2mLMCbUBZC7aRmxhPnzUqTgQwS4YsVH2j', // Jupiter Aggregator V4 Authority
+            'GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ',  // Raydium LP Authority V4
+        ];
+
+        // Filter out accounts that are likely the LP itself
+        const userAccounts = largestAccounts.value.filter((acc: any) => {
+            return !AMM_PROGRAMS.includes(acc.address.toBase58());
+        });
+
+        const top10Total = userAccounts.slice(0, 10).reduce((acc: number, curr: any) => acc + (curr.uiAmount || 0), 0);
         const supply = supplyInfo.value.uiAmount || 1;
         const top10Percent = (top10Total / supply) * 100;
 

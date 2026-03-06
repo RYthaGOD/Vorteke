@@ -13,7 +13,7 @@ export function MobileNav() {
                 onClick={() => router.push('/')}
                 className={`mobile-nav-item ${pathname === '/' ? 'active' : ''}`}
             >
-                <LayoutDashboard size={22} className="vortex-mb-1" />
+                <LayoutDashboard size={22} className="vortex-mb-1 vortex-tactical-icon" />
                 <span>HUB</span>
             </button>
             <button
@@ -26,14 +26,14 @@ export function MobileNav() {
                 }}
                 className="mobile-nav-item"
             >
-                <Search size={22} className="vortex-mb-1" />
+                <Search size={22} className="vortex-mb-1 vortex-tactical-icon" />
                 <span>SCAN</span>
             </button>
             <button
                 className="mobile-nav-item"
                 onClick={() => router.push('/?tab=portfolio')}
             >
-                <Wallet size={22} className="vortex-mb-1" />
+                <Wallet size={22} className="vortex-mb-1 vortex-tactical-icon" />
                 <span>ASSETS</span>
             </button>
             <button
@@ -47,9 +47,10 @@ export function MobileNav() {
                     }
                 }}
             >
-                <Zap size={22} className="vortex-mb-1" />
+                <Zap size={22} className="vortex-mb-1 vortex-tactical-icon" />
                 <span>ELITE</span>
             </button>
+
         </nav>
     );
 }

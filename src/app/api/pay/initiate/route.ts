@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { createBurnInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
 import { TREASURY_ENHANCEMENTS, RPC_ENDPOINTS, VTX_MINT } from '@/lib/constants';
+import { getResilientConnection } from '@/lib/solana/connection';
 
 export async function POST(request: NextRequest) {
     try {
@@ -9,6 +10,12 @@ export async function POST(request: NextRequest) {
 
         if (!wallet || (typeof amount !== 'number') || !address || !tier) {
             return NextResponse.json({ error: 'MISSING_PARAMETERS' }, { status: 400 });
+        }
+
+        // FIX: Validate tier against allowlist to prevent spoofed values
+        const VALID_TIERS = ['Enhanced', 'Elite', 'DeepScan'];
+        if (!VALID_TIERS.includes(tier)) {
+            return NextResponse.json({ error: 'INVALID_TIER' }, { status: 400 });
         }
 
         try {
@@ -19,12 +26,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'INVALID_SOLANA_ADDRESS' }, { status: 400 });
         }
 
-        const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY || RPC_ENDPOINTS[0];
-        const connection = new Connection(endpoint, 'confirmed');
+        // FIX: Use getResilientConnection instead of bare new Connection()
+        const { blockhash } = await getResilientConnection(c => c.getLatestBlockhash());
         const fromPubkey = new PublicKey(wallet);
-
-        const { blockhash } = await connection.getLatestBlockhash();
         const transaction = new Transaction();
+
 
         if (isVtx && VTX_MINT) {
             const mintPubkey = new PublicKey(VTX_MINT);

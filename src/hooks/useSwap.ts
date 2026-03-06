@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Connection, LAMPORTS_PER_SOL, PublicKey, VersionedTransaction, TransactionMessage, AddressLookupTableAccount, SystemProgram } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { TokenInfo } from '@/lib/dataService';
+import { TokenInfo, throttledFetch } from '@/lib/dataService';
 import { JUPITER_QUOTE_API, SOL_MINT, TREASURY_SWAPS, PROTOCOL_FLAT_FEE_LAMPORTS, JITO_TIP_ACCOUNTS, JITO_DEFAULT_TIP_LAMPORTS } from '@/lib/constants';
 import { getDflowQuote, DflowQuote } from '@/lib/solana/dflowService';
 import { verifyEliteAccess } from '@/lib/monetizationService';
@@ -124,24 +124,18 @@ export function useSwapQuote(
 
 /**
  * Hook for managing transaction execution flow.
+ * FIX: Removed internal verifyEliteAccess call — isElite now comes from the parent
+ * which already has it from useVortexAuth. Eliminates duplicate RPC round-trip.
  */
 export function useSwapExecution(
     token: TokenInfo,
-    notify: (type: 'success' | 'error' | 'info', msg: string) => void
+    notify: (type: 'success' | 'error' | 'info', msg: string) => void,
+    isElite: boolean = false
 ) {
     const { connection } = useConnection();
     const { publicKey, signTransaction } = useWallet();
     const [executing, setExecuting] = useState(false);
     const [execStatus, setExecStatus] = useState('');
-    const [isElite, setIsElite] = useState(false);
-
-    useEffect(() => {
-        if (publicKey) {
-            verifyEliteAccess(publicKey.toString()).then(setIsElite);
-        } else {
-            setIsElite(false);
-        }
-    }, [publicKey]);
 
     const executeSwap = async (
         amount: string,

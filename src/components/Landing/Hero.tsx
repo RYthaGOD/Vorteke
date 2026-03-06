@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, ShieldCheck, Zap, Activity } from 'lucide-react';
+import { VortexLogo } from '@/components/DesignSystem';
 
 export function Hero() {
     const router = useRouter();
@@ -16,9 +17,14 @@ export function Hero() {
             </div>
 
             <div className="hero-content">
+                <div className="vortex-mb-8">
+                    <VortexLogo size="hero" showLabel={true} />
+                </div>
+
                 <div className="vanguard-badge">
-                    <ShieldCheck size={14} className="text-vortex-cyan" />
-                    <span>PROTOCOL_V8_ACTIVE</span>
+
+                    <ShieldCheck size={14} className="text-vortex-yellow" />
+                    <span>PROTOCOL_VTX_V9_ACTIVE</span>
                 </div>
 
                 <h1 className="hero-title glitch-text" data-text="MASTER_THE_SINGULARITY">
@@ -27,8 +33,8 @@ export function Hero() {
                 </h1>
 
                 <p className="hero-description">
-                    The ultimate industrial-grade trading interface for the Solana network.
-                    Real-time reconnaissance, automated safety scrutiny, and elite portfolio intelligence.
+                    The ultimate industrial-grade reconnaissance interface for the Solana network.
+                    Real-time telemetry, automated safety scrutiny, and elite portfolio intelligence.
                 </p>
 
                 <div className="hero-actions">
@@ -36,7 +42,7 @@ export function Hero() {
                         className="btn-vortex btn-vortex-primary btn-hero-main"
                         onClick={() => router.push('/terminal')}
                     >
-                        ACCESS_TERMINAL <ChevronRight size={20} />
+                        LAUNCH_TERMINAL <ChevronRight size={20} />
                     </button>
                     <button className="btn-vortex btn-vortex-secondary btn-hero-alt">
                         VIEW_RECON_DOCS
@@ -46,17 +52,17 @@ export function Hero() {
                 <div className="hero-stats">
                     <div className="stat-item">
                         <span className="stat-value text-vortex-cyan">0.2s</span>
-                        <span className="stat-label">LATENCY</span>
+                        <span className="stat-label">DISCOVERY_LATENCY</span>
                     </div>
                     <div className="divider"></div>
                     <div className="stat-item">
                         <span className="stat-value text-vortex-yellow">100%</span>
-                        <span className="stat-label">VERIFIED_LP</span>
+                        <span className="stat-label">BURN_PROTOCOL</span>
                     </div>
                     <div className="divider"></div>
                     <div className="stat-item">
-                        <span className="stat-value">50%</span>
-                        <span className="stat-label">$VTX_DISCOUNT</span>
+                        <span className="stat-value text-vortex-gold">50%</span>
+                        <span className="stat-label">$VTX_YIELD_LOCK</span>
                     </div>
                 </div>
             </div>
@@ -70,6 +76,7 @@ export function Hero() {
                     position: relative;
                     padding-top: 80px;
                     overflow: hidden;
+                    background: radial-gradient(circle at center, #0a0a0c 0%, #050506 100%);
                 }
 
                 .hero-background {
@@ -82,19 +89,25 @@ export function Hero() {
                     position: absolute;
                     inset: 0;
                     background-image: 
-                        linear-gradient(rgba(0, 255, 234, 0.05) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(0, 255, 234, 0.05) 1px, transparent 1px);
-                    background-size: 50px 50px;
+                        linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+                    background-size: 60px 60px;
                     background-position: center center;
                     perspective: 1000px;
-                    transform: rotateX(60deg) translateY(-200px);
-                    opacity: 0.3;
+                    transform: rotateX(60deg) translateY(-200px) translateZ(0);
+                    opacity: 0.4;
+                    animation: grid-drift 20s linear infinite;
+                }
+
+                @keyframes grid-drift {
+                    from { background-position: center 0; }
+                    to { background-position: center 60px; }
                 }
 
                 .radial-glow {
                     position: absolute;
                     inset: 0;
-                    background: radial-gradient(circle at center, rgba(0, 255, 234, 0.1) 0%, transparent 70%);
+                    background: radial-gradient(circle at center, rgba(0, 240, 255, 0.08) 0%, transparent 70%);
                 }
 
                 .scanline {
@@ -103,7 +116,7 @@ export function Hero() {
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: linear-gradient(to bottom, transparent 0%, rgba(0, 255, 234, 0.05) 50%, transparent 100%);
+                    background: linear-gradient(to bottom, transparent 0%, rgba(0, 240, 255, 0.03) 50%, transparent 100%);
                     background-size: 100% 4px;
                     animation: scan 10s linear infinite;
                     opacity: 0.2;
@@ -121,15 +134,17 @@ export function Hero() {
                     display: inline-flex;
                     align-items: center;
                     gap: 8px;
-                    background: rgba(0, 255, 234, 0.1);
-                    border: 1px solid rgba(0, 255, 234, 0.3);
-                    padding: 6px 14px;
-                    border-radius: 100px;
+                    background: rgba(229, 255, 0, 0.05);
+                    border: 1px solid rgba(229, 255, 0, 0.2);
+                    padding: 8px 16px;
+                    border-radius: 2px;
                     font-size: 11px;
-                    font-weight: 700;
+                    font-weight: 800;
                     letter-spacing: 2px;
-                    color: #00ffea;
+                    color: var(--accent-vortex-yellow);
                     margin-bottom: 40px;
+                    font-family: var(--font-hud);
+                    text-transform: uppercase;
                 }
 
                 .hero-title {
@@ -138,10 +153,11 @@ export function Hero() {
                     line-height: 0.95;
                     letter-spacing: -2px;
                     margin-bottom: 24px;
+                    font-family: var(--font-hud);
                 }
 
                 .hero-gradient {
-                    background: linear-gradient(90deg, #00ffea, #ff007a, #00ffea);
+                    background: linear-gradient(90deg, var(--accent-vortex-cyan), var(--accent-vortex-yellow), var(--accent-vortex-cyan));
                     background-size: 200% auto;
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
@@ -149,13 +165,15 @@ export function Hero() {
                 }
 
                 .hero-description {
-                    font-size: 20px;
-                    color: rgba(255, 255, 255, 0.6);
+                    font-size: 18px;
+                    color: rgba(255, 255, 255, 0.5);
                     line-height: 1.6;
                     margin-bottom: 48px;
-                    max-width: 700px;
+                    max-width: 650px;
                     margin-left: auto;
                     margin-right: auto;
+                    font-weight: 400;
+                    letter-spacing: 0.01em;
                 }
 
                 .hero-actions {
@@ -166,22 +184,30 @@ export function Hero() {
                 }
 
                 .btn-hero-main {
-                    height: 64px;
+                    height: 60px;
                     padding: 0 40px;
-                    font-size: 18px;
+                    font-size: 16px;
                     letter-spacing: 2px;
-                    background: #00ffea;
+                    background: var(--accent-vortex-yellow);
                     color: #000;
                     border: none;
+                    font-weight: 800;
                 }
 
                 .btn-hero-alt {
-                    height: 64px;
+                    height: 60px;
                     padding: 0 40px;
-                    font-size: 18px;
+                    font-size: 16px;
                     letter-spacing: 2px;
                     background: transparent;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    color: #fff;
+                }
+
+                .btn-hero-alt:hover {
+                    border-color: var(--accent-vortex-cyan);
+                    color: var(--accent-vortex-cyan);
+                    background: rgba(0, 240, 255, 0.05);
                 }
 
                 .hero-stats {
@@ -190,7 +216,7 @@ export function Hero() {
                     justify-content: center;
                     gap: 60px;
                     padding-top: 40px;
-                    border-top: 1px solid rgba(255, 255, 255, 0.1);
+                    border-top: 1px solid rgba(255, 255, 255, 0.05);
                 }
 
                 .stat-item {
@@ -203,19 +229,21 @@ export function Hero() {
                     font-size: 24px;
                     font-weight: 800;
                     letter-spacing: 1px;
+                    font-family: var(--font-hud);
                 }
 
                 .stat-label {
                     font-size: 10px;
                     font-weight: 700;
                     letter-spacing: 2px;
-                    color: rgba(255, 255, 255, 0.4);
+                    color: rgba(255, 255, 255, 0.3);
+                    text-transform: uppercase;
                 }
 
                 .divider {
                     width: 1px;
                     height: 40px;
-                    background: rgba(255, 255, 255, 0.1);
+                    background: rgba(255, 255, 255, 0.05);
                 }
 
                 @keyframes scan {
@@ -228,11 +256,23 @@ export function Hero() {
                 }
 
                 @media (max-width: 768px) {
-                    .hero-title { font-size: 48px; }
-                    .hero-stats { gap: 20px; flex-wrap: wrap; }
-                    .hero-actions { flex-direction: column; }
+                    .hero-vanguard { padding-top: 60px; }
+                    .hero-content { padding: 0 24px; }
+                    .hero-title { 
+                        font-size: clamp(32px, 10vw, 48px); 
+                        letter-spacing: -1px;
+                        margin-bottom: 16px;
+                    }
+                    .hero-description { font-size: 14px; margin-bottom: 32px; }
+                    .hero-stats { gap: 16px; flex-wrap: wrap; margin-top: 40px; }
+                    .hero-actions { flex-direction: column; gap: 12px; width: 100%; }
+                    .btn-hero-main, .btn-hero-alt { width: 100%; height: 50px; font-size: 14px; }
+                    .stat-item { text-align: center; width: calc(50% - 8px); }
+                    .divider { display: none; }
                 }
+
             `}</style>
+
         </section>
     );
 }

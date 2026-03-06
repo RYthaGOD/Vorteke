@@ -187,18 +187,35 @@ export function TokenChart({ initialData, realtimeData, timeframe, onTimeframeCh
             ema50SeriesRef.current.setData(ema50);
             rsiSeriesRef.current.setData(rsi);
 
-            // Update Legend with final values
+            // Update Legend with high-fidelity HUD style
             if (legendRef.current && rsi.length > 0) {
                 const lastRsi = rsi[rsi.length - 1].value;
                 const lastEma20 = ema20[ema20.length - 1].value;
+                const lastEma50 = ema50[ema50.length - 1]?.value;
+
                 legendRef.current.innerHTML = `
-                    <div class="vortex-flex vortex-gap-3 vortex-text-tiny">
-                        <span style="color: rgba(168, 85, 247, 0.9)">EMA 20: ${lastEma20.toFixed(6)}</span>
-                        <span style="color: rgba(59, 130, 246, 0.9)">EMA 50: ${ema50[ema50.length - 1]?.value.toFixed(6)}</span>
-                        <span style="color: #F59E0B">RSI: ${lastRsi.toFixed(2)}</span>
+                    <div class="glass-panel" style="padding: 6px 12px; font-size: 10px; border-radius: 2px; background: rgba(10, 10, 12, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <div style="display: flex; gap: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 700; letter-spacing: 0.5px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(168, 85, 247, 0.8);"></div>
+                                <span style="color: rgba(255, 255, 255, 0.4)">EMA_20:</span>
+                                <span style="color: rgba(168, 85, 247, 1)">${lastEma20.toFixed(6)}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(59, 130, 246, 0.8);"></div>
+                                <span style="color: rgba(255, 255, 255, 0.4)">EMA_50:</span>
+                                <span style="color: rgba(59, 130, 246, 1)">${lastEma50.toFixed(6)}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <div style="width: 6px; height: 6px; border-radius: 50%; background: #F59E0B;"></div>
+                                <span style="color: rgba(255, 255, 255, 0.4)">RSI:</span>
+                                <span style="color: #F59E0B">${lastRsi.toFixed(2)}</span>
+                            </div>
+                        </div>
                     </div>
                 `;
             }
+
 
             // Add specialized markers based on volume anomalies (Real Whale Recon)
             const avgVolume = volumeData.reduce((acc, d) => acc + d.value, 0) / volumeData.length;
@@ -225,30 +242,40 @@ export function TokenChart({ initialData, realtimeData, timeframe, onTimeframeCh
 
     useEffect(() => {
         if (seriesRef.current && realtimeData) {
-            // OPTIMIZATION: Only "tick" the chart in real-time if we are on the 1S timeframe.
-            // This prevents flickering and stability issues on higher timeframes (1m, 5m etc)
-            // as requested by the user.
-            if (timeframe !== '1S') return;
-
             try {
-                // Ignore updating if the time is older than current series to prevent library crashes
+                // INTERVAL SNAPPING: Align the tick timestamp to the current candle's interval
+                // so real-time updates always update the CURRENT candle, not create a new rogue one.
+                const getIntervalSeconds = (tf: string): number => {
+                    switch (tf) {
+                        case '1S': return 1;
+                        case '1M': return 60;
+                        case '5M': return 300;
+                        case '15M': return 900;
+                        case '1H': return 3600;
+                        case '1D': return 86400;
+                        default: return 60;
+                    }
+                };
+
+                const interval = getIntervalSeconds(timeframe);
+                // Snap the tick time to the nearest interval boundary (floor)
+                const snappedTime = Math.floor(realtimeData.time / interval) * interval;
+
                 seriesRef.current.update({
-                    time: realtimeData.time as Time,
+                    time: snappedTime as any,
                     open: realtimeData.open,
                     high: realtimeData.high,
                     low: realtimeData.low,
                     close: realtimeData.close,
                 });
+
                 if (volumeSeriesRef.current) {
                     volumeSeriesRef.current.update({
-                        time: realtimeData.time as Time,
+                        time: snappedTime as any,
                         value: realtimeData.volume,
                         color: realtimeData.close >= realtimeData.open ? 'rgba(20, 241, 149, 0.3)' : 'rgba(239, 68, 68, 0.3)',
                     });
                 }
-
-                // Update Indicators in real-time (v1 simplified: we wait for new candle typically)
-                // But for a better user feel, we can re-calculate tail occasionally.
             } catch (err) {
                 console.debug("Ignored out-of-order realtime tick update to preserve chart stability");
             }

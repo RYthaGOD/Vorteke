@@ -1,5 +1,6 @@
 import { Connection, ParsedInstruction, PublicKey } from '@solana/web3.js';
 import { SOL_MINT } from '../constants';
+import { throttledFetch } from '../vortex/utils';
 
 export interface DecodedSwap {
     type: 'BUY' | 'SELL';
@@ -98,12 +99,12 @@ export async function decodeVortexSwap(
         let computedSol = solDelta;
         if (amountUsd > 10 && solDelta < 0.05) {
             try {
-                const solPriceRes = await fetch('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112');
-                const solPriceData = await solPriceRes.json();
+                // TACTICAL_FIX: Use throttledFetch with API key and timeout to prevent server-side hang
+                const solPriceData: any = await throttledFetch('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112');
                 const currentSolPrice = parseFloat(solPriceData?.data?.['So11111111111111111111111111111111111111112']?.price || '185');
                 computedSol = amountUsd / currentSolPrice;
             } catch (e) {
-                computedSol = amountUsd / 185; // Absolute unbreakable fallback
+                computedSol = amountUsd / 200; // Emergency conservative fallback
             }
         }
 

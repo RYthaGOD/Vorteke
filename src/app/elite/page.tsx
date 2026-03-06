@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { verifyEliteAccess } from '@/lib/monetizationService';
 import { useVortexAuth } from '@/hooks/useVortexAuth';
 import EliteDashboard from '@/components/EliteDashboard';
+import { VortexPanel } from '@/components/DesignSystem';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -13,7 +14,7 @@ const WalletMultiButton = dynamic(
 );
 
 export default function ElitePage() {
-    const { publicKey, connected } = useVortexAuth();
+    const { publicKey, connected, signMessage } = useVortexAuth();
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
     const router = useRouter();
 
@@ -31,71 +32,106 @@ export default function ElitePage() {
 
     if (isVerified === null) {
         return (
-            <div className="vortex-full-screen-center">
-                <div className="vortex-flex-column vortex-center">
-                    <Loader2 size={48} className="text-vortex-yellow animate-spin vortex-mb-4" />
-                    <p className="vortex-text-xs vortex-text-muted vortex-ls-wider">VERIFYING_ELITE_CREDENTIALS...</p>
+            <main className="vortex-main vortex-center">
+                <div className="vortex-flex-column vortex-center vortex-gap-6 animate-pulse">
+                    <div className="vortex-logo-geometry size-xl text-vortex-cyan" />
+                    <div className="vortex-text-tiny vortex-text-bold vortex-ls-wide vortex-uppercase text-vortex-cyan">
+                        VERIFYING_ELITE_CREDENTIALS...
+                    </div>
                 </div>
-            </div>
+            </main>
         );
     }
 
     if (!isVerified) {
         return (
-            <div className="vortex-full-screen-center">
-                <div className="vortex-panel vortex-w-400 vortex-text-center">
-                    <ShieldAlert size={48} className="text-vortex-red vortex-m-auto vortex-mb-4" />
-                    <h2 className="vortex-h-hud vortex-text-red">ACCESS_DENIED</h2>
-                    <p className="vortex-text-sm vortex-text-muted vortex-mb-6">
-                        This terminal requires Vortex Elite authorization.
-                        Hold an Elite Pass NFT or gain Admin approval to proceed.
-                    </p>
+            <main className="vortex-main vortex-center">
+                <div className="vortex-container-sm">
+                    <VortexPanel
+                        title="TACTICAL_GATEKEEPER_V3"
+                        subTitle="ELITE_ENCRYPTED_SECTOR"
+                        glowColor="yellow"
+                        showCorners={true}
+                        variant="glass"
+                    >
+                        <div className="vortex-flex-column vortex-center vortex-gap-8 vortex-py-8">
+                            <div className="gate-icon hud-flicker">
+                                <ShieldAlert size={48} className="text-vortex-yellow" />
+                            </div>
 
-                    {!connected ? (
-                        <div className="vortex-flex-column vortex-center vortex-gap-4 vortex-mb-6">
-                            <p className="vortex-text-xs vortex-text-muted">CONNECT_WALLET_TO_VERIFY</p>
-                            <WalletMultiButton className="vortex-wallet-btn" />
-                        </div>
-                    ) : (
-                        <div className="vortex-flex-column vortex-gap-2 vortex-mb-6">
-                            <input
-                                type="password"
-                                placeholder="ENTER_ACCESS_CODE"
-                                className="vortex-input-field vortex-text-center vortex-w-full"
-                                onKeyDown={async (e) => {
-                                    if (e.key === 'Enter') {
-                                        const code = (e.target as HTMLInputElement).value;
-                                        if (code === 'VORTEKE' && publicKey) {
-                                            try {
-                                                const res = await fetch('/api/auth/provision', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ wallet: publicKey.toBase58(), code })
-                                                });
-                                                if (res.ok) {
-                                                    setIsVerified(true);
-                                                } else {
-                                                    alert('INVALID_ACCESS_CODE');
+                            <div className="vortex-text-center px-4">
+                                <h2 className="vortex-text-xl vortex-text-extrabold vortex-mb-2">ACCESS_LOCKED</h2>
+                                <p className="vortex-text-xs vortex-text-muted vortex-max-w-xs vortex-mx-auto">
+                                    This terminal requires Vortex Elite authorization. Hold an Elite Pass NFT or provide a verified Alpha access key.
+                                </p>
+                            </div>
+
+                            {!connected ? (
+                                <div className="vortex-flex-column vortex-center vortex-gap-4 vortex-w-full px-8">
+                                    <div className="vortex-text-tiny vortex-text-muted vortex-font-mono text-vortex-cyan">AUTHORIZATION_PENDING...</div>
+                                    <WalletMultiButton className="vortex-wallet-btn" />
+                                </div>
+                            ) : (
+                                <div className="vortex-w-full px-8">
+                                    <div className="vortex-divider-text">ENTER_ALPHA_KEY</div>
+                                    <div className="vortex-flex vortex-gap-2 vortex-mt-4">
+                                        <input
+                                            type="password"
+                                            className="vortex-input-tactical"
+                                            placeholder="INPUT_ACCESS_KEY"
+                                            onKeyDown={async (e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value === 'VORTEKE' && publicKey && signMessage) {
+                                                    try {
+                                                        const timestamp = Date.now();
+                                                        const message = `VORTEX_PROVISION_ACCESS:${publicKey.toBase58()}:${timestamp}`;
+                                                        const signatureBytes = await signMessage(new TextEncoder().encode(message));
+                                                        const signature = Buffer.from(signatureBytes).toString('base64');
+
+                                                        const res = await fetch('/api/auth/provision', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ wallet: publicKey.toBase58(), code: 'VORTEKE', signature, timestamp })
+                                                        });
+
+                                                        if (res.ok) setIsVerified(true);
+                                                        else alert('INVALID_ACCESS_KEY');
+                                                    } catch (err) {
+                                                        alert('SIGNATURE_REJECTED');
+                                                    }
                                                 }
-                                            } catch {
-                                                alert('PROVISIONING_ERROR');
-                                            }
-                                            (e.target as HTMLInputElement).value = '';
-                                        }
-                                    }
-                                }}
-                            />
-                            <span className="vortex-text-tiny vortex-text-muted">Press ENTER to verify.</span>
-                        </div>
-                    )}
+                                            }}
+                                        />
+                                        <div className="vortex-btn-icon text-vortex-yellow">
+                                            <Loader2 size={18} className="animate-spin" />
+                                        </div>
+                                    </div>
+                                    <p className="vortex-text-tiny vortex-text-muted vortex-mt-2 vortex-text-center">PRESS_ENTER_TO_DECRYPT</p>
+                                </div>
+                            )}
 
-                    <button className="btn-vortex btn-vortex-primary vortex-w-full" onClick={() => router.push('/')}>
-                        RETURN_TO_BASE
-                    </button>
+                            <button className="vortex-btn-secondary vortex-w-full mt-4" onClick={() => router.push('/')}>
+                                RETURN_TO_BASE
+                            </button>
+                        </div>
+                    </VortexPanel>
                 </div>
-            </div>
+
+                <style jsx>{`
+                    .gate-icon {
+                        width: 80px;
+                        height: 80px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: rgba(229, 255, 0, 0.05);
+                        border: 1px solid rgba(229, 255, 0, 0.2);
+                        box-shadow: 0 0 30px rgba(229, 255, 0, 0.05);
+                    }
+                `}</style>
+            </main>
         );
     }
+
 
     return (
         <main className="app-container">

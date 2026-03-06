@@ -13,8 +13,9 @@ import { DeepScanModal } from './DeepScanModal';
 
 export function BundlePanel({ token, onEnhance }: BundlePanelProps) {
     const [showDeepScan, setShowDeepScan] = useState(false);
+    // TACTICAL_FIX: Map "Bundle Density" to sniper-specific volume instead of generic holder clusters
     const bundleRisk = token.advancedMetrics?.holderIntelligence?.riskLevel || 'LOW';
-    const bundlePercent = token.advancedMetrics?.holderIntelligence?.clusterSize || 0;
+    const bundlePercent = token.advancedMetrics?.snipeVolumePercent || 0;
 
     return (
         <VortexPanel title="CONTINUUM_RECON" subTitle="HOLDER_ANALYSIS" glowColor="cyan">

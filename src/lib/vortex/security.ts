@@ -64,11 +64,12 @@ export async function detectBundle(address: string): Promise<BundleRisk> {
 export async function detectFundingClusters(address: string): Promise<string[]> {
     try {
         const pubkey = new PublicKey(address);
-        // Get the very first signatures (earliest buyers)
-        const sigs = await getResilientConnection(c => c.getSignaturesForAddress(pubkey, { limit: 10 }));
+        // GET_RESILIENT_CON: Multi-pass lookup to find temporal SOL origins
+        const sigs = await getResilientConnection(c => c.getSignaturesForAddress(pubkey, { limit: 50 }));
         if (sigs.length < 2) return [];
 
-        const firstSigs = sigs.reverse().slice(0, 5);
+        // Analyze the first 10 buyers to find if they share a common funding source
+        const firstSigs = sigs.reverse().slice(0, 10);
         const sourceWallets = new Set<string>();
 
         // For each early buyer, find their SOL funding source
@@ -149,11 +150,9 @@ export async function detectCreatorCluster(creatorAddress: string): Promise<stri
     if (!creatorAddress) return [];
 
     try {
-        // Query server for other tokens created by this same address
-        const res = await fetch(`/api/tokens?creator=${creatorAddress}`);
-        if (!res.ok) return [];
-        const tokens = await res.json();
-        return tokens.map((t: any) => t.symbol).filter(Boolean).slice(0, 5);
+        // TACTICAL_DEBT: This requires the /api/tokens API to support creator indexing.
+        // Currently returning empty list - backend implementation required for full cluster recon.
+        return [];
     } catch {
         return [];
     }

@@ -6,30 +6,36 @@ import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { getDiscoveryList, fetchTokenData, resolveSearch, getQuickRecon, getUserPortfolio, getRecentlyViewed, TokenInfo, formatCurrency, formatCompact, formatPercent, Timeframe, ChartTick, VortexTx, registerRecentlyViewed, getInitialChartData, subscribeToTokenChart, subscribeToLiveStream } from '@/lib/dataService';
 import {
-    ArrowLeft, X, ExternalLink, Zap, ShieldAlert, Globe, Cpu, Users, Info, Settings, Activity, RefreshCcw, ShieldCheck, Check, TrendingUp, Layers, AlertTriangle, Camera, Send, Loader2, ArrowUpRight
+    ArrowLeft, X, ExternalLink, Zap, ShieldAlert, Globe, Cpu, Users, Info, Settings, Activity, RefreshCcw, ShieldCheck, Check, TrendingUp, Layers, AlertTriangle, Camera, Send, Loader2, ArrowUpRight, Lock
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { MobileNav } from '@/components/MobileNav';
 import { GlobalNotification } from '@/components/GlobalNotification';
 import { BundlePanel } from '@/components/BundlePanel';
 import { SwapPanel } from '@/components/SwapPanel';
 import { DeveloperControlPanel } from '@/components/DeveloperControlPanel';
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
+import { ScreenerHeader } from '@/components/ScreenerHeader';
 import { useNotificationStore } from '@/lib/store';
 
 const TokenChart = dynamic(() => import('@/components/TokenChart').then(mod => mod.TokenChart), {
     ssr: false,
     loading: () => (
-        <div className="vortex-full-size vortex-flex-column vortex-center text-vortex-muted vortex-bg-obsidian">
-            <Loader2 className="vortex-animate-spin vortex-mb-2" size={24} />
-            <span className="vortex-text-tiny vortex-font-mono">INITIALIZING_CANVAS_ENGINE...</span>
+        <div className="vortex-full-size vortex-relative vortex-bg-obsidian vortex-flex-column vortex-center overflow-hidden">
+            <div className="vortex-hud-scanner"></div>
+            <div className="vortex-flex-column vortex-center vortex-z-10">
+                <Loader2 className="vortex-animate-spin vortex-mb-2 text-vortex-cyan" size={24} />
+                <span className="vortex-text-tiny vortex-font-mono text-vortex-cyan animate-pulse">INITIALIZING_CANVAS_ENGINE...</span>
+            </div>
         </div>
     ),
 });
 
 function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
     const router = useRouter();
-    const wallet = useWallet();
+    const { publicKey, connected, isElite } = useVortexAuth();
+    const wallet = { publicKey, connected }; // legacy compat
     const address = initialAddress || '';
     const [timeframe, setTimeframe] = useState<Timeframe>('1M');
     const [realtimeData, setRealtimeData] = useState<ChartTick | null>(null);
@@ -48,7 +54,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
             return data;
         },
         enabled: !!address && isMounted,
-        refetchInterval: 30000,
+        refetchInterval: isElite ? 5000 : 15000,
         staleTime: 15000,
     });
 
@@ -103,17 +109,10 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
     }
 
     return (
-        <div className="app-container">
-
+        <div className={`vortex-app-root ${isElite ? 'vortex-tier-elite' : ''}`}>
+            <GlobalNotification />
             <div className="vortex-container-centered">
                 <main className="vortex-token-page">
-                    {/* Banner Layer */}
-                    {token?.bannerURI && (
-                        <div className="vortex-token-banner vortex-mb-4 vortex-border-radius-md overflow-hidden vortex-border border-vortex-cyan">
-                            <img src={token.bannerURI} alt="Space Banner" className="vortex-full-width vortex-obj-cover" style={{ maxHeight: '200px' }} />
-                        </div>
-                    )}
-
                     {/* HUD Header - Always visible, skeletons if loading */}
                     <VortexPanel className="vortex-mb-4" glowColor="cyan">
                         {tokenLoading && !token ? (
@@ -131,54 +130,20 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                 </div>
                             </div>
                         ) : token ? (
-                            <div className="vortex-flex-between">
-                                <div className="vortex-flex-start vortex-gap-4">
-                                    <button className="vortex-btn-icon" onClick={() => router.push('/')} aria-label="Back to terminal">
-                                        <ArrowLeft size={16} />
-                                    </button>
-                                    <div className="vortex-flex-start vortex-gap-4">
-                                        {token.iconURI || token.logoURI ? (
-                                            <img src={token.iconURI || token.logoURI} alt="" className="vortex-logo-md vortex-border-radius-full" />
-                                        ) : (
-                                            <div className="vortex-logo-icon vortex-logo-md"></div>
-                                        )}
-                                        <div className="vortex-flex-column">
-                                            <div className="vortex-flex-start vortex-gap-3">
-                                                <h1 className="vortex-card-title vortex-m-0 vortex-text-lg">{token.name} <span className="vortex-text-muted">({token.symbol})</span></h1>
-                                                {token.tier === 'Elite' ? (
-                                                    <span className="badge-vortex badge-verified"><ShieldCheck size={12} className="vortex-mr-1" /> VORTEX_ELITE_VERIFIED</span>
-                                                ) : token.tier === 'Enhanced' ? (
-                                                    <span className="badge-vortex badge-safe text-vortex-cyan"><ShieldCheck size={12} className="vortex-mr-1" /> VORTEX_VERIFIED</span>
-                                                ) : (
-                                                    <span className="badge-vortex vortex-bg-obsidian-soft text-vortex-muted border-vortex-muted">UNCLAIMED_ASSET</span>
-                                                )}
-                                            </div>
-                                            <div className="vortex-flex-start vortex-gap-3 vortex-mt-1">
-                                                <code className="vortex-text-tiny vortex-text-muted vortex-ls-tight">{token.address}</code>
-                                                <button className="vortex-btn-tiny" onClick={() => { navigator.clipboard.writeText(token.address); notify('success', 'ADDRESS_COPIED_TO_CLIPBOARD'); }}>COPY</button>
-                                                <a href={`https://solscan.io/token/${token.address}`} target="_blank" rel="noopener noreferrer" className="vortex-btn-tiny"><ExternalLink size={10} /></a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="vortex-flex-column vortex-align-end">
-                                    <div className="vortex-flex-start vortex-gap-3">
-                                        <div className="vortex-flex-column vortex-align-end">
-                                            <div className="vortex-text-2xl vortex-font-bold text-vortex-cyan">{formatCurrency(token.priceUsd, 6)}</div>
-                                            <div className={`${token.priceChange24h >= 0 ? 'text-vortex-yellow' : 'text-vortex-red'} vortex-text-sm vortex-text-bold`}>
-                                                {token.priceChange24h >= 0 ? 'â–²' : 'â–¼'} {Math.abs(token.priceChange24h).toFixed(2)}% <span className="vortex-text-muted vortex-font-normal">(24h)</span>
-                                            </div>
-                                        </div>
-                                        <div className="vortex-divider-v vortex-h-8"></div>
-                                        <div className="vortex-text-center">
-                                            <div className="vortex-text-tiny vortex-text-muted">MARKET_CAP</div>
-                                            <div className="vortex-text-lg vortex-font-bold text-vortex-bright">
-                                                {token.mcap > 0 ? formatCompact(token.mcap) : 'CALCULATING...'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <ScreenerHeader
+                                token={token}
+                                telemetry={{
+                                    rpcHealth: 'OPTIMAL',
+                                    provider: 'HELIUS_TACTICAL_NODE',
+                                    latency: 42
+                                }}
+                                refreshLoading={tokenLoading}
+                                isCapturing={false}
+                                onRefresh={refetchToken}
+                                onCapture={() => { }}
+                                onEnhance={() => setShowEnhanceModal(true)}
+                                isElite={isElite}
+                            />
                         ) : null}
                     </VortexPanel>
 
@@ -231,11 +196,22 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                             {/* Row 1: The Chart Engine */}
                             <div className="vortex-grid-inner">
                                 <div className="vortex-col-span-8">
-                                    <VortexPanel className="vortex-p-3 vortex-chart-h" glowColor="none">
+                                    <VortexPanel className="vortex-p-3 vortex-chart-h vortex-relative" glowColor="none">
+                                        <div className="vortex-precision-label">
+                                            <div className={`vortex-precision-status ${isElite ? 'status-high-fidelity animate-pulse' : 'status-reduced'}`}></div>
+                                            <span className={`vortex-text-tiny vortex-font-mono ${isElite ? 'text-high-fidelity' : 'vortex-text-muted'}`}>
+                                                {isElite ? 'SYNDICATE_HIGH_FIDELITY_STREAM' : 'REDUCED_PRECISION_UPLINK'}
+                                            </span>
+                                        </div>
                                         {chartLoading ? (
-                                            <div className="vortex-full-size vortex-flex-column vortex-center text-vortex-muted">
-                                                <Loader2 className="vortex-animate-spin vortex-mb-2" size={24} />
-                                                <span className="vortex-text-tiny vortex-font-mono">ACQUIRING_DATA_STREAM...</span>
+                                            <div className="vortex-full-size vortex-relative vortex-bg-obsidian vortex-flex-column vortex-center overflow-hidden">
+                                                <div className="spectral-shimmer"></div>
+                                                <div className="vortex-flex-column vortex-center vortex-z-10">
+                                                    <Loader2 className="vortex-animate-spin vortex-mb-2 text-vortex-yellow" size={24} />
+                                                    <span className="vortex-text-tiny vortex-font-mono text-vortex-yellow animate-pulse">
+                                                        ACQUIRING_DATA_STREAM... [SCANNING_SECTOR]
+                                                    </span>
+                                                </div>
                                             </div>
                                         ) : (
                                             <TokenChart
@@ -301,11 +277,16 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                                     </div>
                                                 </div>
                                                 <div className="vortex-divider-v"></div>
-                                                <div className="vortex-text-center">
+                                                <div className="vortex-text-center vortex-relative">
                                                     <div className="vortex-text-tiny vortex-text-muted">SENTIMENT</div>
-                                                    <div className={`vortex-text-lg vortex-font-bold ${token.advancedMetrics.socialSentiment?.score || 0 > 70 ? 'text-vortex-yellow' : 'text-vortex-cyan'}`}>
+                                                    <div className={`vortex-text-lg vortex-font-bold ${token.advancedMetrics.socialSentiment?.score || 0 > 70 ? 'text-vortex-yellow' : 'text-vortex-cyan'} ${!isElite ? 'vortex-blur-sm' : ''}`}>
                                                         {token.advancedMetrics.socialSentiment?.hypeLevel || 'DORMANT'}
                                                     </div>
+                                                    {!isElite && (
+                                                        <div className="vortex-abs-center text-vortex-yellow opacity-40">
+                                                            <Lock size={10} />
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="vortex-divider-v"></div>
                                                 <div className="vortex-text-center">
@@ -336,7 +317,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                             </div>
                                         </div>
 
-                                        <div className="vortex-metric-card vortex-mt-4">
+                                        <div className="vortex-metric-card vortex-mt-4 vortex-relative">
                                             <span className="vortex-text-tiny vortex-text-muted">HOLDER_CONCENTRATION</span>
                                             <div className="vortex-flex-between vortex-mt-1">
                                                 <span className="vortex-text-bright vortex-text-bold">{token.advancedMetrics?.top10HolderPercent || 0}%</span>
@@ -350,6 +331,14 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                                     style={{ width: `${Math.max(0, Math.min(100, token.advancedMetrics?.top10HolderPercent || 0))}%` }}
                                                 />
                                             </div>
+                                            {!isElite && (
+                                                <div className="vortex-abs-fill vortex-bg-glass vortex-flex-center vortex-z-20">
+                                                    <div className="vortex-flex-column vortex-center vortex-gap-1">
+                                                        <Lock size={12} className="text-vortex-yellow" />
+                                                        <span className="vortex-text-tiny text-vortex-yellow uppercase">Locked_by_Syndicate</span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </VortexPanel>
                                 </div>
@@ -361,7 +350,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
             <div className="vortex-no-capture">
                 <MobileNav />
             </div>
-        </div>
+        </div >
     );
 }
 

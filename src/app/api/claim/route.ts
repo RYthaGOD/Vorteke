@@ -118,6 +118,21 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'UNAUTHORIZED_OWNER' }, { status: 403 });
         }
 
+        // FIX: Server-side URL validation — client-side checks in UpdateMetadataModal are bypassable
+        const isValidHttpsUrl = (url: string | undefined) => !url || url.startsWith('https://');
+        if (metadata.bannerURI && !isValidHttpsUrl(metadata.bannerURI)) {
+            return NextResponse.json({ error: 'INVALID_BANNER_URI' }, { status: 400 });
+        }
+        if (metadata.iconURI && !isValidHttpsUrl(metadata.iconURI)) {
+            return NextResponse.json({ error: 'INVALID_ICON_URI' }, { status: 400 });
+        }
+        if (metadata.socials?.website && !isValidHttpsUrl(metadata.socials.website)) {
+            return NextResponse.json({ error: 'INVALID_WEBSITE_URI' }, { status: 400 });
+        }
+        if (metadata.customDescription && metadata.customDescription.length > 500) {
+            return NextResponse.json({ error: 'DESCRIPTION_TOO_LONG' }, { status: 400 });
+        }
+
         await prisma.enhancement.update({
             where: { address },
             data: {
@@ -134,3 +149,4 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
     }
 }
+

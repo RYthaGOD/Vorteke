@@ -9,6 +9,8 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { MobileNav } from '@/components/MobileNav';
 import { useNotificationStore } from '@/lib/store';
+import { VortexLogo, Modal } from '@/components/DesignSystem';
+import { TokenChart } from '@/components/TokenChart';
 
 export interface PortfolioItem {
     address: string;
@@ -27,7 +29,7 @@ type DiscoveryType = 'trending' | 'new' | 'gainers' | 'losers' | 'top100' | 'pum
 
 export default function Home() {
     const router = useRouter();
-    const { publicKey, connected } = useVortexAuth();
+    const { publicKey, connected, isElite } = useVortexAuth();
     const [activeTab, setActiveTab] = useState<DiscoveryType>('trending');
     const notify = useNotificationStore(state => state.notify);
 
@@ -52,7 +54,9 @@ export default function Home() {
     // Portfolio Intelligence Query
     const { data: portfolio = [], isLoading: portfolioLoading } = useQuery({
         queryKey: ['portfolio', publicKey?.toString()],
-        queryFn: () => getUserPortfolio(publicKey!.toString()),
+        // FIX: Use optional chaining instead of non-null assertion — enabled guard is not enough
+        // because the publicKey! assertion bypasses TypeScript's null safety.
+        queryFn: () => getUserPortfolio(publicKey?.toString() ?? '', isElite),
         enabled: !!publicKey && connected,
         refetchInterval: 45000,
     });
@@ -138,13 +142,16 @@ export default function Home() {
         <main className="app-container">
             <div className="vortex-container-centered">
                 <header className="vortex-header">
-                    <div className="brand-section">
-                        <div className="vortex-logo glitch-text">
-                            <div className="vortex-logo-icon"></div>
-                            VORTEX
+                    <div className="brand-section vortex-flex-start vortex-gap-4">
+                        <div onClick={() => router.push('/')} style={{ cursor: 'pointer' }}>
+                            <VortexLogo size="mini" />
                         </div>
-                        <span className="vortex-tagline">Master the Singularity.</span>
+                        <div className="vortex-flex-column">
+                            <div className="vortex-logo-text glitch-text">VORTEX</div>
+                            <span className="vortex-tagline">Master the Singularity.</span>
+                        </div>
                     </div>
+
                     <nav className="nav-cluster">
                         <button
                             className={`nav-item ${activeTab !== 'captured' ? 'active' : ''} vortex-glitch-hover`}
@@ -286,7 +293,7 @@ export default function Home() {
                                                                 <div className="vortex-text-tiny vortex-text-muted">{t.name.slice(0, 15)}</div>
                                                             </div>
                                                         </div>
-                                                        <ArrowUpRight size={14} className="vortex-opacity-30" />
+                                                        <ArrowUpRight size={14} className="vortex-opacity-30 vortex-tactical-icon" />
                                                     </div>
                                                 </button>
                                             </li>
@@ -387,24 +394,26 @@ export default function Home() {
                                     </div>
                                 </div>
 
-                                <div className="vortex-flex vortex-gap-2 vortex-border-b vortex-border-vortex vortex-mb-2 vortex-overflow-x-auto">
-                                    {[
-                                        { id: 'verified', label: 'VERIFIED' },
-                                        { id: 'trending', label: 'TRENDING' },
-                                        { id: 'new', label: 'NEW_PAIRS' },
-                                        { id: 'pumpfun', label: 'PUMP_FUN' },
-                                        { id: 'gainers', label: 'GAINERS' },
-                                        { id: 'losers', label: 'TOP_LOSERS' },
-                                        { id: 'top100', label: 'TOP_100' }
-                                    ].map((tab: any) => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id as DiscoveryType)}
-                                            className={`vortex-tab-button ${activeTab === tab.id ? 'active' : ''}`}
-                                        >
-                                            {tab.label}
-                                        </button>
-                                    ))}
+                                <div className="vortex-tabs-wrapper vortex-mb-4">
+                                    <div className="vortex-tabs-scroll-container">
+                                        {[
+                                            { id: 'verified', label: 'VERIFIED' },
+                                            { id: 'trending', label: 'TRENDING' },
+                                            { id: 'new', label: 'NEW_PAIRS' },
+                                            { id: 'pumpfun', label: 'PUMP_FUN' },
+                                            { id: 'gainers', label: 'GAINERS' },
+                                            { id: 'losers', label: 'TOP_LOSERS' },
+                                            { id: 'top100', label: 'TOP_100' }
+                                        ].map((tab: any) => (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => setActiveTab(tab.id as DiscoveryType)}
+                                                className={`vortex-tab-button-elite ${activeTab === tab.id ? 'active' : ''}`}
+                                            >
+                                                {tab.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 <div className="vortex-data-table-container">
@@ -423,8 +432,16 @@ export default function Home() {
                                         <tbody>
                                             {discoveryLoading ? (
                                                 <tr>
-                                                    <td colSpan={7} className="vortex-text-center vortex-p-10 text-vortex-yellow vortex-font-mono">
-                                                        SYNCHRONIZING_NEURAL_MESH...
+                                                    <td colSpan={7} className="vortex-p-0">
+                                                        <div className="vortex-hud-loader">
+                                                            <div className="vortex-hud-scanner"></div>
+                                                            <div className="vortex-flex-center vortex-gap-3 vortex-h-40">
+                                                                <Loader2 size={24} className="text-vortex-yellow animate-spin" />
+                                                                <span className="vortex-text-sm vortex-text-bold text-vortex-yellow vortex-font-mono animate-pulse">
+                                                                    SYNCHRONIZING_NEURAL_MESH... [RECON_MODE_ACTIVE]
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ) : tokens.length === 0 ? (
@@ -477,7 +494,7 @@ export default function Home() {
                                                             </div>
                                                         </td>
                                                         <td className="vortex-text-right">
-                                                            <ArrowUpRight size={14} className="vortex-opacity-30" />
+                                                            <ArrowUpRight size={14} className="vortex-opacity-30 vortex-tactical-icon" />
                                                         </td>
                                                     </tr>
                                                 ))

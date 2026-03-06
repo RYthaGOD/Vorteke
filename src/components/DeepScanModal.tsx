@@ -7,6 +7,7 @@ import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { RPC_ENDPOINTS } from '@/lib/constants';
+import { getResilientConnection } from '@/lib/solana/connection';
 import { notify } from '@/lib/store';
 
 interface DeepScanModalProps {
@@ -22,7 +23,16 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
     const [status, setStatus] = useState<'IDLE' | 'INITIATING' | 'SIGNING' | 'VERIFYING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [error, setError] = useState<string | null>(null);
 
-    const handleinitiateScan = async () => {
+    // FIX: Reset state when modal is closed to prevent re-open showing stale SUCCESS/ERROR state
+    const handleClose = () => {
+        if (status !== 'INITIATING' && status !== 'SIGNING' && status !== 'VERIFYING') {
+            setStatus('IDLE');
+            setError(null);
+        }
+        onClose();
+    };
+
+    const handleInitiateScan = async () => {
         if (!publicKey) {
             notify("WALLET_NOT_CONNECTED", "Please connect your wallet to proceed.", "error");
             return;
@@ -49,7 +59,9 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
 
             // 2. Decode and Sign
             setStatus('SIGNING');
-            const connection = new Connection(RPC_ENDPOINTS[0], 'confirmed');
+
+            // TACTICAL_FIX: Replaced bare Connection() with resilient engine to prevent payment failure on lag
+            const connection = await getResilientConnection(async (c) => c);
 
             // Handle both legacy and versioned transactions
             const buffer = Buffer.from(txData, 'base64');
@@ -84,7 +96,7 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="DEEP_SCAN_PROTOCOL" size="md">
+        <Modal isOpen={isOpen} onClose={handleClose} title="DEEP_SCAN_PROTOCOL" size="md">
             <div className="vortex-flex-column vortex-gap-6 vortex-p-4">
                 {status === 'IDLE' || status === 'ERROR' ? (
                     <>
@@ -122,7 +134,7 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
                         <VortexButton
                             variant="primary"
                             className="vortex-full-width vortex-bg-cyan text-vortex-obsidian"
-                            onClick={handleinitiateScan}
+                            onClick={handleInitiateScan}
                         >
                             <Zap size={16} className="vortex-mr-2" />
                             AUTHORIZE SCAN

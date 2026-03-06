@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request) {
     try {
@@ -12,7 +10,7 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'MISSING_WALLET' }, { status: 400 });
         }
 
-        const access = await prisma.testAccess.findUnique({
+        const access = await (prisma as any).testAccess.findUnique({
             where: { wallet }
         });
 

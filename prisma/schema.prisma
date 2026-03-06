@@ -46,6 +46,8 @@ model Claim {
     signature String
     timestamp DateTime
     createdAt DateTime @default(now())
+
+    @@unique([address, wallet])
 }
 
 model TestAccess {

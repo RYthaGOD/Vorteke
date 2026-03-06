@@ -12,7 +12,7 @@ export async function generateMetadata(
     parent: ResolvingMetadata
 ): Promise<Metadata> {
     const params = await searchParams;
-    const address = Array.isArray(params.address) ? params.address[0] : params.address || 'JUPyiwrYPRnK3B9kR4A9p7YQ8vLwK2qNCjY7MkW99Ld';
+    const address = Array.isArray(params.address) ? params.address[0] : params.address || 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN';
 
     try {
         const token = await fetchTokenData(address);

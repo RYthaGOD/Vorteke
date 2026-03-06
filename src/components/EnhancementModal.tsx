@@ -212,8 +212,8 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
 
             <style jsx>{`
                 .vtx-economy-banner {
-                    background: rgba(255, 0, 122, 0.05);
-                    border: 1px dashed rgba(255, 0, 122, 0.3);
+                    background: rgba(229, 255, 0, 0.05); /* Gold Tint */
+                    border: 1px dashed rgba(229, 255, 0, 0.3);
                     padding: 16px;
                     border-radius: 4px;
                 }
@@ -247,9 +247,9 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                 }
 
                 .vtx-active {
-                    background: #ff007a;
-                    border-color: #ff007a;
-                    box-shadow: 0 0 15px rgba(255, 0, 122, 0.4);
+                    background: var(--accent-vortex-yellow);
+                    border-color: var(--accent-vortex-yellow);
+                    box-shadow: 0 0 15px rgba(229, 255, 0, 0.4);
                 }
 
                 .toggle-knob {
@@ -276,6 +276,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                     border-radius: 4px;
                 }
             `}</style>
+
         </div >
     );
 }

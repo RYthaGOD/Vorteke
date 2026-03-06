@@ -19,7 +19,7 @@ export const PROTECTED_MINT_ADDRESSES = [
     'So11111111111111111111111111111111111111112', // Wrapped SOL
     'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
     'Es9vMFrzaDCSTMdUiAnQxt9shFBXon6mVeL3vpt3TSh', // USDT
-    'JUPyiwrYPRnK3B9kR4A9p7YQ8vLwK2qNCjY7MkW99Ld', // JUP
+    'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', // JUP
     'DezXAZhfjsmAW3kz8fWkbeXp5oV8Xyit2nXU3C8sqxg', // BONK
     'HZ1JovncqS1sbph6YMa6S6fVyc92vBwkoayS9vntvS8P', // PYTH
     '4k3DyjR1Wms8n7jLxTOvUzr7p238a6m99FmQzo48MwnC', // RAY
@@ -43,6 +43,7 @@ export const JITO_DEFAULT_TIP_LAMPORTS = 100000; // 0.0001 SOL tactical base
 export const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 export const PROTOCOL_FLAT_FEE_SOL = 0.0075;
-export const PROTOCOL_FLAT_FEE_LAMPORTS = 0.0075 * 1000000000;
+// FIX: Use Math.round to guarantee integer lamports (float * int may produce floating point result)
+export const PROTOCOL_FLAT_FEE_LAMPORTS = Math.round(0.0075 * 1_000_000_000);
 
 export const VTX_MINT = process.env.NEXT_PUBLIC_VTX_MINT || '';

@@ -30,6 +30,25 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
             return;
         }
 
+        // FIX: Validate URIs to prevent XSS via javascript: or data: URI injection
+        const isValidHttpsUrl = (url: string) => !url || url.startsWith('https://');
+        if (!isValidHttpsUrl(bannerURI)) {
+            notify('error', 'INVALID_BANNER_URI: Must start with https://');
+            return;
+        }
+        if (!isValidHttpsUrl(iconURI)) {
+            notify('error', 'INVALID_ICON_URI: Must start with https://');
+            return;
+        }
+        if (!isValidHttpsUrl(website)) {
+            notify('error', 'INVALID_WEBSITE_URI: Must start with https://');
+            return;
+        }
+        if (description.length > 500) {
+            notify('error', 'DESCRIPTION_TOO_LONG: Max 500 characters.');
+            return;
+        }
+
         setSubmitting(true);
         try {
             // 1. Generate Signature for Authorization (Anti-Replay Protocol)

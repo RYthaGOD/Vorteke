@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { prisma } from '@/lib/prisma';
 import { TREASURY_ENHANCEMENTS, RPC_ENDPOINTS } from '@/lib/constants';
+import { getResilientConnection } from '@/lib/solana/connection';
 
 export const maxDuration = 60; // Prevent Vercel 10-second serverless timeout during RPC congestion
 
@@ -40,6 +41,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'MISSING_PARAMETERS' }, { status: 400 });
         }
 
+        // FIX: Validate tier against allowlist to prevent manipulation
+        const VALID_TIERS = ['Enhanced', 'Elite', 'DeepScan'];
+        if (!VALID_TIERS.includes(tier)) {
+            return NextResponse.json({ error: 'INVALID_TIER' }, { status: 400 });
+        }
+
         // Apply Layer-7 DDoS Defense (Rate Limiting)
         const ip = request.headers.get('x-forwarded-for') || 'unknown';
         if (!checkRateLimit(ip)) {
@@ -47,12 +54,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
-        const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY || RPC_ENDPOINTS[0];
-        const connection = new Connection(endpoint, 'confirmed');
-
-        // 0. Anti-Double-Spend Check (CRITICAL)
+        // FIX: Use getResilientConnection instead of bare new Connection()
+        // 0. Anti-Double-Spend Check (CRITICAL) - must happen BEFORE RPC call to save resources
         if (tier === 'DeepScan') {
-            const existingScan = await prisma.deepScanRecord.findUnique({
+            const existingScan = await (prisma as any).deepScanRecord.findUnique({
                 where: { signature }
             });
             if (existingScan) {
@@ -62,17 +67,16 @@ export async function POST(request: NextRequest) {
             const existingPayment = await prisma.enhancement.findFirst({
                 where: { lastPaymentTx: signature }
             });
-
             if (existingPayment) {
                 return NextResponse.json({ error: 'TRANSACTION_ALREADY_CLAIMED' }, { status: 403 });
             }
         }
 
         // 1. Fetch and Verify Transaction
-        const tx = await connection.getTransaction(signature, {
+        const tx = await getResilientConnection(c => c.getTransaction(signature, {
             commitment: 'confirmed',
             maxSupportedTransactionVersion: 0
-        });
+        }));
 
         if (!tx) {
             return NextResponse.json({ error: 'TRANSACTION_NOT_FOUND' }, { status: 404 });
@@ -122,7 +126,8 @@ export async function POST(request: NextRequest) {
             let expectedLamports = 0;
 
             if (tier === 'DeepScan') {
-                expectedLamports = 0.02 * 1_000_000_000;
+                // FIX: Use Math.round to prevent non-integer float multiplication
+                expectedLamports = Math.round(0.02 * 1_000_000_000);
             } else {
                 const usdcAmount = tier === 'Elite' ? 120 : 30;
                 const usdcMint = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -153,7 +158,8 @@ export async function POST(request: NextRequest) {
 
         // 3. Update Global Database
         if (tier === 'DeepScan') {
-            await prisma.deepScanRecord.create({
+            // FIX: Use (prisma as any) for deepScanRecord until Prisma client types are regenerated
+            await (prisma as any).deepScanRecord.create({
                 data: { signature, address, wallet }
             });
         } else {
