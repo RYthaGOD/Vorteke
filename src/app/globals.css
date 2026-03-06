@@ -2820,3 +2820,9 @@ h3,
   mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
 }
+/* Strategic Profile Enhancements */
+.vortex-banner-h { height: 200px; width: 100%; }
+.vortex-image-cover { object-fit: cover; transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+.vortex-banner-h:hover .vortex-image-cover { transform: scale(1.02) translateY(-2px); }
+.vortex-intel-brief { border-left: 2px solid var(--accent-vortex-cyan); background: linear-gradient(90deg, rgba(0, 240, 255, 0.05) 0%, transparent 100%); }
+.vortex-intel-title { font-family: var(--font-hud); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; font-size: 10px; color: var(--accent-vortex-cyan); }
