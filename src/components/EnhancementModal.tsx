@@ -20,7 +20,6 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
     const { signMessage, sendTransaction } = useWallet();
     const [claiming, setClaiming] = useState(false);
     const [upgrading, setUpgrading] = useState(false);
-    const [useVtx, setUseVtx] = useState(true);
 
     const handleClaim = async () => {
         if (!publicKey || !signMessage) {
@@ -60,7 +59,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
         setUpgrading(true);
         try {
             notify('info', `INITIATING_${tier.toUpperCase()}_PROTOCOL...`);
-            const txBase64 = await purchaseEnhancement(address, tier, publicKey.toBase58(), useVtx);
+            const txBase64 = await purchaseEnhancement(address, tier, publicKey.toBase58());
 
             if (!txBase64) {
                 notify('error', 'INITIATION_FAILED: Server could not prepare transaction.');
@@ -78,7 +77,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
             const signature = await sendTransaction(transaction, connection);
             notify('info', 'TRANSACTION_BROADCAST: Awaiting settlement...');
 
-            const success = await verifyPayment(signature, address, tier, publicKey.toBase58(), useVtx);
+            const success = await verifyPayment(signature, address, tier, publicKey.toBase58());
 
             if (success) {
                 notify('success', `${tier.toUpperCase()}_ACTIVATED: Systems operational.`);
@@ -107,30 +106,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                     </button>
                 </div>
 
-                {/* VTX Economy Banner */}
-                <div className="vtx-economy-banner vortex-mb-6">
-                    <div className="vortex-flex-between">
-                        <div className="vortex-flex-start vortex-gap-3">
-                            <Flame size={20} className="text-vortex-red" />
-                            <div>
-                                <div className="vortex-text-sm vortex-text-bold">50% DISCOUNT ACTIVE</div>
-                                <div className="vortex-text-tiny vortex-text-muted">100% of $VTX payments are physically burned on-chain.</div>
-                            </div>
-                        </div>
-                        <div className="vtx-toggle-container">
-                            <span className={`toggle-label ${!useVtx ? 'active' : ''}`}>SOL</span>
-                            <button
-                                className={`vtx-toggle ${useVtx ? 'vtx-active' : ''}`}
-                                onClick={() => setUseVtx(!useVtx)}
-                            >
-                                <div className="toggle-knob"></div>
-                            </button>
-                            <span className={`toggle-label ${useVtx ? 'active' : ''}`}>$VTX</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Claim Flow Section (C3 Fix) */}
+                {/* Claim Flow Section */}
                 <div className="vortex-panel vortex-mb-6 vortex-bg-glass vortex-border-dashed border-vortex-cyan">
                     <div className="vortex-flex-between">
                         <div className="vortex-flex-start vortex-gap-4">
@@ -156,7 +132,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                     <div className="vortex-panel vortex-border-cyan">
                         <div className="vortex-flex-between vortex-mb-2">
                             <h3 className="vortex-card-title vortex-text-lg">CORE_VERIFIED</h3>
-                            <div className="price-tag text-vortex-cyan">{useVtx ? '15 USDC VAL' : '30 USDC'}</div>
+                            <div className="price-tag text-vortex-cyan">0.25 SOL</div>
                         </div>
                         <p className="vortex-text-xs vortex-text-muted vortex-mb-4">Standard verification for the recon terminal.</p>
                         <div className="vortex-flex-column vortex-gap-2 vortex-mb-6">
@@ -171,7 +147,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                     <div className="vortex-panel vortex-border-purple vortex-glow-purple">
                         <div className="vortex-flex-between vortex-mb-2">
                             <h3 className="vortex-card-title vortex-text-lg">ELITE_RECON</h3>
-                            <div className="price-tag text-vortex-purple">{useVtx ? '60 USDC VAL' : '120 USDC'}</div>
+                            <div className="price-tag text-vortex-purple">0.75 SOL</div>
                         </div>
                         <p className="vortex-text-xs vortex-text-muted vortex-mb-4">Military-grade intel and priority global indexing.</p>
                         <div className="vortex-flex-column vortex-gap-2 vortex-mb-6">
@@ -188,7 +164,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                     <div className="vortex-flex-between vortex-mb-2">
                         <div className="vortex-flex-start vortex-gap-2">
                             <ShieldCheck size={16} className="text-vortex-yellow" />
-                            <span className="vortex-text-xs vortex-text-bold">BURN_PROTOCOL_ENFORCED</span>
+                            <span className="vortex-text-xs vortex-text-bold">PAYMENT_GATED_PROTOCOL</span>
                         </div>
                         <div className="vortex-flex-start vortex-gap-2">
                             {!connected ? (
@@ -226,8 +202,7 @@ export function EnhancementModal({ address, onClose, onPurchase, notify }: Enhan
                         </div>
                     </div>
                     <p className="vortex-text-tiny vortex-text-muted">
-                        $VTX payments trigger on-chain burns.
-                        Testing with access codes bypasses payments for 7 days.
+                        Testing with access codes bypasses payments for 7 days during protocol rollout.
                     </p>
                 </div>
             </div>

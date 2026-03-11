@@ -1,21 +1,22 @@
 import { Connection } from '@solana/web3.js';
-import { RPC_ENDPOINTS } from '../constants';
+import { RPC_ENDPOINTS, RPC_LATENCY_THRESHOLD } from '../constants';
+import { rpcManager } from './rpcManager';
 
 /**
  * Tactical RPC Relay: Rotates through available endpoints on failure.
- * Includes a 5s timeout guard and detects rate-limiting / auth issues.
+ * Includes a 8s timeout guard and detects rate-limiting / auth issues.
+ * Powered by RPCManager for predictive failover and health matrix intelligence.
  */
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Shared state for global RPC health and performance
+// Shared state for global RPC health status
 let vortexDegraded = false;
 let lastDegradedTime = 0;
 const DEGRADED_COOLDOWN = 60000; // 60s cooldown for noisy errors
-const latencyMap = new Map<string, number>();
 
 /**
  * Tactical RPC Relay: Rotates through available endpoints on failure.
- * Enhanced with real-time latency scoring to prioritize the fastest uplink.
+ * Enhanced with RPCManager intelligence for prioritized uplink selection.
  */
 export const getResilientConnection = async <T>(operation: (conn: Connection, endpoint: string) => Promise<T>): Promise<T> => {
     let lastError: any;
@@ -24,26 +25,33 @@ export const getResilientConnection = async <T>(operation: (conn: Connection, en
         throw new Error("VORTEX_FATAL: No RPC endpoints configured.");
     }
 
-    // Dynamic Prioritization: Sort endpoints by known latency (performance-first)
-    const sortedEndpoints = [...RPC_ENDPOINTS].sort((a, b) => {
-        const latA = latencyMap.get(a) || 9999;
-        const latB = latencyMap.get(b) || 9999;
-        return latA - latB;
-    });
-
-    // Add slight randomness to prevent "thundering herd" on a single fast RPC
-    const fallbacks = sortedEndpoints.slice(1).sort(() => Math.random() - 0.2);
-    const shuffled = [sortedEndpoints[0], ...fallbacks];
-
     const now = Date.now();
     if (vortexDegraded && now - lastDegradedTime > DEGRADED_COOLDOWN) {
         vortexDegraded = false;
         console.warn("VORTEX_INFRASTRUCTURE: Attempting recovery from degraded status...");
     }
 
+    // ELITE_UPLINK_PRIORITY: If Helius is configured, it MUST be the primary source for production reliability.
+    const heli = RPC_ENDPOINTS.find(e => e.includes('helius'));
+    const bestEndpoint = rpcManager.getBestEndpoint();
+    const shuffled = heli ? [heli, ...RPC_ENDPOINTS.filter(e => e !== heli)] : [bestEndpoint, ...RPC_ENDPOINTS.filter(e => e !== bestEndpoint)];
+
     for (let i = 0; i < shuffled.length; i++) {
         const endpoint = shuffled[i];
-        const start = Date.now();
+
+        // ELITE_BLOCK_BYPASS: The public 'api.mainnet-beta.solana.com' is currently 403-blocking production.
+        // We skip it if we have other options to prevent unnecessary 8s timeouts.
+        if (endpoint.includes('mainnet-beta.solana.com') && shuffled.length > 1 && !vortexDegraded) {
+            continue;
+        }
+
+        // PREEMPTIVE_FAILOVER: If the "best" endpoint is suddenly exceeding threshold, 
+        // and we have fallbacks, skip it before even attempting the operation.
+        const status = rpcManager.getAllStatus().find(s => s.endpoint === endpoint);
+        if (status && status.latency > RPC_LATENCY_THRESHOLD && i < shuffled.length - 1) {
+            console.debug(`PREEMPTIVE_FAILOVER: Skipping slow endpoint [${endpoint}] (Latency: ${status.latency.toFixed(0)}ms)`);
+            continue;
+        }
 
         try {
             const conn = new Connection(endpoint, 'confirmed');
@@ -59,20 +67,13 @@ export const getResilientConnection = async <T>(operation: (conn: Connection, en
                 ]);
 
                 clearTimeout(timeoutId);
-
-                // Update Latency Intelligence
-                const duration = Date.now() - start;
-                const prevLatency = latencyMap.get(endpoint) || duration;
-                // Weighted moving average for stability: 80% old, 20% new
-                latencyMap.set(endpoint, (prevLatency * 0.8) + (duration * 0.2));
-
                 return result;
             } catch (e: any) {
                 clearTimeout(timeoutId);
                 const errorMessage = e.message?.toLowerCase() || '';
 
-                // Penalize failing/slow endpoints
-                latencyMap.set(endpoint, (latencyMap.get(endpoint) || 1000) + 1000);
+                // Report failure to RPCManager to trigger penalization
+                rpcManager.reportError(endpoint);
 
                 if (errorMessage.includes('403') || errorMessage.includes('401') || errorMessage.includes('429')) {
                     vortexDegraded = true;
@@ -87,7 +88,7 @@ export const getResilientConnection = async <T>(operation: (conn: Connection, en
         } catch (e) {
             lastError = e;
             console.warn(`RPC_UPLINK_FAILURE [${endpoint}]:`, e);
-            latencyMap.set(endpoint, 9999); // Mark as effectively dead
+            rpcManager.reportError(endpoint);
             if (i < shuffled.length - 1) await sleep(200);
             continue;
         }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useVortexAuth } from '@/hooks/useVortexAuth';
+import { useCaptureReport } from '@/hooks/useCaptureReport';
 import { MobileNav } from '@/components/MobileNav';
 import { GlobalNotification } from '@/components/GlobalNotification';
 import { BundlePanel } from '@/components/BundlePanel';
@@ -17,7 +18,10 @@ import { SwapPanel } from '@/components/SwapPanel';
 import { DeveloperControlPanel } from '@/components/DeveloperControlPanel';
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 import { ScreenerHeader } from '@/components/ScreenerHeader';
+import { VortexVerdict } from '@/components/VortexVerdict';
 import { useNotificationStore } from '@/lib/store';
+
+const EnhancementModal = dynamic(() => import('@/components/EnhancementModal').then(m => m.EnhancementModal), { ssr: false });
 
 const TokenChart = dynamic(() => import('@/components/TokenChart').then(mod => mod.TokenChart), {
     ssr: false,
@@ -42,28 +46,34 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
     const [txs, setTxs] = useState<VortexTx[]>([]);
     const [isMounted, setIsMounted] = useState(false);
     const [showEnhanceModal, setShowEnhanceModal] = useState(false);
+    const [rpcLatency, setRpcLatency] = useState(42); // will be updated on first fetch
 
     const notify = useNotificationStore((state) => state.notify);
 
     // Primary Data Reconnaissance
     const { data: token, isLoading: tokenLoading, error, refetch: refetchToken } = useQuery({
-        queryKey: ['token', address],
+        queryKey: ['token', address, publicKey?.toString()],
         queryFn: async () => {
-            const data = await fetchTokenData(address);
+            const t0 = Date.now();
+            const data = await fetchTokenData(address, publicKey?.toString());
+            // H1 FIX: Compute live latency from actual data fetch duration
+            setRpcLatency(Date.now() - t0);
             if (data) registerRecentlyViewed(data);
             return data;
         },
         enabled: !!address && isMounted,
         refetchInterval: isElite ? 5000 : 15000,
-        staleTime: 15000,
+        staleTime: 5000,
     });
+
+    const { captureReport, isCapturing } = useCaptureReport('tactical-recon-grid', `${token?.symbol || 'TOKEN'}_RECON`);
 
     // Historical Chart Data
     const { data: initialData = [], isLoading: chartLoading } = useQuery({
         queryKey: ['chart-init', address, timeframe],
         queryFn: () => getInitialChartData(address, token?.priceUsd || 0, timeframe),
         enabled: !!token && isMounted,
-        staleTime: 60000,
+        staleTime: 10000, // Reduced from 60s for higher fidelity on switch
     });
 
     useEffect(() => {
@@ -73,17 +83,19 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
         return () => window.removeEventListener('VORTEX_SHOW_ENHANCE', handleShowEnhance);
     }, []);
 
-    // Real-time Subscriptions
+    // Real-time Subscriptions: UNIFIED TRUTH PIPE
     useEffect(() => {
         if (!address || !isMounted) return;
-        const unsubChart = subscribeToTokenChart(address, (tick: ChartTick) => {
-            setRealtimeData(tick);
-        });
+
+        // We no longer call subscribeToTokenChart (the polling logic).
+        // The chart is now driven strictly by the transaction stream in the next unsub block.
+
         const unsubStream = subscribeToLiveStream(address, (tx: VortexTx) => {
-            setTxs((prev: VortexTx[]) => [tx, ...prev].slice(0, 15));
+            setTxs((prev: VortexTx[]) => [tx, ...prev].slice(0, 50));
+            // No need to setRealtimeData here, the ChartEngine now watches txs[0] directly
         });
+
         return () => {
-            unsubChart();
             unsubStream();
         };
     }, [address, isMounted]);
@@ -133,14 +145,15 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                             <ScreenerHeader
                                 token={token}
                                 telemetry={{
-                                    rpcHealth: 'OPTIMAL',
-                                    provider: 'HELIUS_TACTICAL_NODE',
-                                    latency: 42
+                                    rpcHealth: rpcLatency < 800 ? 'OPTIMAL' : rpcLatency < 2000 ? 'DEGRADED' : 'DARK',
+                                    provider: 'VORTEX_DAEMON_RPC',
+                                    latency: rpcLatency,
+                                    tier: isElite ? 'ELITE' : 'BASIC'
                                 }}
                                 refreshLoading={tokenLoading}
-                                isCapturing={false}
+                                isCapturing={isCapturing}
                                 onRefresh={refetchToken}
-                                onCapture={() => { }}
+                                onCapture={captureReport}
                                 onEnhance={() => setShowEnhanceModal(true)}
                                 isElite={isElite}
                             />
@@ -204,15 +217,15 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                     )}
 
                     {token && (
-                        <div className="vortex-flex-column vortex-gap-3">
+                        <div className="vortex-flex-column vortex-gap-3" id="tactical-recon-grid">
                             {/* Row 1: The Chart Engine */}
                             <div className="vortex-grid-inner">
                                 <div className="vortex-col-span-8">
-                                    <VortexPanel className="vortex-p-3 vortex-chart-h vortex-relative" glowColor="none">
+                                    <VortexPanel className="vortex-p-0 vortex-chart-h vortex-relative" glowColor="none">
                                         <div className="vortex-precision-label">
                                             <div className={`vortex-precision-status ${isElite ? 'status-high-fidelity animate-pulse' : 'status-reduced'}`}></div>
                                             <span className={`vortex-text-tiny vortex-font-mono ${isElite ? 'text-high-fidelity' : 'vortex-text-muted'}`}>
-                                                {isElite ? 'SYNDICATE_HIGH_FIDELITY_STREAM' : 'REDUCED_PRECISION_UPLINK'}
+                                                {isElite ? 'PRIORITY_UPLINK (5s)' : 'STANDARD_UPLINK (15s)'}
                                             </span>
                                         </div>
                                         {chartLoading ? (
@@ -220,8 +233,8 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                                 <div className="spectral-shimmer"></div>
                                                 <div className="vortex-flex-column vortex-center vortex-z-10">
                                                     <Loader2 className="vortex-animate-spin vortex-mb-2 text-vortex-yellow" size={24} />
-                                                    <span className="vortex-text-tiny vortex-font-mono text-vortex-yellow animate-pulse">
-                                                        ACQUIRING_DATA_STREAM... [SCANNING_SECTOR]
+                                                    <span className="vortex-text-tiny vortex-font-mono text-vortex-yellow">
+                                                        SYNCING_ONCHAIN_STATE... [NETWORK_LOCKED]
                                                     </span>
                                                 </div>
                                             </div>
@@ -229,7 +242,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                             <TokenChart
                                                 address={address}
                                                 initialData={initialData}
-                                                realtimeData={realtimeData}
+                                                realtimeTx={txs[0] || null}
                                                 timeframe={timeframe}
                                                 onTimeframeChange={setTimeframe}
                                             />
@@ -238,23 +251,29 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                 </div>
 
                                 {/* Sidebar: Execution Zone */}
-                                <div className="vortex-col-span-4 vortex-flex-column vortex-gap-6">
+                                <div className="vortex-col-span-4 vortex-flex-column vortex-gap-4">
                                     <SwapPanel token={token} notify={notify} />
 
                                     <VortexPanel title="LIVE_TRANSACTIONS" subTitle="STREAM_ACTIVE" variant="glass" className="vortex-flex-1">
                                         <div className="vortex-tx-stream-container">
                                             {txs.length === 0 ? (
-                                                <div className="vortex-p-8 vortex-text-center vortex-opacity-30">
-                                                    <RefreshCcw size={24} className="vortex-m-auto vortex-mb-2 animate-spin" />
-                                                    <p className="vortex-text-tiny">SYNCING_STREAM...</p>
+                                                <div className="vortex-p-4 vortex-text-center vortex-opacity-30">
+                                                    <RefreshCcw size={20} className="vortex-m-auto vortex-mb-2 animate-spin" />
+                                                    <p className="vortex-text-tiny uppercase">Syncing_Feed...</p>
                                                 </div>
                                             ) : (
                                                 txs.map((tx, idx) => (
-                                                    // Use transaction signature directly as true unique key 
                                                     <div key={tx.signature} className="vortex-tx-item animate-fade-in vortex-flex-between">
-                                                        <span className={tx.type === 'BUY' ? 'text-vortex-yellow' : 'text-vortex-red'}>
-                                                            {tx.type} {tx.amountSol.toFixed(2)} SOL
-                                                        </span>
+                                                        <div className="vortex-flex-column">
+                                                            <span className={tx.type === 'BUY' ? 'text-vortex-yellow' : 'text-vortex-red'}>
+                                                                {tx.type} {tx.amountSol.toFixed(2)} SOL
+                                                            </span>
+                                                            {tx.priceUsd && (
+                                                                <span className="vortex-text-tiny vortex-text-muted">
+                                                                    @{formatCurrency(tx.priceUsd)}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <span className="vortex-text-muted vortex-text-tiny">
                                                             {tx.wallet.slice(0, 4)}...{tx.wallet.slice(-4)}
                                                         </span>
@@ -277,35 +296,30 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                             </div>
 
                             {/* Row 2: Tactical Intelligence */}
-                            <div className="vortex-grid-inner vortex-mt-6">
+                            <div className="vortex-grid-inner vortex-mt-3">
                                 <div className="vortex-col-span-8">
-                                    <div className="vortex-grid-2 vortex-gap-6">
+                                    <div className="vortex-grid-2 vortex-gap-4">
                                         <BundlePanel token={token} onEnhance={() => setShowEnhanceModal(true)} />
                                         <VortexPanel title="VORTEX_VERDICT" subTitle={token.isSafe ? 'OPTIMAL' : 'DEGRADED_OPS'} glowColor="yellow">
                                             <div className="vortex-flex-between vortex-mb-4">
                                                 <div className="vortex-text-center">
-                                                    <div className="vortex-text-tiny vortex-text-muted">SECURITY</div>
-                                                    <div className={`vortex-text-lg vortex-font-bold ${token.isSafe ? 'text-vortex-yellow' : 'text-vortex-loading'}`}>
-                                                        {token.isSafe ? '98/100' : 'RISK_DETECTED'}
+                                                    <div className="vortex-text-tiny vortex-text-muted">SCAN_STATUS</div>
+                                                    <div className={`vortex-text-lg vortex-font-bold ${token.isSafe ? 'text-vortex-yellow' : 'text-vortex-red'}`}>
+                                                        {token.isSafe ? 'OPTIMAL' : 'RISK_DETECTED'}
                                                     </div>
                                                 </div>
                                                 <div className="vortex-divider-v"></div>
                                                 <div className="vortex-text-center vortex-relative">
-                                                    <div className="vortex-text-tiny vortex-text-muted">SENTIMENT</div>
-                                                    <div className={`vortex-text-lg vortex-font-bold ${token.advancedMetrics.socialSentiment?.score || 0 > 70 ? 'text-vortex-yellow' : 'text-vortex-cyan'} ${!isElite ? 'vortex-blur-sm' : ''}`}>
-                                                        {token.advancedMetrics.socialSentiment?.hypeLevel || 'DORMANT'}
+                                                    <div className="vortex-text-tiny vortex-text-muted">VELOCITY_PULSE</div>
+                                                    <div className={`vortex-text-lg vortex-font-bold ${token.advancedMetrics.marketVelocity?.score || 0 > 70 ? 'text-vortex-yellow' : 'text-vortex-cyan'}`}>
+                                                        {token.advancedMetrics.marketVelocity?.activityLevel || 'DORMANT'}
                                                     </div>
-                                                    {!isElite && (
-                                                        <div className="vortex-abs-center text-vortex-yellow opacity-40">
-                                                            <Lock size={10} />
-                                                        </div>
-                                                    )}
                                                 </div>
                                                 <div className="vortex-divider-v"></div>
                                                 <div className="vortex-text-center">
                                                     <div className="vortex-text-tiny vortex-text-muted">LIQUIDITY</div>
                                                     <div className="vortex-text-lg vortex-font-bold text-vortex-bright">
-                                                        {formatCompactLocal(token.liquidityUsd)}
+                                                        {formatCompact(token.liquidityUsd)}
                                                     </div>
                                                 </div>
                                             </div>
@@ -354,18 +368,17 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                                     style={{ width: `${Math.max(0, Math.min(100, token.advancedMetrics?.top10HolderPercent || 0))}%` }}
                                                 />
                                             </div>
-                                            {!isElite && (
-                                                <div className="vortex-abs-fill vortex-bg-glass vortex-flex-center vortex-z-20">
-                                                    <div className="vortex-flex-column vortex-center vortex-gap-1">
-                                                        <Lock size={12} className="text-vortex-yellow" />
-                                                        <span className="vortex-text-tiny text-vortex-yellow uppercase">Locked_by_Syndicate</span>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     </VortexPanel>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* VORTEX VERDICT — Tactical Signal Panel */}
+                    {token && txs.length > 0 && (
+                        <div className="vortex-container-centered vortex-mt-4">
+                            <VortexVerdict token={token} recentTxs={txs} />
                         </div>
                     )}
                 </main>
@@ -376,12 +389,6 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
         </div >
     );
 }
-
-const formatCompactLocal = (val: number) => {
-    if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
-    if (val >= 1000) return (val / 1000).toFixed(1) + 'K';
-    return val.toLocaleString();
-};
 
 export default function TokenClientPage({ address }: { address?: string }) {
     return (

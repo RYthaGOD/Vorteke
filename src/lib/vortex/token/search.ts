@@ -1,6 +1,6 @@
 import { PublicKey } from '@solana/web3.js';
 import { TokenInfo, fetchTokenData, registerDiscoveredToken, fetchTokenFromServer, DexScreenerResponse, DexScreenerPair } from '../../dataService';
-import { TokenEnhancement, fetchTokenEnhancement } from '../../monetizationService';
+import { TokenEnhancement, fetchTokenEnhancement, verifyEliteAccess } from '../../monetizationService';
 import { throttledFetch } from '../utils';
 import { detectBundle } from '../security';
 import { verifyLPBurn } from './metrics';
@@ -83,11 +83,11 @@ export const resolveSearch = async (query: string): Promise<TokenInfo[]> => {
                     top10HolderPercent: 0,
                     devWalletStatus: 'holding',
                     lpBurnStatus: 'unverified',
-                    slippage1k: 0.5,
-                    slippage10k: 2.5,
+                    slippage1k: 0,
+                    slippage10k: 0,
                     snipeVolumePercent: 0,
-                    mintAuthority: 'renounced',
-                    freezeAuthority: 'renounced',
+                    mintAuthority: 'active', // Pessimistic default until scanned
+                    freezeAuthority: 'active', // Pessimistic default until scanned
                     metadataMutable: true,
                     holderIntelligence: {
                         clusterDetected: false,
@@ -95,12 +95,12 @@ export const resolveSearch = async (query: string): Promise<TokenInfo[]> => {
                         riskLevel: 'LOW',
                         top10Percent: 0
                     },
-                    sentiment: {
+                    velocitySentiment: {
                         buyPercent: 50,
                         sellPercent: 50
                     }
                 },
-                securityTags: ['PENDING_RECON']
+                securityTags: ['SEARCH_RESULT']
             };
 
             registerDiscoveredToken(address);

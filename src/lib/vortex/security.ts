@@ -150,10 +150,39 @@ export async function detectCreatorCluster(creatorAddress: string): Promise<stri
     if (!creatorAddress) return [];
 
     try {
-        // TACTICAL_DEBT: This requires the /api/tokens API to support creator indexing.
-        // Currently returning empty list - backend implementation required for full cluster recon.
-        return [];
+        const res = await fetch(`/api/tokens?creator=${creatorAddress}`);
+        if (!res.ok) return [];
+        const tokens = await res.json();
+
+        // Return addresses of other tokens by this creator
+        return Array.isArray(tokens) ? tokens.map((t: any) => t.address) : [];
     } catch {
         return [];
+    }
+}
+
+/**
+ * Helius Tactical Funding Recon: Identifies the original SOL source.
+ * Uses the /funded-by endpoint for single-call resolution.
+ */
+export async function traceFundingOrigins(walletAddress: string): Promise<{ source: string; type: string } | null> {
+    const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
+    if (!HELIUS_API_KEY) return null;
+
+    try {
+        const res = await fetch(`https://api.helius.xyz/v1/wallet/${walletAddress}/funded-by?api-key=${HELIUS_API_KEY}`);
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        if (data && data.fundedBy) {
+            return {
+                source: data.fundedBy,
+                type: data.type || 'UNKNOWN'
+            };
+        }
+        return null;
+    } catch (e) {
+        console.warn("FUNDING_TRACE_FAILURE:", e);
+        return null;
     }
 }

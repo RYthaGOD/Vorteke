@@ -19,7 +19,7 @@ interface DflowQuote {
  */
 export function useSwapBalances(token: TokenInfo) {
     const { connection } = useConnection();
-    const { publicKey } = useWallet();
+    const { publicKey, connected } = useWallet();
     const [balance, setBalance] = useState<number | null>(null);
     const [tokenBalance, setTokenBalance] = useState<number | null>(null);
 
@@ -52,7 +52,8 @@ export function useSwapBalances(token: TokenInfo) {
         fetchBalances();
         const id = setInterval(fetchBalances, 10000);
         return () => clearInterval(id);
-    }, [publicKey, token.address, connection]);
+        // H6 FIX: include `connected` so the effect re-fires on disconnect, clearing the interval
+    }, [publicKey, connected, token.address, connection]);
 
     return { balance, tokenBalance };
 }
@@ -185,7 +186,7 @@ export function useSwapExecution(
 
             const transaction = VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
 
-            setExecStatus('VORTEX_PROTOCOL_INJECTION...');
+            setExecStatus('PREPARING_TRANSACTION_STATE...');
             const altPks = transaction.message.addressTableLookups.map(a => a.accountKey);
             const altInfos = await connection.getMultipleAccountsInfo(altPks);
             const addressLookupTableAccounts = altInfos.map((info, idx) => {
@@ -227,9 +228,33 @@ export function useSwapExecution(
 
             setExecStatus('SIGNING...');
             const signed = await signTransaction(transaction);
+            const serialized = Buffer.from(signed.serialize()).toString('base64');
 
-            const sendOptions = priorityLevel === 'Turbo' ? { skipPreflight: true, maxRetries: 0 } : { skipPreflight: true };
-            const sig = await connection.sendRawTransaction(signed.serialize(), sendOptions);
+            let sig = '';
+            if (priorityLevel === 'Turbo') {
+                setExecStatus('SUBMITTING_JITO_BUNDLE...');
+                try {
+                    const jitoRes = await fetch('/api/proxy/jito-bundle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ signedTransaction: serialized })
+                    });
+
+                    if (!jitoRes.ok) throw new Error("JITO_BUNDLE_REJECTED");
+                    const jitoData = await jitoRes.json();
+
+                    // Jito returns the signature string as 'result'
+                    sig = jitoData.result;
+                    if (!sig) throw new Error("JITO_SUBMISSION_FAILED");
+                } catch (jitoErr: any) {
+                    console.error("JITO_FAIL_FALLBACK", jitoErr);
+                    // Fallback to standard transmission if Jito fails, so user doesn't lose the trade
+                    sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: true });
+                }
+            } else {
+                setExecStatus('TRANSMITTING...');
+                sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: true });
+            }
 
             setExecStatus('CONFIRMING...');
             await connection.confirmTransaction(sig, 'confirmed');

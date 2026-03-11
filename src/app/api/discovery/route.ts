@@ -59,13 +59,7 @@ export async function GET(req: NextRequest) {
                     volume24h: pair.volume?.h24 || 0,
                     liquidityUsd: pair.liquidity?.usd || 0,
                     logoURI: pair.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${pair.baseToken.address}.png`,
-                    securityTags: ['ANALYZED', 'DYNAMIC_LIQUIDITY'],
-                    advancedMetrics: {
-                        lpBurnStatus: 'pending',
-                        mintAuthority: 'checking',
-                        freezeAuthority: 'checking',
-                        sentiment: { buyPercent: 50, sellPercent: 50 }
-                    }
+                    securityTags: ['DYNAMIC_LIQUIDITY']
                 }));
 
             return NextResponse.json(tokens);
@@ -156,51 +150,56 @@ export async function GET(req: NextRequest) {
                     geckoPath = 'networks/solana/trending_pools';
                     break;
                 }
-            case 'losers':
+            case 'verified':
                 try {
-                    // FIX: Fetch real losers via DexScreener (mirrors Gainers but sorted ascending)
-                    const loserRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', {
+                    // Verified tokens = Anything in the Enhancement table with status or owner
+                    const enhancements = await prisma.enhancement.findMany({
+                        where: {
+                            OR: [
+                                { tier: { not: 'Basic' } },
+                                { owner: { not: null } }
+                            ]
+                        },
+                        take: 30,
+                        orderBy: { lastPaymentTime: 'desc' }
+                    });
+
+                    const verifiedAddresses = enhancements.map(e => e.address);
+                    if (verifiedAddresses.length === 0) {
+                        // Fallback to trending pools if no verified tokens yet
+                        geckoPath = 'networks/solana/trending_pools';
+                        break;
+                    }
+
+                    const verifiedPairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${verifiedAddresses.join(',')}`, {
                         next: { revalidate: 60 }
                     } as any);
-                    if (!loserRes.ok) throw new Error('LOSER_FETCH_FAIL');
-                    const loserProfileData = await loserRes.json();
+                    const verifiedPairsData = await verifiedPairsRes.json();
 
-                    const loserAddresses = (loserProfileData || [])
-                        .filter((t: any) => t.chainId === 'solana' && t.tokenAddress)
-                        .slice(0, 30)
-                        .map((t: any) => t.tokenAddress)
-                        .join(',');
+                    const seenVerified = new Set();
+                    const verifiedTokens = (verifiedPairsData.pairs || [])
+                        .filter((p: any) => p.chainId === 'solana' && !seenVerified.has(p.baseToken.address) && seenVerified.add(p.baseToken.address))
+                        .map((p: any) => {
+                            const enh = enhancements.find(e => e.address === p.baseToken.address);
+                            return {
+                                address: p.baseToken.address,
+                                name: p.baseToken.name,
+                                symbol: p.baseToken.symbol,
+                                priceUsd: parseFloat(p.priceUsd || '0'),
+                                priceChange24h: p.priceChange?.h24 || 0,
+                                volume24h: p.volume?.h24 || 0,
+                                liquidityUsd: p.liquidity?.usd || 0,
+                                mcap: p.fdv || 0,
+                                logoURI: enh?.iconURI || p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${p.baseToken.address}.png`,
+                                tier: enh?.tier || 'Basic',
+                                securityTags: ['VERIFIED_PROJECT', 'ENHANCED_DATA']
+                            };
+                        });
 
-                    if (!loserAddresses) throw new Error('NO_LOSER_ADDRS');
-
-                    const loserPairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${loserAddresses}`, {
-                        next: { revalidate: 60 }
-                    } as any);
-                    const loserPairsData = await loserPairsRes.json();
-
-                    const seenLosers = new Set();
-                    const loserTokens = (loserPairsData.pairs || [])
-                        .filter((p: any) => p.chainId === 'solana' && !seenLosers.has(p.baseToken.address) && seenLosers.add(p.baseToken.address))
-                        // Sort ASCENDING (biggest losers first)
-                        .sort((a: any, b: any) => (a.priceChange?.h24 || 0) - (b.priceChange?.h24 || 0))
-                        .slice(0, 25)
-                        .map((p: any) => ({
-                            address: p.baseToken.address,
-                            name: p.baseToken.name,
-                            symbol: p.baseToken.symbol,
-                            priceUsd: parseFloat(p.priceUsd || '0'),
-                            priceChange24h: p.priceChange?.h24 || 0,
-                            volume24h: p.volume?.h24 || 0,
-                            liquidityUsd: p.liquidity?.usd || 0,
-                            mcap: p.fdv || 0,
-                            logoURI: p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${p.baseToken.address}.png`,
-                            securityTags: ['LOSER', 'DECLINING_SIGNAL']
-                        }));
-
-                    discoveryCache[cacheKey] = { data: loserTokens, timestamp: Date.now() };
-                    return NextResponse.json(loserTokens);
+                    discoveryCache[cacheKey] = { data: verifiedTokens, timestamp: Date.now() };
+                    return NextResponse.json(verifiedTokens);
                 } catch (e) {
-                    console.warn("LOSERS_FETCH_FAIL, falling back to trending sorted", e);
+                    console.warn("VERIFIED_FETCH_FAIL, falling back to trending", e);
                     geckoPath = 'networks/solana/trending_pools';
                     break;
                 }
@@ -294,13 +293,7 @@ export async function GET(req: NextRequest) {
                             fdv: pair.fdv || 0,
                             mcap: pair.fdv || 0,
                             logoURI: pair.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${addr}.png`,
-                            advancedMetrics: {
-                                lpBurnStatus: 'pending',
-                                mintAuthority: 'checking',
-                                freezeAuthority: 'checking',
-                                sentiment: { buyPercent: 50, sellPercent: 50 }
-                            },
-                            securityTags: ['LIQUIDITY_DISCOVERED', 'AGGREGRATED_SOURCE'],
+                            securityTags: ['AGGREGRATED_SOURCE'],
                             lastUpdated: new Date()
                         };
 

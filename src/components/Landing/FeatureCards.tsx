@@ -6,38 +6,38 @@ import { VortexPanel } from '../DesignSystem';
 
 const features = [
     {
-        title: 'RECON_ENGINE',
-        description: 'Advanced real-time market reconnaissance with 200ms discovery latency.',
+        title: 'RECON ENGINE',
+        description: 'Advanced real-time market reconnaissance with optimized discovery latency.',
         icon: <Search className="text-vortex-cyan" />,
         color: 'cyan'
     },
     {
-        title: 'VERIFIED_VAULT',
+        title: 'VERIFIED VAULT',
         description: 'Automated safety scrutinizers ensuring LP burn and mint renunciation.',
         icon: <ShieldCheck className="text-vortex-yellow" />,
         color: 'yellow'
     },
     {
-        title: 'PORTFOLIO_INTEL',
+        title: 'PORTFOLIO INTEL',
         description: 'Deep-mesh tracking for Token-2022 assets with instant PnL resolution.',
         icon: <Activity className="text-vortex-cyan" />,
         color: 'cyan'
     },
     {
-        title: 'EXECUTION_ELITE',
+        title: 'EXECUTION ELITE',
         description: 'Jito-Turbo protocol integration for mev-free, blink-of-an-eye swaps.',
         icon: <Zap className="text-vortex-yellow" />,
         color: 'yellow'
     },
     {
-        title: 'DEEP_SCAN_SUITE',
+        title: 'DEEP SCAN SUITE',
         description: 'Contract level source audit and holder concentration analysis.',
         icon: <BarChart3 className="text-vortex-cyan" />,
         color: 'cyan'
     },
     {
-        title: 'ELITE_ACCESS',
-        description: 'Exclusive verification tiers and zero-fee swaps for NFT pass holders.',
+        title: 'ELITE ACCESS',
+        description: 'Exclusive verification tiers and forensic recon utilities for Elite pass holders.',
         icon: <Lock className="text-vortex-yellow" />,
         color: 'yellow'
     }
@@ -50,7 +50,7 @@ export function FeatureCards() {
                 <div key={i} className="feature-item">
                     <VortexPanel
                         title={f.title}
-                        subTitle="SYSTEM_MODULE"
+                        subTitle="SYSTEM MODULE"
                         glowColor={f.color as any}
                         variant="glass"
                         showCorners={true}
@@ -77,7 +77,7 @@ export function FeatureCards() {
                 }
 
                 .feature-content {
-                    padding: 20px 0;
+                    padding: 10px 0 10px;
                 }
 
                 .feature-icon {

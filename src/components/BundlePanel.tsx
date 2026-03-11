@@ -60,7 +60,7 @@ export function BundlePanel({ token, onEnhance }: BundlePanelProps) {
                         className="vortex-full-width vortex-bg-cyan text-vortex-obsidian vortex-text-bold vortex-ls-wide"
                         onClick={() => setShowDeepScan(true)}
                     >
-                        INITIATE DEEP SCAN (0.02 SOL)
+                        INITIATE DEEP SCAN (0.05 SOL)
                     </VortexButton>
 
                     {token.tier !== 'Elite' && (

@@ -17,9 +17,9 @@ interface NotificationStore {
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
     notifications: [],
     notify: (type, message) => {
-        // SILENCE GHOST ERRORS
-        if (type === 'error' && (message.match(/^\d+$/) || message.includes('FETCH_FAILURE') || message.includes('401') || message.includes('429'))) {
-            console.warn("SILENCEDHUDERROR:", message);
+        // Suppress non-actionable numeric-only error codes (e.g. raw status codes)
+        if (type === 'error' && message.match(/^\d+$/)) {
+            console.warn("SILENCED_NUMERIC_ERROR:", message);
             return;
         }
 
@@ -42,7 +42,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     }
 }));
 
-export const notify = (title: string, message: string, type: NotificationType = 'info') => {
-    useNotificationStore.getState().notify(type, `${title}: ${message}`);
-};
+// H4 FIX: Removed 3-arg `notify(title, message, type)` export — it was the root cause of C2/C3.
+// Outside React components, use: useNotificationStore.getState().notify(type, message)
 

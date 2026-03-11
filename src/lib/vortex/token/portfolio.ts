@@ -3,7 +3,7 @@ import { TokenInfo, fetchTokenData } from '../../dataService';
 import { getResilientConnection } from '../../solana/connection';
 import { fetchTokenEnhancement } from '../../monetizationService';
 import { detectBundle } from '../security';
-import { verifyLPBurn, getSocialSentiment } from './metrics';
+import { verifyLPBurn, getMarketVelocity } from './metrics';
 
 export interface PortfolioItem {
     address: string;
@@ -23,11 +23,13 @@ export const getQuickRecon = async (tokenOrAddress: string | TokenInfo): Promise
     const address = typeof tokenOrAddress === 'string' ? tokenOrAddress : tokenOrAddress.address;
     const info = typeof tokenOrAddress === 'string' ? await fetchTokenData(tokenOrAddress) : tokenOrAddress;
 
-    const [bundle, lp, enhancement, sentiment] = await Promise.all([
+    if (!info) return { address, securityTags: ['UPLINK_OFFLINE'] };
+
+    const [bundle, lp, enhancement, velocity] = await Promise.all([
         detectBundle(address).catch(() => ({ isBundled: false, percentage: 0, riskLevel: 'LOW' as const })),
         verifyLPBurn(address).catch(() => 'unverified' as const),
         fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic' as const, socials: {}, customDescription: '' })),
-        getSocialSentiment(address, info.volume24h, info.priceChange24h, info.liquidityUsd).catch(() => ({ score: 50, hypeLevel: 'DORMANT' as const }))
+        getMarketVelocity(address, info.volume24h || 0, info.priceChange24h || 0, info.liquidityUsd || 0).catch(() => ({ score: 50, activityLevel: 'DORMANT' as const }))
     ]);
 
     return {
@@ -47,7 +49,7 @@ export const getQuickRecon = async (tokenOrAddress: string | TokenInfo): Promise
         ])),
         advancedMetrics: {
             ...info.advancedMetrics,
-            socialSentiment: sentiment
+            marketVelocity: velocity
         }
     };
 };
@@ -88,6 +90,8 @@ export const getUserPortfolio = async (userPublicKey: string, isElite: boolean =
 
                     try {
                         const token = await fetchTokenData(mint);
+                        if (!token) throw new Error("TOKEN_NOT_FOUND");
+
                         return {
                             address: mint,
                             symbol: token.symbol,

@@ -83,7 +83,7 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                 </div>
                 {isElite ? (
                     <div className="badge-vortex vortex-bg-purple text-vortex-obsidian vortex-animate-pulse vortex-mr-2">
-                        SYNDICATE_ACTIVE
+                        ELITE_ACCESS_ACTIVE
                     </div>
                 ) : (
                     <button

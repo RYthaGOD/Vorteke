@@ -7,11 +7,21 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const address = searchParams.get('address');
         const addresses = searchParams.get('addresses')?.split(',');
+        const creator = searchParams.get('creator');
 
         if (address) {
             try { new PublicKey(address); } catch { return NextResponse.json({ error: 'INVALID_ADDRESS' }, { status: 400 }); }
             const token = await prisma.token.findUnique({ where: { address } });
             return NextResponse.json(token || { error: 'NOT_FOUND' }, { status: token ? 200 : 404 });
+        }
+
+        if (creator) {
+            const results = await prisma.token.findMany({
+                where: { creator },
+                take: 50,
+                orderBy: { lastUpdated: 'desc' }
+            });
+            return NextResponse.json(results);
         }
 
         if (addresses) {
@@ -50,6 +60,7 @@ export async function POST(request: NextRequest) {
             fdv: typeof token.fdv === 'number' ? token.fdv : 0,
             mcap: typeof token.mcap === 'number' ? token.mcap : 0,
             tier: token.tier || 'Basic',
+            creator: token.creator || null,
             securityTags: token.securityTags || null,
             advancedMetrics: token.advancedMetrics || null,
             lastUpdated: new Date()

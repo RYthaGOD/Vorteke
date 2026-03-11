@@ -20,20 +20,18 @@ export function Hero() {
                 <div className="vortex-mb-8">
                     <VortexLogo size="hero" showLabel={true} />
                 </div>
-
-                <div className="vanguard-badge">
-
-                    <ShieldCheck size={14} className="text-vortex-yellow" />
-                    <span>PROTOCOL_VTX_V9_ACTIVE</span>
+                <div className="vanguad-badge">
+                    <ShieldCheck size={14} className="text-vortex-cyan" />
+                    <span>TRADING_INTERFACE_STABLE</span>
                 </div>
 
-                <h1 className="hero-title glitch-text" data-text="MASTER_THE_SINGULARITY">
+                <h1 className="hero-title glitch-text" data-text="MASTER THE SINGULARITY">
                     MASTER THE<br />
                     <span className="hero-gradient">SINGULARITY</span>
                 </h1>
 
                 <p className="hero-description">
-                    The ultimate industrial-grade reconnaissance interface for the Solana network.
+                    The ultimate industrial-grade trading interface for the Solana network.
                     Real-time telemetry, automated safety scrutiny, and elite portfolio intelligence.
                 </p>
 
@@ -42,27 +40,25 @@ export function Hero() {
                         className="btn-vortex btn-vortex-primary btn-hero-main"
                         onClick={() => router.push('/terminal')}
                     >
-                        LAUNCH_TERMINAL <ChevronRight size={20} />
-                    </button>
-                    <button className="btn-vortex btn-vortex-secondary btn-hero-alt">
-                        VIEW_RECON_DOCS
+                        LAUNCH TERMINAL <ChevronRight size={20} />
                     </button>
                 </div>
 
+
                 <div className="hero-stats">
                     <div className="stat-item">
-                        <span className="stat-value text-vortex-cyan">0.2s</span>
-                        <span className="stat-label">DISCOVERY_LATENCY</span>
+                        <span className="stat-value text-vortex-cyan">OPTIMIZED</span>
+                        <span className="stat-label">DISCOVERY LATENCY</span>
                     </div>
                     <div className="divider"></div>
                     <div className="stat-item">
-                        <span className="stat-value text-vortex-yellow">100%</span>
-                        <span className="stat-label">BURN_PROTOCOL</span>
+                        <span className="stat-value text-vortex-yellow">ACTIVE</span>
+                        <span className="stat-label">SECURITY SCANS</span>
                     </div>
                     <div className="divider"></div>
                     <div className="stat-item">
-                        <span className="stat-value text-vortex-gold">50%</span>
-                        <span className="stat-label">$VTX_YIELD_LOCK</span>
+                        <span className="stat-value text-vortex-purple">FORENSIC</span>
+                        <span className="stat-label">DATA PRECISION</span>
                     </div>
                 </div>
             </div>
@@ -273,6 +269,6 @@ export function Hero() {
 
             `}</style>
 
-        </section>
+        </section >
     );
 }

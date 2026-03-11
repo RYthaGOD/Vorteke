@@ -93,8 +93,15 @@ export async function GET(req: NextRequest) {
     }
 
     try {
+        if (!BIRDEYE_API_KEY) {
+            console.error("BIRDEYE_PROXY_CRITICAL: API Key Missing in Environment");
+            return NextResponse.json({ error: 'BIRDEYE_NOT_CONFIGURED' }, { status: 503 });
+        }
+
         // v3 endpoint per Birdeye docs
         const targetUrl = `https://public-api.birdeye.so/defi/v3/token/ohlcv?address=${address}&type=${type}&time_from=${time_from}&time_to=${time_to}`;
+
+        console.debug(`BIRDEYE_REQUEST: ${targetUrl}`);
 
         const response = await fetch(targetUrl, {
             headers: {
@@ -102,21 +109,25 @@ export async function GET(req: NextRequest) {
                 'x-chain': 'solana',
                 'Accept': 'application/json'
             },
+            // Reduce timeout for snappier fallbacks
+            signal: AbortSignal.timeout(10000)
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`BIRDEYE_HTTP_${response.status} - ${errorText}`);
+            console.error(`BIRDEYE_UPSTREAM_FAIL: ${response.status} | Error: ${errorText}`);
+            return NextResponse.json({ error: `BIRDEYE_${response.status}`, details: errorText }, { status: response.status });
         }
 
         const data = await response.json();
-
-        // Cache successful responses
         setCache(cacheKey, data);
-
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error('BIRDEYE_PROXY_ERROR:', error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        console.error('BIRDEYE_PROXY_EXCEPTION:', error.message || error);
+        return NextResponse.json({
+            error: 'PROXY_INTERNAL_ERROR',
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        }, { status: 500 });
     }
 }

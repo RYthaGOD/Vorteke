@@ -8,7 +8,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { RPC_ENDPOINTS } from '@/lib/constants';
 import { getResilientConnection } from '@/lib/solana/connection';
-import { notify } from '@/lib/store';
+import { useNotificationStore } from '@/lib/store';
 
 interface DeepScanModalProps {
     isOpen: boolean;
@@ -19,6 +19,7 @@ interface DeepScanModalProps {
 
 export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: DeepScanModalProps) {
     const { publicKey, connected } = useVortexAuth();
+    const notify = useNotificationStore(state => state.notify);
     const { signTransaction, sendTransaction } = useWallet();
     const [status, setStatus] = useState<'IDLE' | 'INITIATING' | 'SIGNING' | 'VERIFYING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [error, setError] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
 
     const handleInitiateScan = async () => {
         if (!publicKey) {
-            notify("WALLET_NOT_CONNECTED", "Please connect your wallet to proceed.", "error");
+            notify('error', 'WALLET_NOT_CONNECTED: Please connect your wallet to proceed.');
             return;
         }
 
@@ -49,7 +50,7 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
 
             if (txData === 'ELITE_BYPASS') {
                 setStatus('SUCCESS');
-                notify("ELITE_ACCESS_GRANTED", "Bypassing scan fee via Elite Pass.", "success");
+                notify('success', 'ELITE_ACCESS_GRANTED: Bypassing scan fee via Elite Pass.');
                 return;
             }
 
@@ -83,7 +84,7 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
 
             if (isVerified) {
                 setStatus('SUCCESS');
-                notify("DEEP_SCAN_UNLOCKED", "Holder intelligence clusters are now visible.", "success");
+                notify('success', 'DEEP_SCAN_UNLOCKED: Holder intelligence clusters are now visible.');
             } else {
                 throw new Error("Payment verification failed on-chain.");
             }
@@ -116,7 +117,7 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
                         <div className="vortex-info-box vortex-bg-obsidian-2">
                             <div className="vortex-flex-between vortex-mb-2">
                                 <span className="vortex-text-tiny vortex-text-bold">NETWORK_FEE</span>
-                                <span className="vortex-text-tiny text-vortex-cyan">0.02 SOL</span>
+                                <span className="vortex-text-tiny text-vortex-cyan">0.05 SOL</span>
                             </div>
                             <div className="vortex-flex-between">
                                 <span className="vortex-text-tiny vortex-text-bold">ACCESS_DURATION</span>
@@ -145,7 +146,7 @@ export function DeepScanModal({ isOpen, onClose, tokenSymbol, tokenAddress }: De
                         <CheckCircle2 size={64} className="text-vortex-cyan animate-pulse" />
                         <div className="vortex-text-center">
                             <h3 className="vortex-h3 text-vortex-white">SCAN_COMPLETE</h3>
-                            <p className="vortex-text-sm vortex-text-muted">Advanced metrics have been injected into the Recom Suite.</p>
+                            <p className="vortex-text-sm vortex-text-muted">Advanced metrics have been injected into the Recon Suite.</p>
                         </div>
                         <VortexButton variant="ghost" onClick={onClose} className="vortex-mt-4">
                             CLOSE_TERMINAL

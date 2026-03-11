@@ -117,41 +117,20 @@ export const fetchTokenEnhancement = async (address: string): Promise<TokenEnhan
     }
 };
 
-export const purchaseEnhancement = async (address: string, tier: TokenTier, wallet: string, useVtx: boolean = false): Promise<string | null> => {
+export const purchaseEnhancement = async (address: string, tier: TokenTier, wallet: string): Promise<string | null> => {
     try {
-        const usdcAmount = tier === 'Elite' ? 120 : 30; // 30 USDC or 120 USDC
-        const usdcMint = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-        const solMint = 'So11111111111111111111111111111111111111112';
-
-        // If using VTX, we apply a 50% discount on the USD value
-        const targetUsdValue = useVtx ? usdcAmount * 0.5 : usdcAmount;
-        const inputAmountLamports = targetUsdValue * 1_000_000; // USDC decimals
-
-        // Fetch quote for the target payment asset
-        const outputMint = useVtx ? (process.env.NEXT_PUBLIC_VTX_MINT || '') : solMint;
-
-        if (useVtx && !outputMint) {
-            throw new Error("VTX_MINT_NOT_CONFIGURED");
-        }
-
-        // Use internal proxy to avoid CORS and protect reliability
-        const jupQuoteRes = await fetch(`/api/proxy/jup-quote?inputMint=${usdcMint}&outputMint=${outputMint}&amount=${inputAmountLamports}&slippageBps=50`);
-        const jupQuote = await jupQuoteRes.json();
-
-        if (!jupQuote.outAmount) throw new Error("JUPITER_QUOTE_FAILED");
-
-        // outAmount is in absolute lamports/atoms for the specific mint
-        const amount = Number(jupQuote.outAmount);
+        // Absolute Source of Truth: Standard pricing in SOL lamports
+        const solPrice = tier === 'Elite' ? 0.75 : 0.25;
+        const amountLamports = Math.floor(solPrice * 1_000_000_000);
 
         const resp = await fetch('/api/pay/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 wallet,
-                amount, // This is now raw lamports/atoms
+                amount: amountLamports,
                 address,
                 tier,
-                isVtx: useVtx
             })
         });
 
@@ -165,17 +144,11 @@ export const purchaseEnhancement = async (address: string, tier: TokenTier, wall
 };
 
 export const purchaseDeepScan = async (address: string, wallet: string): Promise<string | null> => {
-    // Deep scan initiated
     try {
-        // 1. Check if the user is an Elite Pass Holder
         const isElite = await verifyEliteAccess(wallet);
-        if (isElite) {
-            // Elite bypass
-            return 'ELITE_BYPASS';
-        }
+        if (isElite) return 'ELITE_BYPASS';
 
-        const scanFeeSol = 0.02; // Flat 0.02 SOL for Deep Scan
-        // FIX: Convert to lamports (was sending raw float 0.02 which Math.floor'd to 0 = free scan exploit)
+        const scanFeeSol = 0.05; // Standardized Deep Scan Fee
         const scanFeeLamports = Math.floor(scanFeeSol * 1_000_000_000);
 
         const resp = await fetch('/api/pay/initiate', {
@@ -193,12 +166,12 @@ export const purchaseDeepScan = async (address: string, wallet: string): Promise
     }
 };
 
-export const verifyPayment = async (signature: string, address: string, tier: TokenTier, wallet: string, isVtx: boolean = false): Promise<boolean> => {
+export const verifyPayment = async (signature: string, address: string, tier: TokenTier, wallet: string): Promise<boolean> => {
     try {
         const res = await fetch('/api/pay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ signature, address, tier, wallet, isVtx })
+            body: JSON.stringify({ signature, address, tier, wallet })
         });
         return res.ok;
     } catch {
@@ -207,8 +180,6 @@ export const verifyPayment = async (signature: string, address: string, tier: To
 };
 
 export const claimProject = async (address: string, wallet: string, signature: string, timestamp: number): Promise<boolean> => {
-    // Claim process
-
     try {
         const res = await fetch(`/api/claim`, {
             method: 'POST',

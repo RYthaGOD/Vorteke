@@ -1,17 +1,17 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { createChart, ColorType, Time } from 'lightweight-charts';
-import { ChartTick, Timeframe } from '@/lib/dataService';
+import { ChartTick, Timeframe, VortexTx } from '@/lib/dataService';
 
 interface TokenChartProps {
     address: string;
     initialData: ChartTick[];
-    realtimeData: ChartTick | null;
+    realtimeTx: VortexTx | null; // Use raw transactions instead of pre-computed poll ticks
     timeframe: Timeframe;
     onTimeframeChange: (tf: Timeframe | any) => void;
 }
 
-export function TokenChart({ address, initialData, realtimeData, timeframe, onTimeframeChange }: TokenChartProps) {
+export function TokenChart({ address, initialData, realtimeTx, timeframe, onTimeframeChange }: TokenChartProps) {
     const [useIframe, setUseIframe] = useState(false);
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<any>(null);
@@ -21,6 +21,10 @@ export function TokenChart({ address, initialData, realtimeData, timeframe, onTi
     const rsiSeriesRef = useRef<any>(null);
     const volumeSeriesRef = useRef<any>(null);
     const legendRef = useRef<HTMLDivElement>(null);
+
+    // CANDLE_STATE_MACHINE: Track the current forming candle to enforce OHLC locking
+    const currentCandleRef = useRef<ChartTick | null>(null);
+    const lastCloseRef = useRef<number>(0);
 
     useEffect(() => {
         if (!chartContainerRef.current) return;
@@ -77,8 +81,8 @@ export function TokenChart({ address, initialData, realtimeData, timeframe, onTi
         series.priceScale().applyOptions({
             autoScale: true,
             scaleMargins: {
-                top: 0.1,
-                bottom: 0.2,
+                top: 0.05, // Reduced from 0.1
+                bottom: 0.15, // Reduced from 0.2
             },
         });
 
@@ -246,11 +250,17 @@ export function TokenChart({ address, initialData, realtimeData, timeframe, onTi
 
 
 
+    // CANDLE_ENGINE: State-aware tick aggregator
     useEffect(() => {
-        if (seriesRef.current && realtimeData) {
+        if (seriesRef.current && (realtimeTx || (initialData?.length > 0 && lastCloseRef.current === 0))) {
             try {
-                // INTERVAL SNAPPING: Align the tick timestamp to the current candle's interval
-                // so real-time updates always update the CURRENT candle, not create a new rogue one.
+                // Initialize lastClose from historical data
+                if (lastCloseRef.current === 0 && initialData.length > 0) {
+                    lastCloseRef.current = initialData[initialData.length - 1].close;
+                }
+
+                if (!realtimeTx) return;
+
                 const getIntervalSeconds = (tf: string): number => {
                     switch (tf) {
                         case '1S': return 1;
@@ -264,29 +274,59 @@ export function TokenChart({ address, initialData, realtimeData, timeframe, onTi
                 };
 
                 const interval = getIntervalSeconds(timeframe);
-                // Snap the tick time to the nearest interval boundary (floor)
-                const snappedTime = Math.floor(realtimeData.time / interval) * interval;
+                const snappedTime = Math.floor(realtimeTx.blockTime / interval) * interval;
+                const price = realtimeTx.priceUsd || 0;
+                if (price === 0) return;
 
+                // STASH: Previous candle state
+                let candle = currentCandleRef.current;
+
+                // NEW_CANDLE_DETECTION: If the snapped time has progressed, we must seal the old candle
+                if (!candle || snappedTime > candle.time) {
+                    // SEAMLESS_TRANSITION: New candle MUST open at the exact price the previous one closed
+                    const openPrice = lastCloseRef.current || price;
+
+                    candle = {
+                        time: snappedTime,
+                        open: openPrice,
+                        high: Math.max(openPrice, price),
+                        low: Math.min(openPrice, price),
+                        close: price,
+                        volume: realtimeTx.amountUsd || 0
+                    };
+                } else {
+                    // ACCUMULATION: Update existing candle High/Low and volume
+                    candle.high = Math.max(candle.high, price);
+                    candle.low = Math.min(candle.low, price);
+                    candle.close = price;
+                    candle.volume += (realtimeTx.amountUsd || 0);
+                }
+
+                // COMMIT: Push to Lightweight Charts
                 seriesRef.current.update({
-                    time: snappedTime as any,
-                    open: realtimeData.open,
-                    high: realtimeData.high,
-                    low: realtimeData.low,
-                    close: realtimeData.close,
+                    time: candle.time as any,
+                    open: candle.open,
+                    high: candle.high,
+                    low: candle.low,
+                    close: candle.close,
                 });
 
                 if (volumeSeriesRef.current) {
                     volumeSeriesRef.current.update({
-                        time: snappedTime as any,
-                        value: realtimeData.volume,
-                        color: realtimeData.close >= realtimeData.open ? 'rgba(20, 241, 149, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+                        time: candle.time as any,
+                        value: candle.volume,
+                        color: candle.close >= candle.open ? 'rgba(20, 241, 149, 0.3)' : 'rgba(239, 68, 68, 0.3)',
                     });
                 }
+
+                currentCandleRef.current = candle;
+                lastCloseRef.current = price;
+
             } catch (err) {
-                console.debug("Ignored out-of-order realtime tick update to preserve chart stability");
+                console.debug("Ignored desync tick in CandleEngine");
             }
         }
-    }, [realtimeData, timeframe]);
+    }, [realtimeTx, timeframe, initialData]);
 
     return (
         <div className="vortex-relative vortex-full-size vortex-chart-h">
@@ -320,12 +360,31 @@ export function TokenChart({ address, initialData, realtimeData, timeframe, onTi
                     />
                 </div>
             ) : (
-                <div
-                    ref={chartContainerRef}
-                    className="vortex-full-size"
-                    role="img"
-                    aria-label="Interactive Token Price Chart"
-                />
+                <>
+                    <div
+                        ref={chartContainerRef}
+                        className="vortex-full-size"
+                        role="img"
+                        aria-label="Interactive Token Price Chart"
+                    />
+                    {(!initialData || initialData.length <= 1) && (
+                        <div className="vortex-abs-center vortex-z-20 vortex-flex-column vortex-center vortex-bg-obsidian-90 vortex-p-6 vortex-border-vortex">
+                            <span className="vortex-text-red vortex-text-bold vortex-font-mono animate-pulse vortex-mb-2">
+                                [!] DATA_UPLINK_DEGRADED
+                            </span>
+                            <span className="vortex-text-tiny vortex-text-muted vortex-text-center">
+                                Historical OHLCV stream is currently unavailable.<br />
+                                Real-time telemetry is still active.
+                            </span>
+                            <button
+                                className="btn-vortex-mini vortex-mt-4 text-vortex-cyan"
+                                onClick={() => setUseIframe(true)}
+                            >
+                                SWITCH_TO_LIVE_EMBED
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
 
             {/* Indicator Legend HUD (Native Canvas only) */}

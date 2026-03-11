@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { getDiscoveryList, fetchTokenData, resolveSearch, getQuickRecon, getUserPortfolio, getRecentlyViewed, TokenInfo, formatCurrency, formatCompact, formatPercent } from '@/lib/dataService';
 import { Search, Filter, ArrowUpRight, Activity, Zap, TrendingUp, Clock, BarChart3, ShieldCheck, ShieldAlert, Loader2, Wallet, TrendingDown } from 'lucide-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
@@ -32,6 +33,8 @@ export default function Home() {
     const { publicKey, connected, isElite } = useVortexAuth();
     const [activeTab, setActiveTab] = useState<DiscoveryType>('trending');
     const notify = useNotificationStore(state => state.notify);
+    const searchParams = useSearchParams();
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
 
     // Discovery Hub Query
     const { data: tokens = [], isLoading: discoveryLoading } = useQuery({
@@ -84,6 +87,13 @@ export default function Home() {
         setMounted(true);
         setRecentTokens(getRecentlyViewed());
     }, []);
+
+    // H2 FIX: Auto-focus search if navigated here with ?focusSearch=true (e.g. from mobile nav)
+    useEffect(() => {
+        if (searchParams?.get('focusSearch') === 'true' && searchInputRef.current) {
+            setTimeout(() => searchInputRef.current?.focus(), 150);
+        }
+    }, [searchParams]);
 
     const handleSearchFocus = () => {
         setShowOverlay(true);
@@ -312,8 +322,11 @@ export default function Home() {
                                             <Search size={16} className="vortex-text-muted vortex-abs-center-y vortex-left-12" />
                                             <input
                                                 type="text"
+                                                id="vortex-main-search"
+                                                aria-label="Search tokens or wallets"
                                                 placeholder="Scan contract address..."
                                                 className="vortex-input-field vortex-search-input-pl vortex-w-320"
+                                                ref={searchInputRef}
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 onFocus={handleSearchFocus}
@@ -340,7 +353,9 @@ export default function Home() {
                                                                         }}
                                                                     >
                                                                         <div className="vortex-flex-start vortex-gap-3">
-                                                                            <img src={token.logoURI} alt="" className="vortex-logo-mini vortex-border-radius-full" />
+                                                                            <img src={token.logoURI} alt="" className="vortex-logo-mini vortex-border-radius-full"
+                                                                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                                                            />
                                                                             <span className="vortex-text-sm vortex-text-bold">{token.symbol}</span>
                                                                         </div>
                                                                         <span className="vortex-text-xs vortex-text-muted">{token.name}</span>
@@ -363,7 +378,9 @@ export default function Home() {
                                                                 }}
                                                             >
                                                                 <div className="vortex-flex-start vortex-gap-3">
-                                                                    <img src={res.logoURI} alt="" className="vortex-logo-mini vortex-border-radius-full" />
+                                                                    <img src={res.logoURI} alt="" className="vortex-logo-mini vortex-border-radius-full"
+                                                                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                                                    />
                                                                     <div className="vortex-flex-column">
                                                                         <div className="vortex-text-sm vortex-text-bold">{res.symbol}</div>
                                                                         <div className="vortex-text-tiny vortex-text-muted">{res.name}</div>

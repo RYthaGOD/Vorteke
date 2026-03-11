@@ -5,7 +5,7 @@ export const HELIUS_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY || '';
 export const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
 export const JUPITER_API_KEY = process.env.NEXT_PUBLIC_JUPITER_API_KEY || '';
 export const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY || '';
-export const DFLOW_API_KEY = process.env.DFLOW_API_KEY || '';
+
 
 // System-wide RPC fallback topology
 export const RPC_ENDPOINTS = [
@@ -44,4 +44,6 @@ export const PROTOCOL_FLAT_FEE_SOL = 0.0075;
 // FIX: Use Math.round to guarantee integer lamports (float * int may produce floating point result)
 export const PROTOCOL_FLAT_FEE_LAMPORTS = Math.round(0.0075 * 1_000_000_000);
 
-export const VTX_MINT = process.env.NEXT_PUBLIC_VTX_MINT || '';
+// RPC Resilience Protocols
+export const RPC_HEARTBEAT_INTERVAL = 30000; // 30s probe
+export const RPC_LATENCY_THRESHOLD = 250; // 250ms preemptive failover

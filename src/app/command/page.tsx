@@ -19,39 +19,72 @@ export default function CommandPage() {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [history]);
 
-    const handleCommand = (e: React.FormEvent) => {
+    const handleCommand = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim()) return;
 
-        const cmd = input.toLowerCase().trim();
+        const fullCmd = input.trim();
+        const args = fullCmd.split(' ');
+        const cmd = args[0].toLowerCase();
         let response = '';
+
+        setHistory(prev => [...prev, `> ${fullCmd}`]);
+        setInput('');
 
         switch (cmd) {
             case 'help':
-                response = 'Available commands: help, clear, status, net, scan, elite';
+                response = 'COMMANDS: help, clear, status, net, scan <addr>, elite <wallet>, quote <addr>';
                 break;
             case 'status':
-                response = 'SYSTEM_OK | LATENCY [24ms] | UPTIME [1,442h]';
+                response = 'SYSTEM_OK | LATENCY [22ms] | NODES [ACTIVE: 4] | VORTEX_STRATA [v1.0.42]';
                 break;
             case 'clear':
                 setHistory([]);
-                setInput('');
                 return;
             case 'net':
-                response = 'SOLANA_MAINNET_CONNECTED | AGGREGATOR_NODE_01_ACTIVE';
+                response = 'SOLANA_MAINNET_CONNECTED | RPC: HELIUS_PREMIUM | JITO_TURBO: ON';
                 break;
             case 'scan':
-                response = 'Scanning global mempool... [OK] | Finding alpha... [4 tokens identified]';
+                if (!args[1]) { response = 'USAGE: scan <token_address>'; break; }
+                setHistory(prev => [...prev, '[...] INITIATING_DEEP_RECON_SCAN...']);
+                try {
+                    const res = await fetch(`/api/discovery?type=search&q=${args[1]}`);
+                    const data = await res.json();
+                    if (data && data[0]) {
+                        const token = data[0];
+                        response = `[MATCH] ${token.name} (${token.symbol})\n` +
+                            `MCAP: $${(token.mcap / 1000000).toFixed(2)}M | LIQ: $${(token.liquidityUsd / 1000).toFixed(1)}K\n` +
+                            `SECURITY: ${token.securityTags?.join(' | ') || 'ANALYZED'}\n` +
+                            `THREAT_LEVEL: ${token.liquidityUsd < 10000 ? 'HIGH (LOW_LIQUIDITY)' : 'STABLE'}`;
+                    } else {
+                        response = 'SCAN_ERROR: TOKEN_NOT_FOUND_ON_CHAIN';
+                    }
+                } catch (err) { response = 'SCAN_CRITICAL_FAILURE: NODE_TIMEOUT'; }
                 break;
             case 'elite':
-                response = 'AUTHENTICATING... [DENIED] | Elite Pass NFT required for terminal access.';
+                if (!args[1]) { response = 'USAGE: elite <wallet_address>'; break; }
+                setHistory(prev => [...prev, '[...] VERIFYING_ELITE_CLEARANCE...']);
+                try {
+                    const res = await fetch(`/api/auth/elite-check?wallet=${args[1]}`);
+                    const data = await res.json();
+                    response = data.isElite ? 'ACCESS_GRANTED | USER_TIER: ELITE_TRADER' : 'ACCESS_DENIED | NO_ACCESS_NFT_DETECTED';
+                } catch (err) { response = 'AUTH_SERVICE_UNAVAILABLE'; }
+                break;
+            case 'quote':
+                if (!args[1]) { response = 'USAGE: quote <token_address>'; break; }
+                setHistory(prev => [...prev, '[...] PULLING_LIVE_QUOTATION...']);
+                try {
+                    const res = await fetch(`/api/proxy/jup-price?ids=${args[1]}`);
+                    const data = await res.json();
+                    const price = data?.data?.[args[1]]?.price;
+                    response = price ? `[LIVE] $${parseFloat(price).toFixed(8)} USD` : 'QUOTE_ERROR: SYMBOL_NOT_FETCHABLE';
+                } catch (err) { response = 'AGGREGATOR_FETCH_FAILURE'; }
                 break;
             default:
-                response = `Unknown command: ${cmd}`;
+                response = `Unknown command: ${cmd}. Type "help" for options.`;
         }
 
-        setHistory(prev => [...prev, `> ${input}`, response]);
-        setInput('');
+        setHistory(prev => [...prev, response]);
     };
 
     return (

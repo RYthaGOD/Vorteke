@@ -5,9 +5,9 @@
   --surface-obsidian: #050506;
   --surface-panel: #0a0a0c;
   --surface-elevated: #121216;
-  --surface-glass: rgba(10, 10, 12, 0.4);
-  --surface-glass-border: rgba(255, 255, 255, 0.1);
-  --surface-glass-blur: blur(12px);
+  --surface-glass: rgba(5, 5, 6, 0.7);
+  --surface-glass-border: rgba(0, 240, 255, 0.15);
+  --surface-glass-blur: blur(24px);
 
   /* Brand Dominance Palette (Converged on Cyan-Gold) */
   --accent-vortex-cyan: #00F0FF;
@@ -53,7 +53,7 @@
 }
 
 
-/* SYNDICATE PROTOCOL - Elite Transformation Tier */
+/* ELITE_TIER_STYLES - Professional High-Precision Skin */
 .vortex-tier-elite {
   --accent-solana-primary: #FFD700;
   /* Syndicate Gold */
@@ -584,7 +584,8 @@ h3,
 .vortex-grid-cols {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 24px;
+  gap: 16px;
+  /* Reduced from 24px */
   width: 100%;
   min-height: calc(100vh - 100px);
 }
@@ -592,7 +593,8 @@ h3,
 .vortex-grid-inner {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 24px;
+  gap: 16px;
+  /* Reduced from 24px */
   grid-column: span 12;
 }
 
@@ -640,13 +642,25 @@ h3,
 }
 
 .sidebar-glass-box {
-  padding: 24px;
+  padding: 16px;
+  /* Reduced from 24px */
 }
 
 .vortex-table-card {
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 16px;
+  /* Reduced from 24px */
+}
+
+.vortex-panel-default-padding {
+  padding: 16px;
+}
+
+.vortex-chart-h {
+  height: 520px;
+  /* Elite standard height */
+  min-height: 400px;
 }
 
 /* Staggered Animations */
@@ -729,9 +743,9 @@ h3,
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.02);
   position: relative;
   z-index: 10;
-  padding: 12px;
+  padding: 20px;
   overflow: hidden;
-  /* backdrop-filter: blur(8px); */
+  /* backdrop-filter: none; - Optimized for performance */
 }
 
 .vortex-chart-h {
@@ -1797,7 +1811,8 @@ h3,
 
 /* VORTEX Component Utilities */
 .vortex-chart-container {
-  height: 520px;
+  height: inherit;
+  /* Inherit from the parent row's specific height */
 }
 
 .vortex-progress-sm {
@@ -2153,8 +2168,8 @@ h3,
 .vortex-grid-cols {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 24px;
-  padding: 0 32px 32px 32px;
+  gap: 16px;
+  padding: 0 16px 16px 16px;
 }
 
 .vortex-col-span-8 {
@@ -2168,14 +2183,14 @@ h3,
 .vortex-grid-inner {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 24px;
+  gap: 16px;
   width: 100%;
 }
 
 .vortex-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  gap: 16px;
 }
 
 .vortex-grid-3 {
@@ -2193,11 +2208,16 @@ h3,
   font-weight: 700;
   width: 100%;
   outline: none;
-  padding: 4px 0;
+  padding: 8px 0;
+  transition: all 0.2s ease;
+}
+
+.vortex-input-field:focus {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .vortex-input-field::placeholder {
-  color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .vortex-m-neg-16 {
@@ -2551,10 +2571,11 @@ h3,
 }
 
 .vortex-glass-morph {
-  background: rgba(10, 11, 14, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 243, 255, 0.1);
-  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  background: rgba(10, 11, 14, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
 }
 
 /* VORTEX GLOW ENGINE */

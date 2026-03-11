@@ -25,30 +25,20 @@ export const verifyLPBurn = async (tokenAddress: string): Promise<'verified' | '
         // FIX: Wrap ALL connection calls in a single getResilientConnection for full retry/failover coverage
         return await getResilientConnection(async (connection) => {
             // 2. Fetch Largest Accounts (Heuristic: LP tokens are usually the largest accounts)
-            const largestAccounts = await connection.getTokenLargestAccounts(pubkey);
+            const largestAccounts = await connection.getTokenLargestAccounts(pubkey, 'confirmed');
+            largestAccounts.value = largestAccounts.value.slice(0, 20);
 
             const hasBurnAccount = largestAccounts.value.some(account =>
                 BURN_ADDRESSES.includes(account.address.toBase58()) && (account.uiAmount || 0) > 0
             );
 
-            if (hasBurnAccount) return 'verified';
-
-            // 3. Precision LP Check (Raydium/Orca Fallback)
-            const sigs = await connection.getSignaturesForAddress(pubkey, { limit: 40 });
-            const isBurned = sigs.some(s =>
-                s.memo?.toLowerCase().includes('burn') ||
-                s.memo?.toLowerCase().includes('lock') ||
-                s.memo?.toLowerCase().includes('lp_burn') ||
-                s.memo?.toLowerCase().includes('success_burn') ||
-                s.memo?.toLowerCase().includes('burned')
-            );
-
-            if (isBurned) return 'verified';
-
-            // Check if the mint authority is revoked (Common for burned/locked tokens)
+            // 3. Authority Check (The Gold Standard)
             const mintInfo = await connection.getParsedAccountInfo(pubkey);
             const mintData = (mintInfo.value?.data as any)?.parsed?.info;
-            if (mintData && !mintData.mintAuthority) return 'verified';
+
+            // If mint authority is null and a burn account holds tokens, it's highly likely burned.
+            if (hasBurnAccount && mintData && !mintData.mintAuthority) return 'verified';
+            if (mintData && !mintData.mintAuthority) return 'locked'; // Fixed supply but not necessarily "burned" LP
 
             return 'unverified';
         });
@@ -70,24 +60,27 @@ export const getHolderConcentration = async (address: string): Promise<{
     try {
         const pubkey = new PublicKey(address);
         const [largestAccounts, supplyInfo] = await Promise.all([
-            getResilientConnection(c => c.getTokenLargestAccounts(pubkey)),
+            getResilientConnection(async (c) => {
+                const res = await c.getTokenLargestAccounts(pubkey, 'confirmed');
+                res.value = res.value.slice(0, 20);
+                return res;
+            }),
             getResilientConnection(c => c.getTokenSupply(pubkey))
         ]);
 
-        // AMM Pools and Common Authority addresses to exclude from concentration
-        const AMM_PROGRAMS = [
-            '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium V4
-            'whirLbMiq69ho3vSTmG5W699LGS3K62ddptS1AD25pk', // Orca Whirlpool
-            'CAMMCzo5YL8w4VFF8KVHrSgS9Q8V5rREyauFpG6C9F1z', // Raydium CLMM
-            'CPMMoo8LqacmJvSFeFs8vY81neC5uK79S6aywFMWo9E', // Raydium CPMM
-            '9W959DqmcGTu2YJByGD47FGDeS8SWckv7y6B7vQfSnXj', // Fluxbeam
-            '5quBozXPiGP2mLMCbUBZC7aRmxhPnzUqTgQwS4YsVH2j', // Jupiter Aggregator V4 Authority
-            'GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ',  // Raydium LP Authority V4
+        // TACTICAL_FIX: Comparing Account Addresses to Program IDs was logically invalid.
+        // We now filter based on known high-liquidity protocol accounts and authorities.
+        const PROTOCOL_ACCOUNTS = [
+            '5Q544fKrwwS3zqSLSrfUA8LcgS83fA4K6n151V84nF43', // Raydium Authority
+            'GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ', // Raydium LP Authority
+            '6EF8rrecthR5Dkzon8Nwu78hRvfX9PNn2A9zH8GfE7rL', // Pump.fun Program/Pool
+            '39393939393939393939393939393939393939393939', // Token-2022 Burn
+            address // The mint itself (rare but possible in some txs)
         ];
 
-        // Filter out accounts that are likely the LP itself
         const userAccounts = largestAccounts.value.filter((acc: any) => {
-            return !AMM_PROGRAMS.includes(acc.address.toBase58());
+            const addr = acc.address.toBase58();
+            return !PROTOCOL_ACCOUNTS.includes(addr);
         });
 
         const top10Total = userAccounts.slice(0, 10).reduce((acc: number, curr: any) => acc + (curr.uiAmount || 0), 0);
@@ -107,11 +100,11 @@ export const getHolderConcentration = async (address: string): Promise<{
 };
 
 /**
- * Tactical Social Sentiment Engine
+ * Market Velocity Engine (Formerly Social Sentiment)
  */
-export const getSocialSentiment = async (address: string, volume24h: number = 0, change24h: number = 0, liquidity: number = 0): Promise<{
+export const getMarketVelocity = async (address: string, volume24h: number = 0, change24h: number = 0, liquidity: number = 0): Promise<{
     score: number;
-    hypeLevel: 'DORMANT' | 'TRENDING' | 'MOONING';
+    activityLevel: 'DORMANT' | 'TRENDING' | 'VOLATILE';
 }> => {
     const vldRatio = liquidity > 0 ? (volume24h / liquidity) : 0;
     const baseHeat = Math.min(70, vldRatio * 35);
@@ -120,6 +113,6 @@ export const getSocialSentiment = async (address: string, volume24h: number = 0,
 
     return {
         score,
-        hypeLevel: score > 85 ? ('MOONING' as const) : score > 45 ? ('TRENDING' as const) : ('DORMANT' as const)
+        activityLevel: score > 85 ? ('VOLATILE' as const) : score > 45 ? ('TRENDING' as const) : ('DORMANT' as const)
     };
 };

@@ -44,7 +44,7 @@ export function Footer() {
                 </div>
                 <div className="uptime-status">
                     <div className="status-indicator"></div>
-                    SYSTEM_STABLE: 99.9%
+                    UPLINK_STATUS: LOGGED
                 </div>
             </div>
 

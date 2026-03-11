@@ -14,8 +14,6 @@ export const useCaptureReport = (elementId: string, tokenSymbol: string) => {
         try {
             setIsCapturing(true);
 
-            // Add a small delay for industrial glitch effects to "settle" or for the HUD to look its best
-            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Implementation of the "Industrial Signature" frame
             const dataUrl = await htmlToImage.toPng(element, {

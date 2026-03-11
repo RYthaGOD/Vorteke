@@ -128,33 +128,26 @@ export const VortexLogo: React.FC<{
                 className={`vortex-singularity-logo ${sizeClasses}`}
             >
                 {/* Background Core Engine Glow (Using standard gradient fill) */}
-                <circle cx="100" cy="100" r="40" fill="url(#coreGlow)" />
+                <circle cx="100" cy="100" r="50" fill="url(#coreGlow)" />
 
                 {/* Mechanical Outer Rings */}
-                <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(0, 240, 255, 0.4)" strokeWidth="1" strokeDasharray="4 4" className="animate-spin-slow" />
-                <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(229, 255, 0, 0.3)" strokeWidth="0.5" strokeDasharray="1 8" className="animate-spin-reverse-slow" />
+                <circle cx="100" cy="100" r="75" fill="none" stroke="rgba(0, 240, 255, 0.4)" strokeWidth="1" strokeDasharray="4 4" className="animate-spin-slow" />
+                <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(229, 255, 0, 0.3)" strokeWidth="0.5" strokeDasharray="1 8" className="animate-spin-reverse-slow" />
 
-                {/* The "V" Vanguard Structure */}
+                {/* The "V" Vanguard Structure - Centered & Prominent */}
                 <path
-                    d="M 20 40 L 100 180 L 180 40 L 140 40 L 100 110 L 60 40 Z"
+                    d="M 20 50 L 100 180 L 180 50 L 145 50 L 100 125 L 55 50 Z"
                     fill="url(#vanguardGradient)"
                     stroke="rgba(0, 240, 255, 0.9)"
-                    strokeWidth="1.5"
+                    strokeWidth="2"
                     className="vortex-svg-draw"
                 />
 
-                {/* Inner Singularity Diamond */}
-                <path
-                    d="M 100 60 L 125 100 L 100 140 L 75 100 Z"
-                    fill="url(#singularityGradient)"
-                    className="animate-pulse"
-                />
-
                 {/* Energy Spikes / Lightning Details */}
-                <path d="M 100 20 L 100 45" stroke="rgba(0, 240, 255, 0.8)" strokeWidth="2" strokeLinecap="round" />
-                <path d="M 100 155 L 100 180" stroke="rgba(229, 255, 0, 0.8)" strokeWidth="2" strokeLinecap="round" />
-                <path d="M 30 100 L 55 100" stroke="rgba(0, 240, 255, 0.8)" strokeWidth="2" strokeLinecap="round" />
-                <path d="M 145 100 L 170 100" stroke="rgba(0, 240, 255, 0.8)" strokeWidth="2" strokeLinecap="round" />
+                <path d="M 100 10 L 100 40" stroke="rgba(0, 240, 255, 0.8)" strokeWidth="2" strokeLinecap="round" />
+                <path d="M 100 160 L 100 190" stroke="rgba(229, 255, 0, 0.8)" strokeWidth="2" strokeLinecap="round" />
+                <path d="M 20 100 L 45 100" stroke="rgba(0, 240, 255, 0.8)" strokeWidth="2" strokeLinecap="round" />
+                <path d="M 155 100 L 180 100" stroke="rgba(0, 240, 255, 0.8)" strokeWidth="2" strokeLinecap="round" />
 
                 <defs>
                     <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
@@ -163,22 +156,19 @@ export const VortexLogo: React.FC<{
                         <stop offset="100%" stopColor="transparent" />
                     </radialGradient>
                     <linearGradient id="vanguardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="rgba(0, 240, 255, 0.2)" />
-                        <stop offset="50%" stopColor="rgba(229, 255, 0, 0.2)" />
-                        <stop offset="100%" stopColor="rgba(0, 240, 255, 0.2)" />
-                    </linearGradient>
-                    <linearGradient id="singularityGradient" x1="50%" y1="0%" x2="50%" y2="100%">
-                        <stop offset="0%" stopColor="#00F0FF" />
-                        <stop offset="100%" stopColor="#FFD700" />
+                        <stop offset="0%" stopColor="rgba(0, 240, 255, 0.3)" />
+                        <stop offset="50%" stopColor="rgba(229, 255, 0, 0.3)" />
+                        <stop offset="100%" stopColor="rgba(0, 240, 255, 0.3)" />
                     </linearGradient>
                 </defs>
             </svg>
 
             {showLabel && (
                 <div className="vortex-abs-center-x" style={{ bottom: '-20px' }}>
-                    <span className="vortex-label text-vortex-cyan vortex-text-tiny animate-pulse uppercase ls-widest" style={{ letterSpacing: '4px', fontSize: '9px', whiteSpace: 'nowrap' }}>NEURAL_MESH_ACTIVE</span>
+                    <span className="vortex-label text-vortex-cyan vortex-text-tiny uppercase ls-widest" style={{ letterSpacing: '4px', fontSize: '9px', whiteSpace: 'nowrap' }}>SYSTEM_TRADING_INTERFACE</span>
                 </div>
             )}
         </div>
     );
 };
+

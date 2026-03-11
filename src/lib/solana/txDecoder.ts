@@ -78,7 +78,7 @@ export async function decodeVortexSwap(
         const solDeltaAdjusted = solDeltaRaw < 0 ? Math.abs(solDeltaRaw) - fee : Math.abs(solDeltaRaw) + fee;
         const solDelta = solDeltaAdjusted / 1e9;
 
-        // 4. Stablecoin (USDC/USDT) Recon for true Whale volume bypass
+        // 4. Stablecoin & SOL USD Valuation
         const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
         const USDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
 
@@ -93,24 +93,25 @@ export async function decodeVortexSwap(
             return Math.abs(delta);
         };
 
-        const amountUsd = getSignerTokenDelta(USDC_MINT) + getSignerTokenDelta(USDT_MINT);
+        const directUsdValue = getSignerTokenDelta(USDC_MINT) + getSignerTokenDelta(USDT_MINT);
 
-        // Heuristic: If it's an extreme stablecoin swap disguised as a low-sol hop, derive a "SOL equivalent"
-        let computedSol = solDelta;
-        if (amountUsd > 10 && solDelta < 0.05) {
-            try {
-                // TACTICAL_FIX: Use throttledFetch with API key and timeout to prevent server-side hang
-                const solPriceData: any = await throttledFetch('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112');
-                const currentSolPrice = parseFloat(solPriceData?.data?.['So11111111111111111111111111111111111111112']?.price || '185');
-                computedSol = amountUsd / currentSolPrice;
-            } catch (e) {
-                computedSol = amountUsd / 200; // Emergency conservative fallback
-            }
+        // Derive true USD value for SOL flow (Real-time Oracle Only)
+        let solPrice = 0;
+        try {
+            // Use public Jupiter V1 (no key required)
+            const solPriceData: any = await throttledFetch('https://price.jup.ag/v1/price?id=So11111111111111111111111111111111111111112');
+            const livePrice = parseFloat(solPriceData?.data?.['So11111111111111111111111111111111111111112']?.price);
+            if (!isNaN(livePrice) && livePrice > 0) solPrice = livePrice;
+        } catch (e) {
+            // Diagnostic logging for restoration forensics
+            console.error("TELEMETRY_ORACLE_FAILURE: Oracle connection lost.");
         }
+
+        const amountUsd = directUsdValue > 0 ? directUsdValue : (solDelta * solPrice);
 
         return {
             type: tokenNetChange > 0 ? 'BUY' : 'SELL', // Net gained tokens = BUY event
-            amountSol: parseFloat(computedSol.toFixed(6)),
+            amountSol: parseFloat(solDelta.toFixed(6)),
             amountUsd: parseFloat(amountUsd.toFixed(2)),
             tokenAmount: Math.abs(tokenNetChange),
             signer: signerPubkeys[0], // Return primary signer for address tracking

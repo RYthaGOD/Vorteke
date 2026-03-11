@@ -22,7 +22,10 @@ model Token {
     tier            String   @default("Basic")
     securityTags    Json?
     advancedMetrics Json?
+    creator         String?
     lastUpdated     DateTime @default(now())
+
+    @@index([creator])
 }
 
 model Enhancement {

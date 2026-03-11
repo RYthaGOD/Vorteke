@@ -7,6 +7,7 @@ import EliteDashboard from '@/components/EliteDashboard';
 import { VortexPanel } from '@/components/DesignSystem';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useNotificationStore } from '@/lib/store';
 
 const WalletMultiButton = dynamic(
     async () => (await import('@solana/wallet-adapter-react-ui')).WalletMultiButton,
@@ -16,6 +17,8 @@ const WalletMultiButton = dynamic(
 export default function ElitePage() {
     const { publicKey, connected, signMessage } = useVortexAuth();
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const notify = useNotificationStore(state => state.notify);
     const router = useRouter();
 
     useEffect(() => {
@@ -81,6 +84,7 @@ export default function ElitePage() {
                                             placeholder="INPUT_ACCESS_KEY"
                                             onKeyDown={async (e) => {
                                                 if (e.key === 'Enter' && e.currentTarget.value && publicKey && signMessage) {
+                                                    setIsSubmitting(true);
                                                     try {
                                                         const code = e.currentTarget.value;
                                                         const timestamp = Date.now();
@@ -95,15 +99,17 @@ export default function ElitePage() {
                                                         });
 
                                                         if (res.ok) setIsVerified(true);
-                                                        else alert('INVALID_ACCESS_KEY');
+                                                        else notify('error', 'INVALID_ACCESS_KEY: Clearance denied.');
                                                     } catch (err) {
-                                                        alert('SIGNATURE_REJECTED');
+                                                        notify('error', 'SIGNATURE_REJECTED: Wallet refused to sign.');
+                                                    } finally {
+                                                        setIsSubmitting(false);
                                                     }
                                                 }
                                             }}
                                         />
                                         <div className="vortex-btn-icon text-vortex-yellow">
-                                            <Loader2 size={18} className="animate-spin" />
+                                            {isSubmitting && <Loader2 size={18} className="animate-spin" />}
                                         </div>
                                     </div>
                                     <p className="vortex-text-tiny vortex-text-muted vortex-mt-2 vortex-text-center">PRESS_ENTER_TO_DECRYPT</p>

@@ -1,43 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * Server-side proxy for live token pricing.
- * Migrated to DexScreener due to Jupiter V2 401 Unauthorized errors on public endpoints.
- */
-export async function GET(request: NextRequest) {
-    const { searchParams } = new URL(request.url);
-    const ids = searchParams.get('ids');
+const JUPITER_API_KEY = process.env.NEXT_PUBLIC_JUPITER_API_KEY || '';
 
-    if (!ids) {
-        return NextResponse.json({ error: 'MISSING_IDS' }, { status: 400 });
-    }
-
+export async function GET(req: NextRequest) {
     try {
-        const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ids}`, {
-            next: { revalidate: 0 }, // Always fresh for chart ticker
-        });
+        const { searchParams } = new URL(req.url);
+        const ids = searchParams.get('ids');
 
-        if (!res.ok) {
-            return NextResponse.json({ error: `DEXSCREENER_ERROR: ${res.status}` }, { status: res.status });
+        if (!ids) {
+            return NextResponse.json({ error: 'Missing required price parameters (ids)' }, { status: 400 });
         }
 
-        const data = await res.json();
+        const url = `https://api.jup.ag/price/v2?ids=${ids}`;
 
-        // Map DexScreener response to match the expected format of the Jupiter proxy
-        // (so the frontend chart hook doesn't need to be rewritten)
-        const price = data?.pairs?.[0]?.priceUsd || "0";
+        const headers: Record<string, string> = {
+            'Accept': 'application/json',
+        };
 
-        return NextResponse.json({
-            data: {
-                [ids]: { price }
-            }
-        }, {
-            headers: {
-                'Cache-Control': 'no-store, max-age=0',
-            }
+        if (JUPITER_API_KEY) {
+            headers['x-api-key'] = JUPITER_API_KEY;
+        }
+
+        const response = await fetch(url, {
+            headers,
+            next: { revalidate: 5 } // Live Intelligence: Cache for only 5 seconds
         });
-    } catch (e: any) {
-        console.error('PRICE_PROXY_ERROR:', e);
-        return NextResponse.json({ error: 'PROXY_FAILURE' }, { status: 500 });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`JUPITER_PRICE_HTTP_${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        return NextResponse.json(data);
+    } catch (error: any) {
+        console.error('JUP_PRICE_PROXY_ERROR:', error);
+        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

@@ -38,7 +38,7 @@ export default function LandingPage() {
                         className="btn-vortex btn-vortex-primary btn-glow"
                         onClick={() => router.push('/terminal')}
                     >
-                        LAUNCH_TERMINAL <ChevronRight size={16} />
+                        LAUNCH TERMINAL <ChevronRight size={16} />
                     </button>
                 </div>
             </nav>
@@ -47,7 +47,7 @@ export default function LandingPage() {
 
             <section id="features" className="section-recon">
                 <div className="section-header">
-                    <h2 className="glitch-text" data-text="TACTICAL_RECON_SUITE">TACTICAL_RECON_SUITE</h2>
+                    <h2 className="glitch-text" data-text="TACTICAL RECON SUITE">TACTICAL RECON SUITE</h2>
                     <p className="subtitle">High-fidelity reconnaissance protocols for the digital elite.</p>
                 </div>
                 <FeatureCards />
@@ -55,7 +55,7 @@ export default function LandingPage() {
 
             <section id="economy" className="section-economy">
                 <div className="section-header">
-                    <h2 className="glitch-text" data-text="VORTEX_DEFLATIONARY_BURN">VORTEX_DEFLATIONARY_BURN</h2>
+                    <h2 className="glitch-text" data-text="VORTEX DEFLATIONARY BURN">VORTEX DEFLATIONARY BURN</h2>
                     <p className="subtitle">Fueled by $VTX. Hardened by the Burn Protocol.</p>
                 </div>
                 <EconomyVisualizer />

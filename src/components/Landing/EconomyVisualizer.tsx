@@ -9,31 +9,31 @@ export function EconomyVisualizer() {
             <div className="vortex-grid-3 vortex-gap-6">
                 <div className="eco-card eco-vtx-burn">
                     <div className="eco-header">
-                        <Flame className="text-vortex-yellow" size={18} />
-                        <span className="vortex-text-tiny vortex-text-bold">100%_BURN_PROTOCOL</span>
+                        <Zap className="text-vortex-cyan" size={18} />
+                        <span className="vortex-text-tiny vortex-text-bold">REAL-TIME_RECON</span>
                     </div>
-                    <div className="eco-value text-vortex-yellow">DEFLATIONARY</div>
+                    <div className="eco-value text-vortex-cyan">OPTIMIZED</div>
                     <p className="vortex-text-xs vortex-text-muted">
-                        Every enhancement transaction physically removes $VTX from the total supply via on-chain burn instructions.
+                        Direct integration with Helius and custom RPC endpoints for ultra-low latency token discovery.
                     </p>
                     <div className="burn-meter">
-                        <div className="meter-fill"></div>
+                        <div className="meter-fill" style={{ width: '95%' }}></div>
                         <div className="meter-pulse"></div>
                     </div>
                 </div>
 
                 <div className="eco-card eco-vanguard">
                     <div className="eco-header">
-                        <ShieldCheck className="text-vortex-cyan" size={18} />
-                        <span className="vortex-text-tiny vortex-text-bold">VANGUARD_BENEFIT</span>
+                        <ShieldCheck className="text-vortex-yellow" size={18} />
+                        <span className="vortex-text-tiny vortex-text-bold">FORENSIC_SCRUTINY</span>
                     </div>
-                    <div className="eco-value text-vortex-cyan">50%_OFF</div>
+                    <div className="eco-value text-vortex-yellow">MATHEMATICAL</div>
                     <p className="vortex-text-xs vortex-text-muted">
-                        Holding $VTX grants elite access to all Vortex recon engines at a permanent 50% discount compared to SOL payments.
+                        Automated liquidity audits and holder-concentration analysis using on-chain account verification.
                     </p>
                     <div className="discount-meter">
                         <div className="meter-bar"></div>
-                        <div className="meter-label">DISCOUNT_LOCKED</div>
+                        <div className="meter-label">SCAN_PROTOCOL_ACTIVE</div>
                     </div>
                 </div>
 
@@ -43,8 +43,8 @@ export function EconomyVisualizer() {
                         <span className="vortex-text-tiny vortex-text-bold">ELITE_LIQUIDITY</span>
                     </div>
                     <div className="eco-value text-vortex-gold">VORTEX_PRIME</div>
-                    <p className="vortex-text-xs vortex-text-muted">
-                        Elite status users contribute to the "Deep Scan" pool, enabling faster reconnaissance for the entire ecosystem.
+                    <p className="vortex-text-sm vortex-text-muted">
+                        Elite users bypass the standard protocol fee on all swaps and gain access to the **Priority Node Uplink** (5s refreshes) for maximum forensic precision.
                     </p>
                     <div className="vortex-corners">
                         <div className="vortex-corner-tl" />
@@ -65,16 +65,16 @@ export function EconomyVisualizer() {
                     <span className="vortex-text-tiny text-vortex-cyan">ENHANCE_TX</span>
                 </div>
                 <div className="flow-step">
-                    <div className="step-box glass-panel">VORTEX_ENGINE</div>
+                    <div className="step-box glass-panel text-vortex-yellow">RECON_TERMINAL</div>
                 </div>
-                <div className="flow-arrow yellow-burn">
+                <div className="flow-arrow cyan-pulse">
                     <svg width="40" height="20" viewBox="0 0 40 20">
                         <path className="path-draw" d="M0 10 H30 L25 5 M30 10 L25 15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <span className="vortex-text-tiny text-vortex-yellow">100%_BURN</span>
+                    <span className="vortex-text-tiny text-vortex-yellow">DATA_UPLINK</span>
                 </div>
                 <div className="flow-step">
-                    <div className="step-box glass-panel h-red">VOID</div>
+                    <div className="step-box glass-panel h-cyan">STRATEGIC_INTEL</div>
                 </div>
             </div>
 

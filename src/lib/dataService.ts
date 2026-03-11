@@ -1,15 +1,15 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { RPC_ENDPOINTS, PROTECTED_MINT_ADDRESSES, SOL_MINT } from './constants';
-import { TokenTier, TokenEnhancement, fetchTokenEnhancement } from './monetizationService';
+import { TokenTier, TokenEnhancement, fetchTokenEnhancement, verifyEliteAccess } from './monetizationService';
 import { captureException, logger } from './logger';
-import { detectBundle as modularDetectBundle } from './vortex/security';
+import { detectBundle as modularDetectBundle, detectCreatorCluster, traceFundingOrigins } from './vortex/security';
 import { decodeVortexSwap } from './solana/txDecoder';
 import { getResilientConnection } from './solana/connection';
 import { HELIUS_RPC, HELIUS_API_KEY, JUPITER_API_KEY } from './constants';
 
 // Modularized Service Layer Imports
 import { fetchHeliusMetadata, getMetaplexMetadata } from './vortex/token/metadata';
-import { verifyLPBurn, getHolderConcentration, getSocialSentiment } from './vortex/token/metrics';
+import { verifyLPBurn, getHolderConcentration, getMarketVelocity } from './vortex/token/metrics';
 import { getInitialChartData, subscribeToTokenChart, Timeframe, ChartTick } from './vortex/token/charts';
 export type { Timeframe, ChartTick };
 import { getDiscoveryList } from './vortex/token/discovery';
@@ -21,7 +21,7 @@ const detectBundle = modularDetectBundle;
 
 export {
     fetchHeliusMetadata, getMetaplexMetadata,
-    verifyLPBurn, getHolderConcentration, getSocialSentiment,
+    verifyLPBurn, getHolderConcentration, getMarketVelocity,
     getInitialChartData, subscribeToTokenChart,
     getDiscoveryList,
     resolveSearch,
@@ -99,19 +99,24 @@ export interface TokenInfo {
             riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
             top10Percent: number;
         };
-        socialSentiment?: {
+        marketVelocity?: {
             score: number;
-            hypeLevel: 'DORMANT' | 'TRENDING' | 'MOONING';
+            activityLevel: 'DORMANT' | 'TRENDING' | 'VOLATILE';
         };
         volumeVelocity?: {
             score: number; // 0-100
             status: 'STAGNANT' | 'STABLE' | 'ACCELERATING' | 'BREAKOUT';
             ratio: number;
         };
-        sentiment?: {
+        velocitySentiment?: {
             buyPercent: number;
             sellPercent: number;
         };
+        cluster?: string[];
+        fundingSource?: {
+            source: string;
+            type: string;
+        } | null;
     };
     securityTags?: string[];
     isSafe?: boolean;
@@ -180,6 +185,8 @@ export interface VortexTx {
     type: 'BUY' | 'SELL';
     amountSol: number;
     amountUsd?: number;
+    tokenAmount?: number;
+    priceUsd?: number;
     wallet: string;
     labels?: string[];
 }
@@ -289,33 +296,41 @@ export const fetchTokenFromServer = async (address: string): Promise<TokenInfo |
  * Fetch token metadata and security metrics from Mainnet
  * Enhanced with DexScreener API for metadata resolution
  */
-export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
+export const fetchTokenData = async (address: string, viewerWallet?: string): Promise<TokenInfo | null> => {
     try {
+        const isElite = viewerWallet ? await verifyEliteAccess(viewerWallet) : false;
         if (!address || address.length < 32 || address.length > 44) {
             throw new Error(`INVALID_ADDRESS_FORMAT: ${address}`);
         }
 
         const mintPubkey = new PublicKey(address);
 
-        // 1. Fetch Parallel Data with Helius DAS as Primary Intelligence
-        const [rpcResult, dexResult, heliusResult] = await Promise.allSettled([
+        // NATIVE_SOL_PROTECTION: DexScreener misidentifies So1111... as "FOGO". 
+        // We MUST intercept and override with absolute truth (Case-Insensitive for UI safety).
+        const isSol = address.toLowerCase() === 'So11111111111111111111111111111111111111112'.toLowerCase();
+
+        // 1. Fetch Parallel Data 
+        // We now include a dedicated Jupiter Price fetch (Meticulous V1 fallback)
+        const [rpcResult, dexResult, heliusResult, jupResult] = await Promise.allSettled([
             getResilientConnection(async (c, endpoint) => {
                 try {
                     const res = await c.getParsedAccountInfo(mintPubkey);
                     if (!res.value) return { value: null, endpoint };
                     return { ...res, endpoint };
                 } catch (e) {
-                    console.warn("RPC_ACCOUNT_INFO_FAIL", e);
                     return { value: null, endpoint };
                 }
             }),
             throttledFetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`).then((data: DexScreenerResponse) => data).catch(() => ({ pairs: [] as DexScreenerPair[] })),
-            fetchHeliusMetadata(address) as Promise<any>
+            fetchHeliusMetadata(address) as Promise<any>,
+            // TACTICAL_RESTORE: Jupiter V2 requires API key; we fallback to V1 for unauthenticated public availability
+            throttledFetch(`https://price.jup.ag/v1/price?id=${address}`).catch(() => null)
         ]);
 
         const mintInfo = rpcResult.status === 'fulfilled' ? rpcResult.value : null;
         const dexJson = dexResult.status === 'fulfilled' ? dexResult.value : { pairs: [] };
         const helius = heliusResult.status === 'fulfilled' ? heliusResult.value : null;
+        const jupPriceData = jupResult.status === 'fulfilled' ? jupResult.value : null;
 
         const parsedData = (mintInfo?.value?.data as any)?.parsed?.info;
         const pair = dexJson?.pairs?.[0];
@@ -325,12 +340,14 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
 
         // Circulation Detection: Helius DAS is the ultimate source of truth for supply
         const supply = helius?.supply ? (helius.supply / Math.pow(10, decimals)) :
-            (parsedData?.supply ? (parseFloat(parsedData.supply) / Math.pow(10, decimals)) : 1000000000);
+            (parsedData?.supply ? (parseFloat(parsedData.supply) / Math.pow(10, decimals)) : 0);
 
         // 2. Resolve Metadata with Hierarchical Priority
         // Priority: Helius DAS > DexScreener > RPC Parsed > Default
-        const name = helius?.name || pair?.baseToken?.name || parsedData?.name || 'VORTEX Asset';
-        const symbol = helius?.symbol || pair?.baseToken?.symbol || parsedData?.symbol || 'UNKNWN';
+        const creator = helius?.owner || (parsedData as any)?.mintAuthority || null;
+
+        let name = isSol ? 'Solana' : (helius?.name || pair?.baseToken?.name || parsedData?.name || 'VORTEX Asset');
+        let symbol = isSol ? 'SOL' : (helius?.symbol || pair?.baseToken?.symbol || parsedData?.symbol || 'UNKNWN');
 
         // Detect Token2022 Transfer Fee (Tax)
         let transferFeeBps = 0;
@@ -344,21 +361,20 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
             }
         }
 
-        // Logo Resolution: Moved after Enhancement fetch (section 5.1) to allow for custom icon overrides.
-        // let logoURI = helius?.logoURI || pair?.info?.imageUrl || (helius as any)?.content?.links?.image;
-        // if (!logoURI) {
-        //     logoURI = `https://dd.dexscreener.com/ds-data/tokens/solana/${address}.png`;
-        // }
+        // 3. Resolve Price and Market Data (Ultra-Meticulous Real-Time Oracle)
+        const dexPrice = isSol ? 0 : parseFloat(pair?.priceUsd || '0'); // Bypass FOGO corruption for SOL
 
-        // If logo is missing and metaplex URI exists, we could fetch it (deferred for perf or done here)
-        // For now, we use the DexScreener predictable URL as a strong fallback
+        // Jupiter V1 resolution: returns { data: { [address]: { price: ... } } }
+        const jupVal = (jupPriceData as any)?.data?.[address];
+        const jupPrice = parseFloat(jupVal?.price || (jupPriceData as any)?.data?.price || (jupPriceData as any)?.price || '0');
+        const heliusPrice = parseFloat(helius?.priceUsd || '0');
 
-        // 3. Resolve Price and Market Data (Ultra-resilient fallback chain)
-        const dexPrice = parseFloat(pair?.priceUsd || '0');
-        const currentPrice = helius?.priceUsd || dexPrice || 0;
+        // Priority: Live Jupiter (ELITE ONLY) > Historical Helius > DexScreener Stale
+        // TRUTH_PROTOCOL: Basic users fallback to standard feeds to maintain tier value.
+        const currentPrice = (isElite && jupPrice) ? jupPrice : (heliusPrice || dexPrice || 0);
 
         // Guard against zero-division or missing supply in MCAP calculation
-        const mcap = pair?.marketCap || pair?.fdv || (currentPrice * (supply || 1000000000));
+        const mcap = pair?.marketCap || pair?.fdv || (supply > 0 ? (currentPrice * supply) : 0);
 
         // 4. Volume Velocity & Social Proxy
         const v5m = pair?.volume?.m5 || 0;
@@ -373,12 +389,14 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
         const velocityScore = Math.min(100, Math.floor(velocityRatio * 33));
 
         // 5. Fetch Deep Reconnaissance & Enhancement Data (Defensively)
-        const [holderIntel, sentiment, bundle, lp, enhancement] = await Promise.all([
+        const [holderIntel, velocity, bundle, lp, enhancement, cluster, funding] = await Promise.all([
             getHolderConcentration(address).catch(() => ({ clusterDetected: false, clusterSize: 0, riskLevel: 'LOW' as const, top10Percent: 0 })),
-            getSocialSentiment(address, pair?.volume?.h24 || 0, pair?.priceChange?.h24 || 0, pair?.liquidity?.usd || 0).catch(() => ({ score: 50, hypeLevel: 'DORMANT' as const })),
+            getMarketVelocity(address, pair?.volume?.h24 || 0, pair?.priceChange?.h24 || 0, pair?.liquidity?.usd || 0).catch(() => ({ score: 50, activityLevel: 'DORMANT' as const })),
             detectBundle(address).catch(() => ({ isBundled: false, percentage: 0, riskLevel: 'LOW' as const })),
             verifyLPBurn(address).catch(() => 'unverified' as const),
-            fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic', socials: {}, customDescription: '' } as TokenEnhancement))
+            fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic', socials: {}, customDescription: '' } as TokenEnhancement)),
+            creator ? detectCreatorCluster(creator).catch(() => []) : Promise.resolve([]),
+            creator ? traceFundingOrigins(creator).catch(() => null) : Promise.resolve(null)
         ]);
 
         // 5.1 SECONDARY_METADATA_POLISH: Enhancement logic now overrides default resolution for logoURI
@@ -386,7 +404,7 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
         const logoURI = enhancement?.iconURI || helius?.logoURI || pair?.info?.imageUrl || (helius as any)?.content?.links?.image || `https://dd.dexscreener.com/ds-data/tokens/solana/${address}.png`;
 
         // 6. Build and Return Tactical Token Object
-        const token: TokenInfo = {
+        const token: any = {
             address,
             name,
             symbol,
@@ -413,26 +431,31 @@ export const fetchTokenData = async (address: string): Promise<TokenInfo> => {
                 top10HolderPercent: (holderIntel as any).top10Percent || 0,
                 devWalletStatus: helius?.mintAuthority ? 'holding' : 'burnt',
                 lpBurnStatus: lp,
-                slippage1k: 0.5,
-                slippage10k: 2.5,
+                slippage1k: 0,
+                slippage10k: 0,
                 snipeVolumePercent: bundle.percentage,
-                mintAuthority: helius?.mintAuthority ? 'active' : 'renounced',
-                freezeAuthority: helius?.freezeAuthority ? 'active' : 'renounced',
+                mintAuthority: helius?.mintAuthority ? 'active' : (lp === 'verified' ? 'renounced' : 'active'),
+                freezeAuthority: helius?.freezeAuthority ? 'active' : (lp === 'verified' ? 'renounced' : 'active'),
                 metadataMutable: true,
                 transferFeeBps,
                 holderIntelligence: holderIntel,
-                socialSentiment: sentiment,
+                marketVelocity: velocity,
                 volumeVelocity: {
                     score: velocityScore,
                     status: velocityStatus,
                     ratio: velocityRatio
                 },
-                sentiment: {
-                    buyPercent: (sentiment.score > 50) ? Math.min(95, sentiment.score + 10) : 50,
-                    sellPercent: (sentiment.score <= 50) ? Math.min(95, 100 - sentiment.score + 10) : 50
-                }
+                velocitySentiment: {
+                    buyPercent: (velocity.score > 50) ? Math.min(95, velocity.score + 10) : 50,
+                    sellPercent: (velocity.score <= 50) ? Math.min(95, 100 - velocity.score + 10) : 50
+                },
+                // Real Intelligence Gating: Funding origins and Cluster lists are ELITE/DEEP_SCAN only.
+                cluster: (isElite) ? cluster : [],
+                fundingSource: (isElite) ? funding : undefined
             },
-            isSafe: lp === 'verified' && !helius?.mintAuthority && ((holderIntel as any).top10Percent ?? 0) < 40
+            creator: creator,
+            securityTags: cluster.length > 0 ? ['HIGH_CHURN_CREATOR', 'SERIAL_LAUNCHER'] : ['LIQUIDITY_DISCOVERED'],
+            isSafe: lp === 'verified' && !helius?.mintAuthority && ((holderIntel as any).top10Percent ?? 0) < 40 && cluster.length < 3
         };
 
         // 7. Sync to Vortex Indexer (Background)
@@ -491,6 +514,8 @@ const getVortexTransaction = async (signature: string, tokenAddress: string): Pr
                 type: decoded.type,
                 amountSol: decoded.amountSol,
                 amountUsd: decoded.amountUsd,
+                tokenAmount: decoded.tokenAmount,
+                priceUsd: decoded.tokenAmount > 0 ? (decoded.amountUsd / decoded.tokenAmount) : 0,
                 wallet: decoded.signer.slice(0, 4) + '...' + decoded.signer.slice(-4),
                 labels
             };

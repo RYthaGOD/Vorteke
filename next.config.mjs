@@ -34,7 +34,8 @@ const nextConfig = {
                     {
                         key: 'Content-Security-Policy',
                         // FIX: Hardened CSP (Removed unsafe-eval, unsafe-inline where possible, blocked wildcard iframes)
-                        value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss:; frame-src 'self' https://jup.ag https://*.jup.ag; object-src 'none'; base-uri 'self';",
+                        // UPDATE: Added Solflare and wallet domains for production compatibility
+                        value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss: https://*.solflare.com https://connect.solflare.com https://*.jup.ag; frame-src 'self' https://jup.ag https://*.jup.ag https://*.solflare.com https://connect.solflare.com; object-src 'none'; base-uri 'self';",
                     },
                 ],
             },

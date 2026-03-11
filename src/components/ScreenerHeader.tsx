@@ -15,6 +15,7 @@ interface ScreenerHeaderProps {
         rpcHealth: 'OPTIMAL' | 'DEGRADED' | 'DARK';
         provider: string;
         latency: number;
+        tier?: 'ELITE' | 'BASIC'; // Real Tier Indicator
     };
     refreshLoading: boolean;
     isCapturing: boolean;
@@ -71,14 +72,14 @@ export const ScreenerHeader = React.memo(({
                     </div>
 
                     <div className="vortex-flex-start vortex-gap-3 vortex-border-left-tactical vortex-pl-4 vortex-no-capture flex-wrap">
-                        {isElite && (
-                            <div className="vortex-flex-column vortex-mr-4">
-                                <span className="vortex-label vortex-text-tiny vortex-m-0 text-vortex-yellow">SYNDICATE_STATUS</span>
-                                <span className="vortex-text-xs vortex-text-bold animate-pulse text-vortex-yellow">ACTIVE_ENCRYPTED</span>
-                            </div>
-                        )}
+                        <div className="vortex-flex-column vortex-mr-4">
+                            <span className="vortex-label vortex-text-tiny vortex-m-0">SESSION_TIER</span>
+                            <span className={`vortex-text-xs vortex-text-bold ${telemetry.tier === 'ELITE' ? 'text-vortex-yellow' : 'text-vortex-muted'}`}>
+                                {telemetry.tier || 'BASIC'}
+                            </span>
+                        </div>
                         <div className="vortex-flex-column">
-                            <span className="vortex-label vortex-text-tiny vortex-m-0">RPC_UPLINK</span>
+                            <span className="vortex-label vortex-text-tiny vortex-m-0">NODE_LATENCY</span>
                             <span className="vortex-text-xs vortex-text-mono text-vortex-cyan">{telemetry.latency}ms</span>
                         </div>
                         <div className="vortex-flex-column">
@@ -125,7 +126,7 @@ export const ScreenerHeader = React.memo(({
             <style jsx>{`
                 .vortex-screener-header-container {
                     width: 100%;
-                    padding: 8px 0;
+                    padding: 4px 0;
                 }
                 .flex-wrap {
                     flex-wrap: wrap;

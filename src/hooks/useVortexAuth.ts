@@ -40,7 +40,7 @@ export function useVortexAuth() {
     }, [publicKey, connected]);
 
     return {
-        publicKey,
+        publicKey: publicKey as any,
         connected,
         realPK,
         realConnected,

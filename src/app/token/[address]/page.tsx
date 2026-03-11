@@ -8,16 +8,22 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
     let displayName = `${address.slice(0, 4)}...${address.slice(-4)}`;
     let symbol = '';
 
-    try {
-        const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
-        const data = await res.json();
-        if (data.pairs && data.pairs.length > 0) {
-            const pair = data.pairs[0];
-            displayName = pair.baseToken.name;
-            symbol = pair.baseToken.symbol;
+    // SOL_GLOBAL_OVERRIDE: Prevent SSR misidentification (FOGO)
+    if (address === 'So11111111111111111111111111111111111111112') {
+        displayName = 'Solana';
+        symbol = 'SOL';
+    } else {
+        try {
+            const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+            const data = await res.json();
+            if (data.pairs && data.pairs.length > 0) {
+                const pair = data.pairs[0];
+                displayName = pair.baseToken.name;
+                symbol = pair.baseToken.symbol;
+            }
+        } catch {
+            // Fallback to address if API fails during SSR
         }
-    } catch {
-        // Fallback to address if API fails during SSR
     }
 
     const title = `VORTEX | ${displayName} ${symbol ? `(${symbol})` : ''} - Live Intelligence`;
