@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchHeliusMetadata, fetchTokenData } from '@/lib/dataService';
 import { prisma } from '@/lib/prisma';
+import { streamingService } from '@/lib/vortex/streamingService';
+import { aetherClient } from '@/lib/vortex/aetherClient';
 
 // Server-side cache to prevent upstream flooding during local dev
 let discoveryCache: Record<string, { data: any; timestamp: number }> = {};
@@ -240,7 +242,19 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        const addressesToFetch = poolAddresses.slice(0, 30); // DexScreener supports max 30 per explicit request
+        // Prepend Elite Promoted Assets (Global Trending Priority)
+        let eliteAddresses: string[] = [];
+        try {
+            const eliteEnhancements = await prisma.enhancement.findMany({
+                where: { tier: 'Elite' },
+                select: { address: true }
+            });
+            eliteAddresses = eliteEnhancements.map(e => e.address);
+        } catch (eliteErr) {
+            console.warn("ELITE_FETCH_WARN", eliteErr);
+        }
+
+        const addressesToFetch = [...new Set([...eliteAddresses, ...poolAddresses])].slice(0, 30);
 
         // 3. Multi-Source Enhancement (Batching: 1 request instead of 30)
         let enhancedTokens: any[] = [];
@@ -323,9 +337,13 @@ export async function GET(req: NextRequest) {
             filteredTokens.sort((a, b) => a.priceChange24h - b.priceChange24h);
         }
 
-        // 4. Update Cache & Return (prune before writing to enforce size cap)
+        // 4. Update Cache & Broadcast Reactive Pulse
         pruneCache();
         discoveryCache[cacheKey] = { data: filteredTokens, timestamp: Date.now() };
+
+        // VORTEX_SSE_HEARTBEAT: Notify all connected clients that new tactical data is ready
+        streamingService.emit('discovery:pulse', { type });
+
         return NextResponse.json(filteredTokens);
 
     } catch (error: any) {
