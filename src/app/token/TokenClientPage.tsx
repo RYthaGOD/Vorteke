@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { getDiscoveryList, fetchTokenData, resolveSearch, getQuickRecon, getUserPortfolio, getRecentlyViewed, TokenInfo, formatCurrency, formatCompact, formatPercent, Timeframe, ChartTick, VortexTx, registerRecentlyViewed, getInitialChartData, subscribeToTokenChart, subscribeToLiveStream } from '@/lib/dataService';
+import { getDiscoveryList, fetchTokenData, resolveSearch, getQuickRecon, getUserPortfolio, getRecentlyViewed, TokenInfo, formatCurrency, formatCompact, formatPercent, Timeframe, ChartTick, VortexTx, registerRecentlyViewed, getInitialChartData, subscribeToTokenChart, subscribeToLiveStream, subscribeToServerStream } from '@/lib/dataService';
 import {
     ArrowLeft, X, ExternalLink, Zap, ShieldAlert, Globe, Cpu, Users, Info, Settings, Activity, RefreshCcw, ShieldCheck, Check, TrendingUp, Layers, AlertTriangle, Camera, Send, Loader2, ArrowUpRight, Lock
 } from 'lucide-react';
@@ -38,7 +38,7 @@ const TokenChart = dynamic(() => import('@/components/TokenChart').then(mod => m
 
 function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
     const router = useRouter();
-    const { publicKey, connected, isElite } = useVortexAuth();
+    const { publicKey, connected, isElite: walletIsElite } = useVortexAuth();
     const wallet = { publicKey, connected }; // legacy compat
     const address = initialAddress || '';
     const [timeframe, setTimeframe] = useState<Timeframe>('1M');
@@ -62,9 +62,11 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
             return data;
         },
         enabled: !!address && isMounted,
-        refetchInterval: isElite ? 5000 : 15000,
+        refetchInterval: walletIsElite ? 5000 : 15000,
         staleTime: 5000,
     });
+
+    const isElite = walletIsElite || token?.tier === 'Elite';
 
     const { captureReport, isCapturing } = useCaptureReport('tactical-recon-grid', `${token?.symbol || 'TOKEN'}_RECON`);
 
@@ -88,11 +90,12 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
         if (!address || !isMounted) return;
 
         // We no longer call subscribeToTokenChart (the polling logic).
-        // The chart is now driven strictly by the transaction stream in the next unsub block.
-
-        const unsubStream = subscribeToLiveStream(address, (tx: VortexTx) => {
-            setTxs((prev: VortexTx[]) => [tx, ...prev].slice(0, 50));
-            // No need to setRealtimeData here, the ChartEngine now watches txs[0] directly
+        // VORTEX_SSE_BRIDGE: Cutover from unstable browser-RPC-WS to industrial Server-Side Stream
+        const unsubStream = subscribeToServerStream(address, false, (data: any) => {
+            if (data.type === 'tx') {
+                const tx = data as VortexTx;
+                setTxs((prev: VortexTx[]) => [tx, ...prev].slice(0, 50));
+            }
         });
 
         return () => {
@@ -145,7 +148,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                             <ScreenerHeader
                                 token={token}
                                 telemetry={{
-                                    rpcHealth: rpcLatency < 800 ? 'OPTIMAL' : rpcLatency < 2000 ? 'DEGRADED' : 'DARK',
+                                    rpcHealth: rpcLatency < 500 ? 'OPTIMAL' : rpcLatency < 1500 ? 'DEGRADED' : 'DARK',
                                     provider: 'VORTEX_DAEMON_RPC',
                                     latency: rpcLatency,
                                     tier: isElite ? 'ELITE' : 'BASIC'
