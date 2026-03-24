@@ -299,7 +299,7 @@ export const fetchTokenFromServer = async (address: string): Promise<TokenInfo |
  */
 export const fetchTokenData = async (address: string, viewerWallet?: string): Promise<TokenInfo | null> => {
     try {
-        const isElite = viewerWallet ? await verifyEliteAccess(viewerWallet) : false;
+        let isElite = viewerWallet ? await verifyEliteAccess(viewerWallet) : false;
         if (!address || address.length < 32 || address.length > 44) {
             throw new Error(`INVALID_ADDRESS_FORMAT: ${address}`);
         }
@@ -351,7 +351,6 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
         const aetherData = aetherResult.status === 'fulfilled' ? aetherResult.value?.[0] : null;
         const dexData = dexResult?.status === 'fulfilled' ? dexResult.value : null;
 
-        let isElite = viewerWallet ? await verifyEliteAccess(viewerWallet) : false;
         isElite = isElite || enh?.tier === 'Elite';
 
         const parsedData = (mintInfo?.value?.data as any)?.parsed?.info;
