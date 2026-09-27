@@ -18,6 +18,12 @@ import { getQuickRecon, getUserPortfolio } from './vortex/token/portfolio';
 import { throttledFetch, sleep } from './vortex/utils';
 import { aetherClient } from './vortex/aetherClient';
 
+// Newly extracted modules
+import { TokenInfo } from './vortex/token/types';
+import { formatCurrency, formatCompact, formatPercent } from './vortex/token/formatting';
+import { registerRecentlyViewed, getRecentlyViewed, getDiscoveredAddresses, registerDiscoveredToken } from './vortex/token/storage';
+export type { TokenInfo };
+
 const detectBundle = modularDetectBundle;
 
 export {
@@ -28,7 +34,9 @@ export {
     resolveSearch,
     getQuickRecon, getUserPortfolio,
     throttledFetch, sleep,
-    detectBundle
+    detectBundle,
+    formatCurrency, formatCompact, formatPercent,
+    registerRecentlyViewed, getRecentlyViewed, getDiscoveredAddresses, registerDiscoveredToken
 };
 
 /**
@@ -59,69 +67,7 @@ export const getHeliusPriorityFee = async (accountAddresses: string[]) => {
         return 5000;
     }
 };
-export interface TokenInfo {
-    address: string;
-    name: string;
-    symbol: string;
-    decimals: number;
-    logoURI?: string;
-    priceUsd: number;
-    priceChange24h: number;
-    volume24h: number;
-    liquidityUsd: number;
-    fdv: number;
-    mcap: number;
-    holders: number;
-    owner?: string;
-    tier?: TokenTier;
-    latency?: number;
-    socials?: {
-        twitter?: string;
-        telegram?: string;
-        website?: string;
-    };
-    customDescription?: string;
-    bannerURI?: string;
-    iconURI?: string;
-    advancedMetrics: {
-        top10HolderPercent: number;
-        devWalletStatus: 'selling' | 'holding' | 'accumulating' | 'burnt';
-        lpBurnStatus: 'verified' | 'unverified' | 'locked';
-        slippage1k: number;
-        slippage10k: number;
-        snipeVolumePercent: number;
-        mintAuthority: 'renounced' | 'active';
-        freezeAuthority: 'renounced' | 'active';
-        metadataMutable: boolean;
-        transferFeeBps?: number;
-        holderIntelligence?: {
-            clusterDetected: boolean;
-            clusterSize: number;
-            riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-            top10Percent: number;
-        };
-        marketVelocity?: {
-            score: number;
-            activityLevel: 'DORMANT' | 'TRENDING' | 'VOLATILE';
-        };
-        volumeVelocity?: {
-            score: number; // 0-100
-            status: 'STAGNANT' | 'STABLE' | 'ACCELERATING' | 'BREAKOUT';
-            ratio: number;
-        };
-        velocitySentiment?: {
-            buyPercent: number;
-            sellPercent: number;
-        };
-        cluster?: string[];
-        fundingSource?: {
-            source: string;
-            type: string;
-        } | null;
-    };
-    securityTags?: string[];
-    isSafe?: boolean;
-}
+// TokenInfo interface is imported from './vortex/token/types'
 
 export interface DexScreenerPair {
     chainId: string;
@@ -194,80 +140,7 @@ export interface VortexTx {
 
 // Throttled fetch moved to vortex/utils.ts
 
-const RECENTLY_VIEWED_KEY = 'vortex_recently_viewed';
-const DISCOVERED_TOKENS_KEY = 'vortex_discovered_tokens';
-
-export const registerRecentlyViewed = (token: TokenInfo) => {
-    if (typeof window === 'undefined') return;
-    try {
-        const stored = localStorage.getItem(RECENTLY_VIEWED_KEY);
-        let current: any[] = stored ? JSON.parse(stored) : [];
-        current = [token, ...current.filter(t => t.address !== token.address)].slice(0, 10);
-        localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(current));
-    } catch (e) { }
-};
-
-// --- Formatting Utilities ---
-
-export const formatCurrency = (val: number, minimumDecimals: number = 2) => {
-    if (val === 0) return '$0.00';
-
-    // Industrial-grade dynamic decimal resolution for memecoins
-    let decimals = minimumDecimals;
-    if (val < 1) {
-        const str = val.toFixed(20);
-        const match = str.match(/0\.0*[1-9]/);
-        if (match) {
-            const leadingZeros = match[0].length - 3; // count zeros after decimal point
-            // FIX: Ensure at least 4 significant digits for values 0.01-0.99 that have no leading zeros
-            decimals = Math.max(minimumDecimals, leadingZeros + 4);
-        } else {
-            // For values like 0.15, 0.99 — show at least 4 decimal places for precision
-            decimals = Math.max(minimumDecimals, 4);
-        }
-    }
-
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: Math.min(20, decimals),
-        maximumFractionDigits: Math.min(20, decimals)
-    }).format(val);
-};
-
-export const formatCompact = (val: number) =>
-    new Intl.NumberFormat('en-US', {
-        notation: "compact",
-        maximumFractionDigits: 1
-    }).format(val);
-
-export const formatPercent = (val: number) =>
-    `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
-
-export const getRecentlyViewed = (): TokenInfo[] => {
-    if (typeof window === 'undefined') return [];
-    try {
-        const stored = localStorage.getItem(RECENTLY_VIEWED_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-};
-
-export const getDiscoveredAddresses = (): string[] => {
-    if (typeof window === 'undefined') return [];
-    try {
-        const stored = localStorage.getItem(DISCOVERED_TOKENS_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-};
-
-export const registerDiscoveredToken = (address: string) => {
-    if (typeof window === 'undefined') return;
-    const current = getDiscoveredAddresses();
-    if (!current.includes(address)) {
-        const updated = [address, ...current].slice(0, 50);
-        localStorage.setItem(DISCOVERED_TOKENS_KEY, JSON.stringify(updated));
-    }
-};
+// Storage and Formatting utilities are imported from './vortex/token/storage' and './vortex/token/formatting'
 
 // --- Server Persistence Sync ---
 export const syncTokenToServer = async (token: TokenInfo) => {
@@ -322,13 +195,13 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
                 }
             }),
             fetchHeliusMetadata(address) as Promise<any>,
-            throttledFetch(`https://price.jup.ag/v1/price?id=${address}`).catch(() => null),
+            throttledFetch(`https://api.jup.ag/price/v2?ids=${address}`).catch(() => null), // V2 Migration
             getHolderConcentration(address).catch(() => ({ clusterDetected: false, clusterSize: 0, riskLevel: 'LOW' as const, top10Percent: 0 })),
             detectBundle(address).catch(() => ({ isBundled: false, percentage: 0, riskLevel: 'LOW' as const })),
             verifyLPBurn(address).catch(() => 'unverified' as const),
             fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic', socials: {}, customDescription: '' } as TokenEnhancement)),
             aetherClient.searchTokens(address).catch(() => []),
-            throttledFetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`).catch(() => null)
+            throttledFetch(`https://api.geckoterminal.com/api/v2/networks/solana/tokens/${address}`).catch(() => null)
         ]);
 
         const rpcResult = batchResults[0] as PromiseSettledResult<any>;
@@ -339,7 +212,7 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
         const lp = batchResults[5] as PromiseSettledResult<any>;
         const enhancement = batchResults[6] as PromiseSettledResult<any>;
         const aetherResult = batchResults[7] as PromiseSettledResult<any>;
-        const dexResult = batchResults[8] as PromiseSettledResult<any>;
+        const geckoResult = batchResults[8] as PromiseSettledResult<any>;
 
         const mintInfo = rpcResult.status === 'fulfilled' ? rpcResult.value : null;
         const helius = heliusResult.status === 'fulfilled' ? heliusResult.value : null;
@@ -349,7 +222,6 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
         const lpStatus = lp.status === 'fulfilled' ? lp.value : 'unverified';
         const enh: any = enhancement.status === 'fulfilled' ? enhancement.value : { address, tier: 'Basic', socials: {}, customDescription: '' };
         const aetherData = aetherResult.status === 'fulfilled' ? aetherResult.value?.[0] : null;
-        const dexData = dexResult?.status === 'fulfilled' ? dexResult.value : null;
 
         isElite = isElite || enh?.tier === 'Elite';
 
@@ -367,10 +239,10 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
         // 2. Resolve Metadata with Hierarchical Priority
         const creator = helius?.owner || (parsedData as any)?.mintAuthority || null;
 
-        const dexPair = dexData?.pairs?.[0];
+        const geckoData = geckoResult?.status === 'fulfilled' ? geckoResult.value : null;
 
-        let name = isSol ? 'Solana' : (enh?.name || dexPair?.baseToken?.name || aetherData?.name || helius?.name || parsedData?.name || 'VORTEX Asset');
-        let symbol = isSol ? 'SOL' : (enh?.symbol || dexPair?.baseToken?.symbol || aetherData?.symbol || helius?.symbol || parsedData?.symbol || 'UNKNWN');
+        let name = isSol ? 'Solana' : (enh?.name || geckoData?.data?.attributes?.name || aetherData?.name || helius?.name || parsedData?.name || 'VORTEX Asset');
+        let symbol = isSol ? 'SOL' : (enh?.symbol || geckoData?.data?.attributes?.symbol || aetherData?.symbol || helius?.symbol || parsedData?.symbol || 'UNKNWN');
 
         // Detect Token2022 Transfer Fee (Tax)
         let transferFeeBps = 0;
@@ -388,9 +260,9 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
         const jupVal = (jupPriceData as any)?.data?.[address];
         const jupPrice = parseFloat(jupVal?.price || (jupPriceData as any)?.data?.price || (jupPriceData as any)?.price || '0');
         const heliusPrice = parseFloat(helius?.priceUsd || '0');
-        const dexPrice = parseFloat(dexPair?.priceUsd || '0');
-        const currentPrice = jupPrice || dexPrice || heliusPrice || 0;
-        const mcap = supply > 0 ? (currentPrice * supply) : (dexPair?.fdv || 0);
+        const geckoPrice = parseFloat(geckoData?.data?.attributes?.price_usd || '0');
+        const currentPrice = jupPrice || geckoPrice || heliusPrice || 0;
+        const mcap = supply > 0 ? (currentPrice * supply) : parseFloat(geckoData?.data?.attributes?.fdv_usd || '0');
 
         // 4. Volume Velocity & Social Proxy (Approximated via Aether / Jupiter defaults)
         const v5m = jupVal?.volume24h ? jupVal.volume24h / 288 : 0; // rough heuristic if available
@@ -411,7 +283,7 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
             creator ? traceFundingOrigins(creator).catch(() => null) : Promise.resolve(null)
         ]);
 
-        const logoURI = enh?.iconURI || helius?.logoURI || (helius as any)?.content?.links?.image || '/logo-placeholder.png';
+        const logoURI = enh?.iconURI || helius?.logoURI || (helius as any)?.content?.links?.image || geckoData?.data?.attributes?.image_url || '/logo-placeholder.png';
 
         // 6. Build and Return Tactical Token Object
         const token: any = {
@@ -424,9 +296,9 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
             iconURI: enh?.iconURI,
             priceUsd: currentPrice,
             priceChange24h: 0, // Fallback, would be injected by Aether historicals if needed
-            volume24h: jupVal?.volume24h || 0,
-            liquidityUsd: 0, 
-            fdv: (currentPrice * supply) || 0,
+            volume24h: jupVal?.volume24h || parseFloat(geckoData?.data?.attributes?.volume_usd?.h24 || '0'),
+            liquidityUsd: parseFloat(geckoData?.data?.attributes?.total_reserve_in_usd || '0'), 
+            fdv: (currentPrice * supply) || parseFloat(geckoData?.data?.attributes?.fdv_usd || '0'),
             mcap: mcap || 0,
             holders: 0, 
             owner: enh?.owner,

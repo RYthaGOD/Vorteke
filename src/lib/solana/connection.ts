@@ -41,14 +41,29 @@ export const getResilientConnection = async <T>(operation: (conn: Connection, en
 
         // ELITE_BLOCK_BYPASS: The public 'api.mainnet-beta.solana.com' is currently 403-blocking production.
         // We skip it if we have other options to prevent unnecessary 8s timeouts.
-        if (endpoint.includes('mainnet-beta.solana.com') && shuffled.length > 1 && !vortexDegraded) {
+        // BUG FIX: this skip had no "unless it's the last option" guard, unlike the
+        // latency skip below. If the only other endpoint got flagged slow (preemptive
+        // failover), both endpoints were skipped via `continue` and the loop fell
+        // through to the generic ALL_RPC_ENDPOINTS_OFFLINE error without ever making
+        // a single real connection attempt — a real payment could fail this way even
+        // with working RPC connectivity. Never skip the last remaining candidate.
+        if (endpoint.includes('mainnet-beta.solana.com') && shuffled.length > 1 && !vortexDegraded && i < shuffled.length - 1) {
             continue;
         }
 
-        // PREEMPTIVE_FAILOVER: If the "best" endpoint is suddenly exceeding threshold, 
+        // PREEMPTIVE_FAILOVER: If the "best" endpoint is suddenly exceeding threshold,
         // and we have fallbacks, skip it before even attempting the operation.
+        // BUG FIX: rpcManager initializes every endpoint's latency to a 9999 sentinel
+        // ("unmeasured"), and the heartbeat that replaces it with a real reading only
+        // starts `if (typeof window !== 'undefined')` — it never runs on the server.
+        // That made every server-side call here treat every endpoint as permanently
+        // "known slow" (9999 > the 250ms threshold) and skip it, including a correctly
+        // configured Helius primary — server RPC calls were silently always falling
+        // through to the last-resort endpoint. Require an actual probe (`lastHeard`
+        // set) before treating latency as a reason to skip; an unmeasured endpoint is
+        // unknown, not bad.
         const status = rpcManager.getAllStatus().find(s => s.endpoint === endpoint);
-        if (status && status.latency > RPC_LATENCY_THRESHOLD && i < shuffled.length - 1) {
+        if (status && status.lastHeard > 0 && status.latency > RPC_LATENCY_THRESHOLD && i < shuffled.length - 1) {
             console.debug(`PREEMPTIVE_FAILOVER: Skipping slow endpoint [${endpoint}] (Latency: ${status.latency.toFixed(0)}ms)`);
             continue;
         }
@@ -56,7 +71,7 @@ export const getResilientConnection = async <T>(operation: (conn: Connection, en
         try {
             const conn = new Connection(endpoint, 'confirmed');
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
 
             try {
                 const result = await Promise.race([

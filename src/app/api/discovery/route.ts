@@ -1,353 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchHeliusMetadata, fetchTokenData } from '@/lib/dataService';
 import { prisma } from '@/lib/prisma';
-import { streamingService } from '@/lib/vortex/streamingService';
-import { aetherClient } from '@/lib/vortex/aetherClient';
-
-// Server-side cache to prevent upstream flooding during local dev
-let discoveryCache: Record<string, { data: any; timestamp: number }> = {};
-const CACHE_TTL = 30000; // 30 seconds
-const CACHE_MAX_KEYS = 20; // Max 20 keys to prevent unbounded memory growth
-
-// Prune stale or excess cache entries
-const pruneCache = () => {
-    const now = Date.now();
-    const keys = Object.keys(discoveryCache);
-    // Remove TTL-expired entries
-    keys.forEach(k => { if (now - discoveryCache[k].timestamp > CACHE_TTL) delete discoveryCache[k]; });
-    // If still over max, remove oldest
-    const remaining = Object.keys(discoveryCache);
-    if (remaining.length > CACHE_MAX_KEYS) {
-        remaining
-            .sort((a, b) => discoveryCache[a].timestamp - discoveryCache[b].timestamp)
-            .slice(0, remaining.length - CACHE_MAX_KEYS)
-            .forEach(k => delete discoveryCache[k]);
-    }
-};
-
+const GECKO_BASE = 'https://api.geckoterminal.com/api/v2';
+type Entity = { id: string; attributes: Record<string, any>; relationships?: Record<string, { data?: { id: string } }> };
+type MarketToken = { address: string; name: string; symbol: string; priceUsd: number; priceChange24h: number | null; volume24h: number; liquidityUsd: number; fdv: number; mcap: number | null; logoURI: string | null; securityTags: string[]; tier: string; };
+async function upstream(path: string) {
+    const response = await fetch(GECKO_BASE + path, { signal: AbortSignal.timeout(12000), next: { revalidate: 30 } });
+    if (!response.ok) throw new Error('MARKET_PROVIDER_UNAVAILABLE');
+    return response.json() as Promise<{ data: Entity[]; included?: Entity[] }>;
+}
 export async function GET(req: NextRequest) {
-    const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type') || 'trending';
-    const cacheKey = `discovery_${type}`;
-
-    // 1. Check Local Dev Cache (Next.js Data Cache handles production)
-    const cached = discoveryCache[cacheKey];
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return NextResponse.json(cached.data);
-    }
-
+    const type = req.nextUrl.searchParams.get('type') || 'trending';
     try {
-        let tokens: any[] = [];
-
-        if (type === 'search') {
-            const query = searchParams.get('q');
-            if (!query) return NextResponse.json([]);
-
-            // Search via DexScreener directly for high-fidelity results
-            const searchRes = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${query}`, {
-                next: { revalidate: 30 }
-            } as any);
-            const searchData = await searchRes.json();
-
-            // Map and enrich, enforcing absolute 'solana' chain isolation to prevent unhandled Base58 decode failures
-            tokens = (searchData.pairs || [])
-                .filter((pair: any) => pair.chainId === 'solana')
-                .slice(0, 10).map((pair: any) => ({
-                    address: pair.baseToken.address,
-                    name: pair.baseToken.name,
-                    symbol: pair.baseToken.symbol,
-                    priceUsd: parseFloat(pair.priceUsd || '0'),
-                    priceChange24h: pair.priceChange?.h24 || 0,
-                    volume24h: pair.volume?.h24 || 0,
-                    liquidityUsd: pair.liquidity?.usd || 0,
-                    logoURI: pair.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${pair.baseToken.address}.png`,
-                    securityTags: ['DYNAMIC_LIQUIDITY']
-                }));
-
-            return NextResponse.json(tokens);
-        }
-
-        const baseUrl = 'https://api.geckoterminal.com/api/v2';
-        let geckoPath = '';
-
-        switch (type) {
-            case 'top100': geckoPath = 'networks/solana/pools'; break;
-            case 'pumpfun':
-                try {
-                    // Pump.fun tokens via DexScreener pairs on pumpswap dex
-                    const pumpRes = await fetch('https://api.dexscreener.com/latest/dex/pairs/solana/pumpfun', {
-                        next: { revalidate: 60 }
-                    } as any);
-                    if (!pumpRes.ok) throw new Error('DEX_PUMP_SEARCH_DOWN');
-                    const pumpData = await pumpRes.json();
-
-                    const pTokens = (pumpData.pairs || [])
-                        .filter((p: any) => p.chainId === 'solana')
-                        .slice(0, 25)
-                        .map((p: any) => ({
-                            address: p.baseToken.address,
-                            name: p.baseToken.name,
-                            symbol: p.baseToken.symbol,
-                            priceUsd: parseFloat(p.priceUsd || '0'),
-                            priceChange24h: p.priceChange?.h24 || 0,
-                            volume24h: p.volume?.h24 || 0,
-                            liquidityUsd: p.liquidity?.usd || 0,
-                            mcap: p.fdv || 0,
-                            logoURI: p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${p.baseToken.address}.png`,
-                            securityTags: ['PUMP_ORIGIN', 'BONDING_CURVE']
-                        }));
-                    return NextResponse.json(pTokens);
-                } catch (e) {
-                    console.warn("PUMP_FETCH_FAIL, falling back to trending", e);
-                    // Fall through to gecko trending as fallback
-                    geckoPath = 'networks/solana/trending_pools';
-                    break;
-                }
-            case 'new': geckoPath = 'networks/solana/new_pools'; break;
-            case 'gainers':
-                try {
-                    // DexScreener gainers: trending Solana pairs with highest positive 24h shift
-                    const gainRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', {
-                        next: { revalidate: 60 }
-                    } as any);
-                    if (!gainRes.ok) throw new Error('GAIN_FETCH_FAIL');
-                    const gainData = await gainRes.json();
-
-                    // Get up to 30 addresses from the token profiles feed
-                    const addresses = (gainData || [])
-                        .filter((t: any) => t.chainId === 'solana' && t.tokenAddress)
-                        .slice(0, 30)
-                        .map((t: any) => t.tokenAddress)
-                        .join(',');
-
-                    if (!addresses) throw new Error('NO_GAIN_ADDRS');
-
-                    const pairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`, {
-                        next: { revalidate: 60 }
-                    } as any);
-                    const pairsData = await pairsRes.json();
-
-                    const seen = new Set();
-                    const gainTokens = (pairsData.pairs || [])
-                        .filter((p: any) => p.chainId === 'solana' && !seen.has(p.baseToken.address) && seen.add(p.baseToken.address))
-                        .sort((a: any, b: any) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0))
-                        .slice(0, 25)
-                        .map((p: any) => ({
-                            address: p.baseToken.address,
-                            name: p.baseToken.name,
-                            symbol: p.baseToken.symbol,
-                            priceUsd: parseFloat(p.priceUsd || '0'),
-                            priceChange24h: p.priceChange?.h24 || 0,
-                            volume24h: p.volume?.h24 || 0,
-                            liquidityUsd: p.liquidity?.usd || 0,
-                            mcap: p.fdv || 0,
-                            logoURI: p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${p.baseToken.address}.png`,
-                            securityTags: ['GAINER', 'HOT_SIGNAL']
-                        }));
-
-                    discoveryCache[cacheKey] = { data: gainTokens, timestamp: Date.now() };
-                    return NextResponse.json(gainTokens);
-                } catch (e) {
-                    console.warn("GAINERS_FETCH_FAIL, falling back to trending sorted", e);
-                    geckoPath = 'networks/solana/trending_pools';
-                    break;
-                }
-            case 'verified':
-                try {
-                    // Verified tokens = Anything in the Enhancement table with status or owner
-                    const enhancements = await prisma.enhancement.findMany({
-                        where: {
-                            OR: [
-                                { tier: { not: 'Basic' } },
-                                { owner: { not: null } }
-                            ]
-                        },
-                        take: 30,
-                        orderBy: { lastPaymentTime: 'desc' }
-                    });
-
-                    const verifiedAddresses = enhancements.map(e => e.address);
-                    if (verifiedAddresses.length === 0) {
-                        // Fallback to trending pools if no verified tokens yet
-                        geckoPath = 'networks/solana/trending_pools';
-                        break;
-                    }
-
-                    const verifiedPairsRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${verifiedAddresses.join(',')}`, {
-                        next: { revalidate: 60 }
-                    } as any);
-                    const verifiedPairsData = await verifiedPairsRes.json();
-
-                    const seenVerified = new Set();
-                    const verifiedTokens = (verifiedPairsData.pairs || [])
-                        .filter((p: any) => p.chainId === 'solana' && !seenVerified.has(p.baseToken.address) && seenVerified.add(p.baseToken.address))
-                        .map((p: any) => {
-                            const enh = enhancements.find(e => e.address === p.baseToken.address);
-                            return {
-                                address: p.baseToken.address,
-                                name: p.baseToken.name,
-                                symbol: p.baseToken.symbol,
-                                priceUsd: parseFloat(p.priceUsd || '0'),
-                                priceChange24h: p.priceChange?.h24 || 0,
-                                volume24h: p.volume?.h24 || 0,
-                                liquidityUsd: p.liquidity?.usd || 0,
-                                mcap: p.fdv || 0,
-                                logoURI: enh?.iconURI || p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${p.baseToken.address}.png`,
-                                tier: enh?.tier || 'Basic',
-                                securityTags: ['VERIFIED_PROJECT', 'ENHANCED_DATA']
-                            };
-                        });
-
-                    discoveryCache[cacheKey] = { data: verifiedTokens, timestamp: Date.now() };
-                    return NextResponse.json(verifiedTokens);
-                } catch (e) {
-                    console.warn("VERIFIED_FETCH_FAIL, falling back to trending", e);
-                    geckoPath = 'networks/solana/trending_pools';
-                    break;
-                }
-            default: geckoPath = 'networks/solana/trending_pools';
-        }
-
-        // 2. Fetch Base Pools from GeckoTerminal
-        let geckoData: any = { data: [] };
-        let poolAddresses: string[] = [];
-
-        try {
-            const geckoRes = await fetch(`${baseUrl}/${geckoPath}`, {
-                next: { revalidate: 30 } // Vercel Data Cache
-            } as any);
-            if (geckoRes.ok) {
-                geckoData = await geckoRes.json();
-                poolAddresses = geckoData.data?.map((p: any) => p.relationships?.base_token?.data?.id?.split('_')[1]).filter(Boolean) || [];
-            } else {
-                console.warn(`GECKO_FAILURE: ${geckoRes.status}`);
-            }
-        } catch (e) {
-            console.warn("GECKO_FETCH_NETWORK_FAIL", e);
-        }
-
-        // 2.5 FALLBACK LOGIC: If Gecko fails (rate limits, etc) and we have no pools, use DexScreener token profiles
-        if (poolAddresses.length === 0) {
-            console.warn('GECKO_NO_POOLS, FALLING BACK TO DEXSCREENER PROFILES');
-            try {
-                const fallbackRes = await fetch('https://api.dexscreener.com/token-profiles/latest/v1', { next: { revalidate: 30 } } as any);
-                if (fallbackRes.ok) {
-                    const fallbackData = await fallbackRes.json();
-                    poolAddresses = (fallbackData || [])
-                        .filter((t: any) => t.chainId === 'solana' && t.tokenAddress)
-                        .map((t: any) => t.tokenAddress);
-                }
-            } catch (fallbackErr) {
-                console.error("TOTAL_DISCOVERY_FAILURE", fallbackErr);
+        let tokens: MarketToken[] = [];
+        if (type === 'verified' || type === 'captured') {
+            const profiles = type === 'verified'
+                ? await prisma.enhancement.findMany({ where: { tier: { not: 'Basic' } }, orderBy: { lastPaymentTime: 'desc' }, take: 30, select: { address: true } })
+                : await prisma.token.findMany({ orderBy: { lastUpdated: 'desc' }, take: 30, select: { address: true } });
+            if (!profiles.length) return NextResponse.json([]);
+            const response = await upstream('/networks/solana/tokens/multi/' + profiles.map(p => p.address).join(','));
+            tokens = response.data.map(({ attributes: a }) => ({
+                address: a.address, name: a.name, symbol: a.symbol, priceUsd: Number(a.price_usd || 0),
+                priceChange24h: null, volume24h: Number(a.volume_usd?.h24 || 0), liquidityUsd: Number(a.total_reserve_in_usd || 0),
+                fdv: Number(a.fdv_usd || 0), mcap: a.market_cap_usd == null ? null : Number(a.market_cap_usd),
+                logoURI: a.image_url || null, securityTags: [], tier: 'Basic',
+            }));
+        } else {
+            const query = req.nextUrl.searchParams.get('q')?.trim().slice(0, 100) || '';
+            if (type === 'search' && !query) return NextResponse.json([]);
+            const path = type === 'search' ? '/search/pools?network=solana&query=' + encodeURIComponent(query)
+                : '/networks/solana/' + (type === 'new' || type === 'pumpfun' ? 'new_pools' : type === 'top100' ? 'pools' : 'trending_pools') + '?page=1';
+            const response = await upstream(path + '&include=base_token');
+            const metadata = new Map(response.included?.map(item => [item.id, item.attributes]));
+            const seen = new Set<string>();
+            for (const pool of response.data) {
+                const id = pool.relationships?.base_token?.data?.id;
+                const address = id?.replace(/^solana_/, '');
+                const dex = pool.relationships?.dex?.data?.id || '';
+                if (!address || seen.has(address) || (type === 'pumpfun' && !dex.includes('pump'))) continue;
+                seen.add(address);
+                const a = pool.attributes, token = metadata.get(id!) || {};
+                tokens.push({ address, name: token.name || a.name?.split(' / ')[0] || address, symbol: token.symbol || a.name?.split(' / ')[0] || '?',
+                    priceUsd: Number(a.base_token_price_usd || 0), priceChange24h: a.price_change_percentage?.h24 == null ? null : Number(a.price_change_percentage.h24),
+                    volume24h: Number(a.volume_usd?.h24 || 0), liquidityUsd: Number(a.reserve_in_usd || 0),
+                    fdv: Number(a.fdv_usd || 0), mcap: a.market_cap_usd == null ? null : Number(a.market_cap_usd),
+                    logoURI: token.image_url || null, securityTags: [], tier: 'Basic' });
             }
         }
-
-        // Prepend Elite Promoted Assets (Global Trending Priority)
-        let eliteAddresses: string[] = [];
-        try {
-            const eliteEnhancements = await prisma.enhancement.findMany({
-                where: { tier: 'Elite' },
-                select: { address: true }
-            });
-            eliteAddresses = eliteEnhancements.map(e => e.address);
-        } catch (eliteErr) {
-            console.warn("ELITE_FETCH_WARN", eliteErr);
-        }
-
-        const addressesToFetch = [...new Set([...eliteAddresses, ...poolAddresses])].slice(0, 30);
-
-        // 3. Multi-Source Enhancement (Batching: 1 request instead of 30)
-        let enhancedTokens: any[] = [];
-        const neededAddresses: string[] = [];
-
-        // DB Pass (Hardened against connection failure)
-        let existingMap = new Map();
-        try {
-            const existingRecords = await prisma.token.findMany({
-                where: { address: { in: addressesToFetch } }
-            });
-            existingRecords.forEach((r: any) => existingMap.set(r.address, r));
-
-            for (const addr of addressesToFetch) {
-                const existing = existingMap.get(addr);
-                if (existing && (Date.now() - new Date(existing.lastUpdated).getTime() < 60000)) {
-                    enhancedTokens.push(existing);
-                } else {
-                    neededAddresses.push(addr);
-                }
-            }
-        } catch (dbErr) {
-            console.warn("DB_RECON_FAILURE, falling back to batch API", dbErr);
-            neededAddresses.push(...addressesToFetch);
-        }
-
-        // Batch Fetch Pass
-        if (neededAddresses.length > 0) {
-            try {
-                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${neededAddresses.join(',')}`, {
-                    next: { revalidate: 30 }
-                } as any);
-                const dexData = await res.json();
-
-                if (dexData.pairs) {
-                    const processedAddrs = new Set();
-                    for (const pair of dexData.pairs) {
-                        const addr = pair.baseToken.address;
-                        if (processedAddrs.has(addr)) continue;
-                        processedAddrs.add(addr);
-
-                        const tokenInfo = {
-                            address: addr,
-                            name: pair.baseToken.name,
-                            symbol: pair.baseToken.symbol,
-                            priceUsd: parseFloat(pair.priceUsd || '0'),
-                            priceChange24h: pair.priceChange?.h24 || 0,
-                            volume24h: pair.volume?.h24 || 0,
-                            liquidityUsd: pair.liquidity?.usd || 0,
-                            fdv: pair.fdv || 0,
-                            mcap: pair.fdv || 0,
-                            logoURI: pair.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/solana/${addr}.png`,
-                            securityTags: ['AGGREGRATED_SOURCE'],
-                            lastUpdated: new Date()
-                        };
-
-                        try {
-                            await prisma.token.upsert({
-                                where: { address: addr },
-                                update: tokenInfo,
-                                create: tokenInfo
-                            });
-                        } catch (prismaErr) {
-                            console.warn("DB_PERSIST_WARN", prismaErr);
-                        }
-
-                        enhancedTokens.push(tokenInfo);
-                    }
-                }
-            } catch (e) {
-                console.error("BATCH_FETCH_ERR:", e);
-            }
-        }
-
-        let filteredTokens = enhancedTokens.filter(Boolean);
-
-        if (type === 'gainers') {
-            filteredTokens.sort((a, b) => b.priceChange24h - a.priceChange24h);
-        } else if (type === 'losers') {
-            filteredTokens.sort((a, b) => a.priceChange24h - b.priceChange24h);
-        }
-
-        // 4. Update Cache & Broadcast Reactive Pulse
-        pruneCache();
-        discoveryCache[cacheKey] = { data: filteredTokens, timestamp: Date.now() };
-
-        // VORTEX_SSE_HEARTBEAT: Notify all connected clients that new tactical data is ready
-        streamingService.emit('discovery:pulse', { type });
-
-        return NextResponse.json(filteredTokens);
-
-    } catch (error: any) {
-        console.error('AGGREGATOR_ERROR:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const enhancements = await prisma.enhancement.findMany({ where: { address: { in: tokens.map(t => t.address) } } });
+        const profiles = new Map(enhancements.map(e => [e.address, e]));
+        const data = tokens.map(token => { const profile = profiles.get(token.address); return { ...token, tier: profile?.tier || 'Basic', logoURI: profile?.iconURI || token.logoURI }; });
+        if (type === 'gainers') data.sort((a, b) => (b.priceChange24h ?? -Infinity) - (a.priceChange24h ?? -Infinity));
+        else if (type === 'losers') data.sort((a, b) => (a.priceChange24h ?? Infinity) - (b.priceChange24h ?? Infinity));
+        else if (type === 'trending') data.sort((a, b) => Number(b.tier === 'Elite') - Number(a.tier === 'Elite'));
+        return NextResponse.json(data);
+    } catch (error) {
+        console.error('DISCOVERY_UNAVAILABLE', error);
+        return NextResponse.json({ error: 'MARKET_DATA_UNAVAILABLE' }, { status: 503 });
     }
 }

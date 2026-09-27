@@ -78,11 +78,10 @@ export const getUserPortfolio = async (userPublicKey: string, isElite: boolean =
         const allAccounts = [...splAccounts.value, ...spl2022Accounts.value];
         const limit = isElite ? 40 : 10;
 
-        // 2. Resolve Metadata in optimized parallel batches
-        const holdings = await Promise.all(
+        // 2. Process ALL valid accounts to extract metadata and value
+        const allHoldings = await Promise.all(
             allAccounts
                 .filter(acc => (acc.account.data as any).parsed.info.tokenAmount.uiAmount > 0)
-                .slice(0, limit)
                 .map(async (acc) => {
                     const info = (acc.account.data as any).parsed.info;
                     const mint = info.mint;
@@ -116,9 +115,10 @@ export const getUserPortfolio = async (userPublicKey: string, isElite: boolean =
                 })
         );
 
-        return holdings.sort((a, b) => b.valueUsd - a.valueUsd);
+        // 3. Sort by total USD value, then apply the limit slice
+        return allHoldings.sort((a, b) => b.valueUsd - a.valueUsd).slice(0, limit);
     } catch (e) {
         console.error("Portfolio fetch error:", e);
-        return [];
+        throw new Error('Could not load wallet holdings. Please retry.');
     }
 };

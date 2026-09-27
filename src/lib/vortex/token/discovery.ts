@@ -32,6 +32,20 @@ export const getDiscoveryList = async (type: 'trending' | 'new' | 'gainers' | 'l
             }) as TokenInfo[];
         }
 
+        if (type === 'trending' || type === 'gainers') {
+            try {
+                const { aetherClient } = await import('../aetherClient');
+                const movers = await aetherClient.getTopMovers();
+                if (movers.length > 0) {
+                    console.log(`AETHER_DISCOVERY: Sourced ${type} from Sovereign Indexer.`);
+                    const tokens = await Promise.all(movers.map(m => fetchTokenData(m.tokenAddress)));
+                    return tokens.filter(t => t !== null) as TokenInfo[];
+                }
+            } catch (err) {
+                console.warn("AETHER_DISCOVERY_FALLBACK:", err);
+            }
+        }
+
         const res = await fetch(`/api/discovery?type=${type}`);
         if (!res.ok) throw new Error(`AGGREGATOR_FAILURE: ${res.status}`);
         return await res.json();

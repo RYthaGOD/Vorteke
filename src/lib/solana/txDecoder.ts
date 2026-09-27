@@ -96,15 +96,14 @@ export async function decodeVortexSwap(
         const directUsdValue = getSignerTokenDelta(USDC_MINT) + getSignerTokenDelta(USDT_MINT);
 
         // Derive true USD value for SOL flow (Real-time Oracle Only)
-        let solPrice = 0;
+        let solPrice = 145.0; // Sane fallback for 2026 baseline if all else fails
         try {
-            // Use public Jupiter V1 (no key required)
-            const solPriceData: any = await throttledFetch('https://price.jup.ag/v1/price?id=So11111111111111111111111111111111111111112');
+            // Try Jupiter V2 (Standard)
+            const solPriceData: any = await throttledFetch('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112');
             const livePrice = parseFloat(solPriceData?.data?.['So11111111111111111111111111111111111111112']?.price);
             if (!isNaN(livePrice) && livePrice > 0) solPrice = livePrice;
         } catch (e) {
-            // Diagnostic logging for restoration forensics
-            console.error("TELEMETRY_ORACLE_FAILURE: Oracle connection lost.");
+            console.error("TELEMETRY_ORACLE_FAILURE: Oracle connection lost, using fallback.");
         }
 
         const amountUsd = directUsdValue > 0 ? directUsdValue : (solDelta * solPrice);

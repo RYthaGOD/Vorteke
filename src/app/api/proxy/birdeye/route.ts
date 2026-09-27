@@ -36,8 +36,8 @@ function tryConsumeToken(): boolean {
 // ═══════════════════════════════════════════════════════════════════════════
 interface CacheEntry { data: any; timestamp: number; }
 const responseCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 30_000; // 30 seconds — charts don't need sub-30s updates
-const CACHE_MAX_ENTRIES = 50;
+const CACHE_TTL_MS = 60_000; // 60 seconds — charts don't need sub-60s updates for standard views
+const CACHE_MAX_ENTRIES = 200; // Increased significantly for multi-token tracking
 
 function getCached(key: string): any | null {
     const entry = responseCache.get(key);
