@@ -2,12 +2,6 @@
 import React from 'react';
 import { Camera, RefreshCcw, Zap, ShieldCheck } from 'lucide-react';
 import { TokenInfo, formatCurrency } from '@/lib/dataService';
-import dynamic from 'next/dynamic';
-
-const WalletMultiButton = dynamic(
-    async () => (await import('@solana/wallet-adapter-react-ui')).WalletMultiButton,
-    { ssr: false }
-);
 
 interface ScreenerHeaderProps {
     token: TokenInfo;
@@ -73,22 +67,22 @@ export const ScreenerHeader = React.memo(({
 
                     <div className="vortex-flex-start vortex-gap-3 vortex-border-left-tactical vortex-pl-4 vortex-no-capture flex-wrap">
                         <div className="vortex-flex-column vortex-mr-4">
-                            <span className="vortex-label vortex-text-tiny vortex-m-0">SESSION_TIER</span>
+                            <span className="vortex-label vortex-text-tiny vortex-m-0">Your access</span>
                             <span className={`vortex-text-xs vortex-text-bold ${telemetry.tier === 'ELITE' ? 'text-vortex-yellow' : 'text-vortex-muted'}`}>
                                 {telemetry.tier || 'BASIC'}
                             </span>
                         </div>
                         <div className="vortex-flex-column">
-                            <span className="vortex-label vortex-text-tiny vortex-m-0">NODE_LATENCY</span>
-                            <span className="vortex-text-xs vortex-text-mono text-vortex-cyan">{telemetry.latency}ms</span>
+                            <span className="vortex-label vortex-text-tiny vortex-m-0">Load time</span>
+                            <span className="vortex-text-xs vortex-text-mono text-vortex-cyan">{telemetry.latency < 1000 ? telemetry.latency + ' ms' : (telemetry.latency / 1000).toFixed(1) + ' s'}</span>
                         </div>
                         <div className="vortex-flex-column">
-                            <span className="vortex-label vortex-text-tiny vortex-m-0">NODE_STATUS</span>
+                            <span className="vortex-label vortex-text-tiny vortex-m-0">Data feed</span>
                             <span className={`vortex-text-xs vortex-text-mono ${
                                 telemetry.rpcHealth === 'OPTIMAL' ? 'text-vortex-yellow' : 
                                 telemetry.rpcHealth === 'DEGRADED' ? 'text-vortex-cyan' : 'text-vortex-red'
                             }`}>
-                                {telemetry.rpcHealth}
+                                {telemetry.rpcHealth === 'OPTIMAL' ? 'Fast' : telemetry.rpcHealth === 'DEGRADED' ? 'Slow' : 'Very slow'}
                             </span>
                         </div>
                     </div>
@@ -101,8 +95,8 @@ export const ScreenerHeader = React.memo(({
                             className="btn-vortex btn-vortex-sm btn-vortex-icon-only"
                             onClick={onRefresh}
                             disabled={refreshLoading}
-                            title="RECALIBRATE_TELEMETRY"
-                            aria-label="Recalibrate telemetry"
+                            title="Refresh data"
+                            aria-label="Refresh data"
                             aria-busy={refreshLoading}
                         >
                             <RefreshCcw size={14} className={refreshLoading ? 'animate-spin' : ''} aria-hidden="true" />
@@ -111,11 +105,11 @@ export const ScreenerHeader = React.memo(({
                             type="button"
                             className={`btn-vortex btn-vortex-sm ${isCapturing ? 'vortex-bg-purple animate-pulse' : 'btn-vortex-outline-purple'}`}
                             onClick={onCapture}
-                            title="GENERATE_RECON_REPORT"
+                            title="Save a snapshot image of this page"
                             aria-busy={isCapturing}
                         >
                             <Camera size={14} className="vortex-mr-2" aria-hidden="true" />
-                            {isCapturing ? 'CAPTURING...' : 'CAPTURE'}
+                            {isCapturing ? 'Capturing…' : 'Snapshot'}
                         </button>
                         {token.tier !== 'Elite' && (
                             <button
@@ -124,10 +118,9 @@ export const ScreenerHeader = React.memo(({
                                 onClick={onEnhance}
                             >
                                 <Zap size={14} className={`vortex-mr-2 ${token.tier === 'Enhanced' ? 'text-vortex-white' : ''}`} aria-hidden="true" />
-                                {token.tier === 'Enhanced' ? 'UPGRADE_TO_ELITE' : 'VERIFY_TOKEN'}
+                                {token.tier === 'Enhanced' ? 'Upgrade to Elite' : 'Upgrade profile'}
                             </button>
                         )}
-                        <WalletMultiButton className="vortex-wallet-btn" />
                     </div>
                 </div>
             </div>

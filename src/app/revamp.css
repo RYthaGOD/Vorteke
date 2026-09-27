@@ -119,7 +119,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .vortex-empty p { margin: 0; line-height: 1.6; }
 .vortex-market-sidebar .vortex-empty { padding: 16px 0; font-size: 14px; }
 .vortex-market-skeleton { height: 36px; border-radius: 6px; background: var(--surface-elevated); }
-.vortex-modal-overlay { z-index: 1000; padding: 20px; background: #000b; }
+.vortex-modal-overlay { z-index: 10000; /* above .vortex-mobile-nav (9999) */ padding: 20px; background: #000b; }
 .vortex-modal-container, .vortex-modal-content { width: min(100%, 760px); background: var(--surface-panel); border: var(--border-vortex); border-radius: 14px; max-height: calc(100dvh - 40px); overflow-y: auto; padding: 0; }
 .vortex-modal-header, .vortex-modal-body { padding: 24px; }
 .vortex-modal-header { border-bottom: var(--border-vortex); }

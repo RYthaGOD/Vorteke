@@ -46,7 +46,9 @@ export async function GET(req: NextRequest) {
                     logoURI: token.image_url || null, securityTags: [], tier: 'Basic' });
             }
         }
-        const enhancements = await prisma.enhancement.findMany({ where: { address: { in: tokens.map(t => t.address) } } });
+        // Paid profiles only decorate market data; if the database is unreachable, still serve the market.
+        const enhancements = await prisma.enhancement.findMany({ where: { address: { in: tokens.map(t => t.address) } } })
+            .catch((error) => { console.error('DISCOVERY_PROFILES_UNAVAILABLE', error); return []; });
         const profiles = new Map(enhancements.map(e => [e.address, e]));
         const data = tokens.map(token => { const profile = profiles.get(token.address); return { ...token, tier: profile?.tier || 'Basic', logoURI: profile?.iconURI || token.logoURI }; });
         if (type === 'gainers') data.sort((a, b) => (b.priceChange24h ?? -Infinity) - (a.priceChange24h ?? -Infinity));

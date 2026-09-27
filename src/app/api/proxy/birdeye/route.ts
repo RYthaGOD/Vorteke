@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
         }
 
         // v3 endpoint per Birdeye docs
-        const targetUrl = `https://public-api.birdeye.so/defi/v3/token/ohlcv?address=${address}&type=${type}&time_from=${time_from}&time_to=${time_to}`;
+        const targetUrl = `https://public-api.birdeye.so/defi/v3/ohlcv?address=${address}&type=${type}&time_from=${time_from}&time_to=${time_to}`;
 
         console.debug(`BIRDEYE_REQUEST: ${targetUrl}`);
 

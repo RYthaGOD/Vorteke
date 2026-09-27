@@ -96,11 +96,13 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                 )}
             </div>
 
-            <div className="vortex-flex-between vortex-mb-4">
-                <div className="vortex-flex vortex-gap-3">
+            <div className="vortex-flex-between vortex-wrap vortex-gap-3 vortex-mb-4">
+                <div className="vortex-flex vortex-wrap vortex-gap-3" role="group" aria-label="Slippage">
                     {['Auto', '0.5', '1.0'].map(val => (
                         <button
                             key={val}
+                            type="button"
+                            aria-pressed={slippage === val}
                             onClick={() => setSlippage(val)}
                             className={`vortex-pill-tab vortex-text-tiny ${slippage === val ? 'active' : ''}`}
                         >
@@ -110,6 +112,8 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                     <div className="vortex-flex-start vortex-gap-2 vortex-ml-2 vortex-border-left vortex-border-muted vortex-pl-2">
                         <input
                             type="text"
+                            inputMode="decimal"
+                            aria-label="Custom slippage percent"
                             className="vortex-input-mini vortex-w-12 vortex-text-tiny"
                             placeholder="Custom"
                             value={!['Auto', '0.5', '1.0'].includes(slippage) ? slippage : ''}
@@ -118,18 +122,22 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                         <span className="vortex-text-tiny vortex-text-muted">%</span>
                     </div>
                 </div>
-                <div className="vortex-flex vortex-gap-3">
+                <div className="vortex-flex vortex-gap-3" role="group" aria-label="Transaction priority">
                     <button
+                        type="button"
+                        aria-pressed={priorityLevel === 'Normal'}
                         onClick={() => setPriorityLevel('Normal')}
                         className={`vortex-pill-tab vortex-text-tiny ${priorityLevel === 'Normal' ? 'active' : ''}`}
                     >
                         NORMAL
                     </button>
                     <button
+                        type="button"
+                        aria-pressed={priorityLevel === 'Turbo'}
                         onClick={() => setPriorityLevel('Turbo')}
                         className={`vortex-pill-tab vortex-text-tiny ${priorityLevel === 'Turbo' ? 'active' : ''} text-vortex-cyan`}
                     >
-                        <Zap size={10} className="vortex-mr-1" />
+                        <Zap size={10} className="vortex-mr-1" aria-hidden />
                         TURBO
                     </button>
                 </div>

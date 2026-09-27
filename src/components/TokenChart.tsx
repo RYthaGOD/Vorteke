@@ -242,16 +242,19 @@ export function TokenChart({ address, initialData, realtimeTx, timeframe, onTime
                 `;
             }
 
-            // Whale Recon Markers
+            // Whale Recon Markers: only the largest few spikes, otherwise labels bury the candles.
+            const MAX_WHALE_MARKERS = 5;
             const avgVol = volumeData.reduce((acc, d) => acc + d.value, 0) / volumeData.length;
             const markers = initialData
                 .filter(d => d.volume > avgVol * 4)
+                .sort((a, b) => b.volume - a.volume)
+                .slice(0, MAX_WHALE_MARKERS)
                 .map(d => ({
                     time: d.time as Time,
                     position: 'aboveBar' as const,
                     color: cssVar('--accent-vortex-yellow', '#E5FF00'),
                     shape: 'arrowDown' as const,
-                    text: 'WHALE_TX',
+                    text: 'Whale',
                 }))
                 .sort((a, b) => (a.time as number) - (b.time as number));
 

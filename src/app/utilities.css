@@ -119,3 +119,6 @@
   .animate-spin-slow, .animate-spin-reverse-slow, .animate-pulse, .vortex-animate-pulse, .vortex-skeleton { animation: none; }
 }
 .vortex-text-secondary { color: var(--text-secondary); }
+
+/* Wallet picker must sit above the mobile nav (9999) and our own modals (10000). */
+.wallet-adapter-modal { z-index: 10001; }

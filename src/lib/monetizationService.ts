@@ -35,14 +35,8 @@ const saveEnhancements = (data: Record<string, TokenEnhancement>) => {
 };
 
 // Default system enhancements
-const DEFAULT_ENHANCEMENTS: Record<string, TokenEnhancement> = {
-    'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': {
-        address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
-        tier: 'Elite',
-        socials: { twitter: 'https://x.com/JupiterExchange', website: 'https://jup.ag' },
-        customDescription: 'The giant of Solana liquidity. Unified routing for every token.'
-    }
-};
+// No hardcoded profiles: a paid tier badge must come from a real payment record.
+const DEFAULT_ENHANCEMENTS: Record<string, TokenEnhancement> = {};
 
 /**
  * Validates if a wallet holds the Elite VORTEX access.
