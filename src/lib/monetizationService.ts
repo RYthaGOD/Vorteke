@@ -1,9 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-// @ts-ignore
 import nacl from 'tweetnacl';
 import { RPC_ENDPOINTS, PROTECTED_MINT_ADDRESSES, TREASURY_ENHANCEMENTS, TIER_PRICES_SOL } from './constants';
 import { getResilientConnection } from './solana/connection';
-import { buildBuyAndBurnTransaction } from './solana/transactionBuilder';
 
 export type TokenTier = 'Basic' | 'Enhanced' | 'Elite' | 'DeepScan';
 
@@ -123,7 +121,6 @@ export const purchaseEnhancement = async (address: string, tier: TokenTier, wall
         const solPrice = TIER_PRICES_SOL[tier] ?? TIER_PRICES_SOL.Enhanced;
         const amountLamports = Math.floor(solPrice * 1_000_000_000);
 
-        console.log(`[VORTEX] Requesting direct SOL payment for ${tier} tier...`);
         const resp = await fetch('/api/pay/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

@@ -7,7 +7,7 @@
         "build": "prisma generate && next build",
         "test:payments": "node --test tests/payments.test.mjs",
         "start": "next start",
-        "lint": "next lint"
+        "lint": "next lint --dir src --dir scripts"
     },
     "dependencies": {
         "@ethereumjs/util": "^10.1.1",

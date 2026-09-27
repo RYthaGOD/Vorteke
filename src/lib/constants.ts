@@ -29,7 +29,6 @@ export const JUPITER_QUOTE_API = 'https://quote-api.jup.ag/v6';
 export const TREASURY_SWAPS = 'C29gx6Wq2fvuBXrj9YjoTTFYHXhsB5dD5cWd7bmu9PDp'; // Vortex Treasury Alpha
 export const TREASURY_ENHANCEMENTS = 'jawKuQ3xtcYoAuqE9jyG2H35sv2pWJSzsyjoNpsxG38'; // Elite Enhancements Revenue
 export const VORTEX_OPS = '8hLpEK6D2msZnC2HKeaxHiEiTLLSwRvd31FqUCNrYnP2'; // Vortex Ops Beta
-export const VTX_MINT = 'VTXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxMINT'; // Placeholder until launch
 
 // Single source of truth for tier pricing in SOL. /api/pay/initiate builds the charge
 // and /api/pay/verify checks the treasury received it — both must read from here.

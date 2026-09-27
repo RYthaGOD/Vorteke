@@ -51,7 +51,8 @@ async function main() {
             uri: 'https://vortexsol.app/api/metadata/elite-collection', // Placeholder for Arweave/IPFS
             plugins: [
                 {
-                    // @ts-ignore - Metaplex Core typing mismatch on 'Royalties'
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Metaplex Core typing mismatch on Royalties
+                    // @ts-ignore
                     plugin: {
                         type: 'Royalties',
                         basisPoints: 500, // 5%

@@ -57,7 +57,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'SIGNATURE_EXPIRED' }, { status: 401 });
         }
 
-        if (code !== 'VORTEKE') {
+        // Codes live in env (comma-separated) so they can be rotated without a deploy.
+        // Unset means access codes are disabled entirely.
+        const validCodes = (process.env.ELITE_ACCESS_CODES || '')
+            .split(',')
+            .map((c) => c.trim())
+            .filter(Boolean);
+        if (validCodes.length === 0) {
+            return NextResponse.json({ error: 'ACCESS_CODES_DISABLED' }, { status: 403 });
+        }
+        if (!validCodes.includes(String(code).trim())) {
             return NextResponse.json({ error: 'INVALID_ACCESS_CODE' }, { status: 403 });
         }
 

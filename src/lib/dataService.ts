@@ -241,8 +241,8 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
 
         const geckoData = geckoResult?.status === 'fulfilled' ? geckoResult.value : null;
 
-        let name = isSol ? 'Solana' : (enh?.name || geckoData?.data?.attributes?.name || aetherData?.name || helius?.name || parsedData?.name || 'VORTEX Asset');
-        let symbol = isSol ? 'SOL' : (enh?.symbol || geckoData?.data?.attributes?.symbol || aetherData?.symbol || helius?.symbol || parsedData?.symbol || 'UNKNWN');
+        const name = isSol ? 'Solana' : (enh?.name || geckoData?.data?.attributes?.name || aetherData?.name || helius?.name || parsedData?.name || 'VORTEX Asset');
+        const symbol = isSol ? 'SOL' : (enh?.symbol || geckoData?.data?.attributes?.symbol || aetherData?.symbol || helius?.symbol || parsedData?.symbol || 'UNKNWN');
 
         // Detect Token2022 Transfer Fee (Tax)
         let transferFeeBps = 0;

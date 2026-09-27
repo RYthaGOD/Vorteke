@@ -35,7 +35,6 @@ export const getInitialChartData = async (
         try {
             const aetherHistory = await aetherClient.getHistory(address, aetherInterval);
             if (aetherHistory && aetherHistory.length > 5) {
-                console.log(`AETHER_HIT: Sovereign history found for ${address}`);
                 return normalizeAndHarden(aetherHistory.map(h => ({
                     unix_time: Math.floor(new Date(h.window_start).getTime() / 1000),
                     o: h.open,

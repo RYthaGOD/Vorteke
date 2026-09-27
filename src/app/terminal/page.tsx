@@ -9,7 +9,7 @@ import { getRecentlyViewed, getUserPortfolio, TokenInfo, formatCurrency, formatC
 import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { VortexPanel } from '@/components/DesignSystem';
 import { MobileNav } from '@/components/MobileNav';
-import { BurnLeaderboard } from '@/components/BurnLeaderboard';
+import { FeaturedProjects } from '@/components/FeaturedProjects';
 import { BoostedTicker } from '@/components/BoostedTicker';
 
 export interface PortfolioItem { address: string; symbol: string; name: string; logoURI?: string; priceUsd: number; balance: number; valueUsd: number; pnlPercent: number; }
@@ -65,7 +65,7 @@ function Terminal() {
                     {!connected ? <div className="vortex-empty"><Wallet size={24} aria-hidden /><p>Connect your wallet to see your holdings alongside the market.</p><WalletMultiButton /></div> : portfolio.isLoading ? <p role="status">Loading holdings…</p> : portfolio.isError ? <div><p>Could not load holdings.</p><button className="btn-vortex btn-vortex-secondary" onClick={() => portfolio.refetch()}>Retry</button></div> : !portfolio.data?.length ? <p>No holdings found for this wallet.</p> :
                         <ul className="vortex-featured-list">{portfolio.data.map(item => <li key={item.address}><Link href={'/token/' + item.address}><strong>{item.symbol}</strong><span>{formatCurrency(item.valueUsd)}</span></Link></li>)}</ul>}
                 </VortexPanel></section>
-                <BurnLeaderboard />
+                <FeaturedProjects />
                 <VortexPanel title="Recently viewed" glowColor="none">{recent.length ? <ul className="vortex-featured-list">{recent.slice(0, 5).map(token => <li key={token.address}><Link href={'/token/' + token.address}><strong>{token.symbol}</strong><span>{token.name} ↗</span></Link></li>)}</ul> : <p className="vortex-text-muted">Tokens you explore will appear here.</p>}</VortexPanel>
                 <div className="vortex-project-callout"><span className="vortex-eyebrow">BUILDING ON SOLANA?</span><h3>Make your profile count.</h3><p>Add your project identity and official links.</p><Link href="/#projects">Explore profile upgrades ↗</Link></div>
             </aside>

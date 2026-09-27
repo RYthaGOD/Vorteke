@@ -130,7 +130,7 @@ export async function detectDeveloperReputation(creatorAddress: string): Promise
         // In a production environment, this would hit a proprietary reputation database.
         const rugHeuristic = sigs.filter(s => s.err).length / sigs.length;
 
-        let score = 100 - (rugHeuristic * 100);
+        const score = 100 - (rugHeuristic * 100);
         let status: 'TRUSTED' | 'CAUTION' | 'DANGER' = 'TRUSTED';
 
         if (score < 40) status = 'DANGER';

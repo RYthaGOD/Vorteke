@@ -56,7 +56,7 @@ export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
             new PhantomWalletAdapter(),
             new SolflareWalletAdapter({ network }),
         ],
-        []
+        [network]
     );
 
     const [mounted, setMounted] = React.useState(false);

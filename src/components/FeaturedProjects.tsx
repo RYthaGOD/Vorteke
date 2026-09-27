@@ -4,8 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { VortexPanel } from './DesignSystem';
 import type { TokenInfo } from '@/lib/dataService';
 
-// Compatibility export for existing imports. There is no active burn mechanism.
-export function BurnLeaderboard() {
+export function FeaturedProjects() {
     const query = useQuery<TokenInfo[]>({ queryKey: ['promoted-projects'], queryFn: async () => {
         const response = await fetch('/api/discovery?type=verified');
         if (!response.ok) throw new Error('Profiles unavailable');

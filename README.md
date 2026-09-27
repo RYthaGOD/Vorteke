@@ -17,8 +17,8 @@ VORTEX is a Next.js Solana DEX screener/terminal. Its primary business model is 
 Flow: `EnhancementModal.tsx` → `purchaseEnhancement()` in `monetizationService.ts` → `POST /api/pay/initiate` (builds unsigned SOL transfer to `TREASURY_ENHANCEMENTS`) → wallet signs & sends → `POST /api/pay/verify` (confirms the transfer landed, upserts `Enhancement`).
 
 **Known gaps, not yet fixed:**
-- No `$VTX` token exists yet (`VTX_MINT` in `constants.ts` is a placeholder). The "burn `$VTX` on your behalf" copy in `EnhancementModal.tsx` and the buy-and-burn builder in `src/lib/solana/transactionBuilder.ts` describe a flow that isn't wired into the live purchase path — the live path is a direct SOL transfer to treasury, full stop. Decide whether to launch `$VTX` and switch to the burn flow, or drop the burn framing from the UI copy so it doesn't promise something the code doesn't do.
-- The Burn Leaderboard (`BurnLeaderboard.tsx`, `Enhancement.burnAmount`) has nothing to display until burns are real — no burn currently happens.
+- No `$VTX` token exists. The burn flow (buy-and-burn builder, burn copy, Burn Leaderboard) was removed; the live path is a direct SOL transfer to treasury. `Enhancement.burnAmount` is still in the Prisma schema and can be dropped during the Postgres migration.
+- Elite trial access codes are read from `ELITE_ACCESS_CODES` (comma-separated). Unset means redemption is disabled.
 
 ## 🛠️ Stack
 

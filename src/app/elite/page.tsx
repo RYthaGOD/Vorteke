@@ -90,8 +90,15 @@ export default function ElitePage() {
                                                 const code = accessKey.trim();
                                                 const timestamp = Date.now();
                                                 const message = `VORTEX_PROVISION_ACCESS:${publicKey.toBase58()}:${timestamp}`;
-                                                const signatureBytes = await signMessage(new TextEncoder().encode(message));
-                                                const signature = Buffer.from(signatureBytes).toString('base64');
+                                                let signature: string;
+                                                try {
+                                                    const signatureBytes = await signMessage(new TextEncoder().encode(message));
+                                                    signature = Buffer.from(signatureBytes).toString('base64');
+                                                } catch {
+                                                    setKeyError('Your wallet declined to sign the verification message.');
+                                                    notify('error', 'SIGNATURE_REJECTED: Wallet refused to sign.');
+                                                    return;
+                                                }
 
                                                 const res = await fetch('/api/auth/provision', {
                                                     method: 'POST',
@@ -102,12 +109,15 @@ export default function ElitePage() {
                                                 if (res.ok) {
                                                     setIsVerified(true);
                                                 } else {
-                                                    setKeyError('That access key was not accepted.');
+                                                    const body = await res.json().catch(() => ({}));
+                                                    setKeyError(body.error === 'ACCESS_CODES_DISABLED'
+                                                        ? 'Access codes are not being accepted right now.'
+                                                        : 'That access key was not accepted.');
                                                     notify('error', 'INVALID_ACCESS_KEY: Clearance denied.');
                                                 }
-                                            } catch (err) {
-                                                setKeyError('Your wallet declined to sign the verification message.');
-                                                notify('error', 'SIGNATURE_REJECTED: Wallet refused to sign.');
+                                            } catch {
+                                                setKeyError('Could not reach the server. Try again in a moment.');
+                                                notify('error', 'NETWORK_ERROR: Provision request failed.');
                                             } finally {
                                                 setIsSubmitting(false);
                                             }

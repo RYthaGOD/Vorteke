@@ -44,7 +44,6 @@ class StreamingService extends EventEmitter {
         state.count++;
 
         if (state.count === 1) {
-            console.log(`[VSS] INITIALIZING_TACTICAL_RECON: ${address}`);
             
             // SOVEREIGN_RECON_TRIGGER: Ensure AetherIndex is actively monitoring this asset.
             try {
@@ -70,7 +69,6 @@ class StreamingService extends EventEmitter {
 
         state.count--;
         if (state.count <= 0) {
-            console.log(`[VSS] DEACTIVATING_RECON: ${address}`);
             if (state.interval) clearInterval(state.interval);
             this.activeTokens.delete(address);
         }
