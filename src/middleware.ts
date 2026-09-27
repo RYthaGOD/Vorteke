@@ -46,7 +46,7 @@ export function middleware(request: NextRequest) {
     response.headers.set('X-Frame-Options', 'DENY');
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss: https://*.solflare.com https://connect.solflare.com https://*.jup.ag; frame-src 'self' https://jup.ag https://*.jup.ag https://*.solflare.com https://connect.solflare.com; object-src 'none'; base-uri 'self';");
+    // Content-Security-Policy is managed centrally in next.config.mjs
 
     return response;
 }

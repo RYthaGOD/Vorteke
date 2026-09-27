@@ -1,530 +1,75 @@
 'use client';
-
-import { useRouter } from 'next/navigation';
-import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
-import { getDiscoveryList, fetchTokenData, resolveSearch, getQuickRecon, getUserPortfolio, getRecentlyViewed, TokenInfo, formatCurrency, formatCompact, formatPercent } from '@/lib/dataService';
-import { Search, Filter, ArrowUpRight, Activity, Zap, TrendingUp, Clock, BarChart3, ShieldCheck, ShieldAlert, Loader2, Wallet, TrendingDown } from 'lucide-react';
+import { Search, ArrowUpRight, RefreshCw, Wallet, Activity } from 'lucide-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { getRecentlyViewed, getUserPortfolio, TokenInfo, formatCurrency, formatCompact, formatPercent, subscribeToServerStream } from '@/lib/dataService';
 import { useVortexAuth } from '@/hooks/useVortexAuth';
+import { VortexPanel } from '@/components/DesignSystem';
 import { MobileNav } from '@/components/MobileNav';
-import { useNotificationStore } from '@/lib/store';
-import { VortexLogo, Modal } from '@/components/DesignSystem';
-import { TokenChart } from '@/components/TokenChart';
+import { BurnLeaderboard } from '@/components/BurnLeaderboard';
+import { BoostedTicker } from '@/components/BoostedTicker';
 
-export interface PortfolioItem {
-    address: string;
-    symbol: string;
-    name: string;
-    logoURI?: string;
-    priceUsd: number;
-    balance: number;
-    valueUsd: number;
-    pnlPercent: number;
-}
-
-import { VortexPanel, VortexButton } from '@/components/DesignSystem';
-
-type DiscoveryType = 'trending' | 'new' | 'gainers' | 'losers' | 'top100' | 'pumpfun' | 'captured' | 'verified';
-
-export default function Home() {
+export interface PortfolioItem { address: string; symbol: string; name: string; logoURI?: string; priceUsd: number; balance: number; valueUsd: number; pnlPercent: number; }
+const tabs = [['trending', 'Trending'], ['new', 'New pairs'], ['gainers', 'Gainers'], ['losers', 'Losers'], ['top100', 'Top pools'], ['pumpfun', 'Pump.fun'], ['captured', 'Tracked'], ['verified', 'Promoted']];
+function Terminal() {
+    const params = useSearchParams();
     const router = useRouter();
     const { publicKey, connected, isElite } = useVortexAuth();
-    const [activeTab, setActiveTab] = useState<DiscoveryType>('trending');
-    const notify = useNotificationStore(state => state.notify);
-    const searchParams = useSearchParams();
-    const searchInputRef = useRef<HTMLInputElement | null>(null);
-
-    // Discovery Hub Query
-    const { data: tokens = [], isLoading: discoveryLoading } = useQuery({
-        queryKey: ['discovery', activeTab],
-        queryFn: () => getDiscoveryList(activeTab),
-        refetchInterval: 30000,
-        staleTime: 15000,
+    const activeTab = tabs.some(([key]) => key === params.get('tab')) ? params.get('tab')! : 'trending';
+    const [search, setSearch] = useState(params.get('q') || '');
+    const [query, setQuery] = useState(search);
+    const [recent, setRecent] = useState<TokenInfo[]>([]);
+    const input = useRef<HTMLInputElement>(null);
+    const portfolioRef = useRef<HTMLElement>(null);
+    useEffect(() => { setRecent(getRecentlyViewed()); }, []);
+    useEffect(() => { if (params.get('focusSearch') === 'true') input.current?.focus(); if (params.get('tab') === 'portfolio') portfolioRef.current?.scrollIntoView(); }, [params]);
+    useEffect(() => { const timer = setTimeout(() => setQuery(search.trim()), 350); return () => clearTimeout(timer); }, [search]);
+    const market = useQuery<TokenInfo[]>({
+        queryKey: ['market', activeTab, query],
+        queryFn: async ({ signal }) => {
+            const res = await fetch('/api/discovery?type=' + (query.length >= 2 ? 'search&q=' + encodeURIComponent(query) : activeTab), { signal });
+            if (!res.ok) throw new Error('Market data unavailable');
+            const data = await res.json();
+            if (!Array.isArray(data)) throw new Error('Invalid market response');
+            const unique = [...new Map<string, TokenInfo>(data.map((token: TokenInfo) => [token.address, token])).values()];
+            if (activeTab === 'gainers') unique.sort((a, b) => b.priceChange24h - a.priceChange24h);
+            if (activeTab === 'losers') unique.sort((a, b) => a.priceChange24h - b.priceChange24h);
+            return unique;
+        }, staleTime: 15000, refetchInterval: 60000,
     });
-
-    // Tactical Pulse Query
-    const pulseSource = (activeTab === 'captured' || activeTab === 'top100') ? activeTab : 'trending';
-    const { data: pulseData = [] } = useQuery({
-        queryKey: ['discovery', pulseSource],
-        queryFn: () => getDiscoveryList(pulseSource),
-        refetchInterval: 60000,
-        staleTime: 30000,
-    });
-    const pulseTokens = pulseData.slice(0, 3);
-
-    // Portfolio Intelligence Query
-    const { data: portfolio = [], isLoading: portfolioLoading } = useQuery({
-        queryKey: ['portfolio', publicKey?.toString()],
-        // FIX: Use optional chaining instead of non-null assertion — enabled guard is not enough
-        // because the publicKey! assertion bypasses TypeScript's null safety.
-        queryFn: () => getUserPortfolio(publicKey?.toString() ?? '', isElite),
-        enabled: !!publicKey && connected,
-        refetchInterval: 45000,
-    });
-
-    // Search State
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<any[]>([]);
-    const [searchLoading, setSearchLoading] = useState(false);
-    const [showOverlay, setShowOverlay] = useState(false);
-    const [focusedIndex, setFocusedIndex] = useState(-1);
-    const [mounted, setMounted] = useState(false);
-    const [recentTokens, setRecentTokens] = useState<TokenInfo[]>([]);
-    const searchRef = useRef<HTMLDivElement>(null);
-
-    // Trending suggestions query (enabled only on focus)
-    const { data: suggestionsData = [] } = useQuery({
-        queryKey: ['discovery', 'trending'],
-        queryFn: () => getDiscoveryList('trending'),
-        enabled: showOverlay && searchQuery.length < 2,
-        staleTime: 300000,
-    });
-    const trendingSuggestions = suggestionsData.slice(0, 5);
-
-    useEffect(() => {
-        setMounted(true);
-        setRecentTokens(getRecentlyViewed());
-    }, []);
-
-    // H2 FIX: Auto-focus search if navigated here with ?focusSearch=true (e.g. from mobile nav)
-    useEffect(() => {
-        if (searchParams?.get('focusSearch') === 'true' && searchInputRef.current) {
-            setTimeout(() => searchInputRef.current?.focus(), 150);
-        }
-    }, [searchParams]);
-
-    const handleSearchFocus = () => {
-        setShowOverlay(true);
-    };
-
-    // Search Logic (Optimized for Aggregator)
-    useEffect(() => {
-        const handler = setTimeout(async () => {
-            if (searchQuery.length >= 2) {
-                setSearchLoading(true);
-                try {
-                    const res = await fetch(`/api/discovery?type=search&q=${searchQuery}`);
-                    const results = await res.json();
-                    setSearchResults(results);
-                    setShowOverlay(true);
-                } catch (e) {
-                    console.error("Search error:", e);
-                } finally {
-                    setSearchLoading(false);
-                    setFocusedIndex(-1);
-                }
-            } else {
-                setSearchResults([]);
-                if (searchQuery.length === 0) setShowOverlay(false);
-            }
-        }, 300);
-        return () => clearTimeout(handler);
-    }, [searchQuery]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            // Only close if clicking truly outside the search wrapper
-            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-                // Small timeout to allow any pending clicks on results to register
-                setTimeout(() => setShowOverlay(false), 100);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (!showOverlay) return;
-        if (e.key === 'ArrowDown') {
-            setFocusedIndex(prev => (prev < searchResults.length - 1 ? prev + 1 : prev));
-        } else if (e.key === 'ArrowUp') {
-            setFocusedIndex(prev => (prev > 0 ? prev - 1 : prev));
-        } else if (e.key === 'Enter' && focusedIndex >= 0) {
-            router.push(`/token/${searchResults[focusedIndex].address}`);
-        } else if (e.key === 'Escape') {
-            setShowOverlay(false);
-        }
-    };
-
-    return (
-        <main className="app-container">
-            <div className="vortex-container-centered">
-                <header className="vortex-header">
-                    <div className="brand-section vortex-flex-start vortex-gap-4">
-                        <div onClick={() => router.push('/')} style={{ cursor: 'pointer' }}>
-                            <VortexLogo size="mini" />
-                        </div>
-                        <div className="vortex-flex-column">
-                            <div className="vortex-logo-text glitch-text">VORTEX</div>
-                            <span className="vortex-tagline">Master the Singularity.</span>
-                        </div>
-                    </div>
-
-                    <nav className="nav-cluster">
-                        <button
-                            className={`nav-item ${activeTab !== 'captured' ? 'active' : ''} vortex-glitch-hover`}
-                            onClick={() => setActiveTab('trending')}
-                        >
-                            Screener
-                        </button>
-                        <button
-                            className={`nav-item vortex-glitch-hover`}
-                            onClick={() => {
-                                if (!connected) {
-                                    document.querySelector<HTMLButtonElement>('.wallet-adapter-button')?.click();
-                                } else {
-                                    document.getElementById('portfolio-section')?.scrollIntoView({ behavior: 'smooth' });
-                                }
-                            }}
-                        >
-                            Portfolio
-                        </button>
-                        <button
-                            className="nav-item vortex-glitch-hover"
-                            onClick={() => router.push('/elite')}
-                        >
-                            Elite Analytics
-                        </button>
-                    </nav>
-                    <div className="header-actions">
-                        {mounted ? <WalletMultiButton className="vortex-wallet-btn" /> : <div className="btn-vortex btn-vortex-primary vortex-opacity-50">INITIALIZING...</div>}
-                    </div>
-                </header>
-            </div>
-
-            <div className="vortex-container-centered">
-                <div className="main-content">
-                    <div className="vortex-dashboard-grid">
-                        {/* Tactical Sidebar */}
-                        <aside className="vortex-sidebar">
-                            <VortexPanel title="PORTFOLIO_INTEL" subTitle="ACTIVE_ASSETS" glowColor="cyan">
-                                <div id="portfolio-section">
-                                    {!connected ? (
-                                        <div className="vortex-p-6 vortex-bg-obsidian-soft vortex-border vortex-border-dashed vortex-border-vortex-muted vortex-border-radius-lg vortex-text-center">
-                                            <div className="vortex-animate-pulse vortex-mb-4">
-                                                <Wallet size={32} className="vortex-text-muted vortex-m-auto" />
-                                            </div>
-                                            <p className="vortex-text-xs vortex-text-muted vortex-ls-wide vortex-mb-4">AWAITING_WALLET_LINK</p>
-                                            <button
-                                                className="btn-vortex btn-vortex-primary vortex-bg-purple vortex-w-full vortex-text-xs"
-                                                onClick={() => document.querySelector<HTMLButtonElement>('.wallet-adapter-button')?.click()}
-                                            >
-                                                CONNECT WALLET FOR LIVE PNL
-                                            </button>
-                                        </div>
-                                    ) : portfolioLoading ? (
-                                        <div className="vortex-text-center vortex-p-4 text-vortex-yellow vortex-font-mono vortex-text-xs">
-                                            SYNCING ASSETS...
-                                        </div>
-                                    ) : portfolio.length === 0 ? (
-                                        <p className="vortex-text-xs vortex-text-muted vortex-text-center">No active tactical assets detected.</p>
-                                    ) : (
-                                        <ul className="vortex-sidebar-list vortex-list-reset">
-                                            {portfolio.map((item: any) => (
-                                                <li key={item.address} className="vortex-mb-2">
-                                                    <button className="vortex-list-item-clickable vortex-full-width" onClick={() => router.push(`/token/${item.address}`)}>
-                                                        <div className="vortex-flex-between">
-                                                            <div className="vortex-flex-column vortex-align-start">
-                                                                <div className="vortex-text-bold vortex-text-md">{item.symbol}</div>
-                                                                <div className="vortex-text-tiny vortex-text-muted">{item.balance.toFixed(2)} units</div>
-                                                            </div>
-                                                            <div className="vortex-flex-column vortex-align-end">
-                                                                <div className="vortex-text-sm vortex-text-bright">{formatCurrency(item.valueUsd)}</div>
-                                                                <div className={`${item.pnlPercent >= 0 ? 'text-vortex-yellow' : 'text-vortex-red'} vortex-text-xs vortex-text-extrabold`}>
-                                                                    {item.pnlPercent >= 0 ? 'â–²' : 'â–¼'} {Math.abs(item.pnlPercent).toFixed(1)}%
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
-                            </VortexPanel>
-
-                            <VortexPanel title="TACTICAL_PULSE" subTitle="LIVE_SIGNAL" glowColor="none">
-                                <ul className="vortex-sidebar-list vortex-list-reset">
-                                    {pulseTokens.length === 0 ? (
-                                        <div className="vortex-p-4 vortex-text-center vortex-opacity-50">
-                                            <Activity size={24} className="vortex-m-auto vortex-mb-2 text-vortex-cyan" />
-                                            <p className="vortex-text-tiny vortex-font-mono">SCANNING_CHANNELS...</p>
-                                        </div>
-                                    ) : (
-                                        pulseTokens.map((t) => (
-                                            <li key={t.address} className="vortex-mb-2">
-                                                <button className="vortex-list-item-clickable vortex-full-width" onClick={() => router.push(`/token/${t.address}`)}>
-                                                    <div className="vortex-flex-between">
-                                                        <div className="vortex-flex-start vortex-gap-2">
-                                                            <img
-                                                                src={t.logoURI || `https://dd.dexscreener.com/ds-data/tokens/solana/${t.address}.png`}
-                                                                alt={t.symbol}
-                                                                className="vortex-logo-mini vortex-border-radius-full"
-                                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                                            />
-                                                            <div className="vortex-flex-column vortex-align-start">
-                                                                <div className="vortex-text-bold vortex-text-sm">{t.symbol || '???'}/SOL</div>
-                                                                <div className="vortex-text-tiny vortex-text-muted">MCAP {formatCompact(t.mcap || 0)}</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className={`${t.priceChange24h >= 0 ? 'text-vortex-yellow' : 'text-vortex-red'} vortex-text-sm vortex-text-bold`}>
-                                                            {t.priceChange24h >= 0 ? '+' : ''}{(t.priceChange24h || 0).toFixed(1)}%
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            </li>
-                                        ))
-                                    )}
-                                </ul>
-                            </VortexPanel>
-                            <VortexPanel title="RECENT_RECURRENCE" subTitle="HISTORY_STREAM" variant="glass">
-                                <ul className="vortex-sidebar-list vortex-list-reset">
-                                    {recentTokens.length === 0 ? (
-                                        <div className="vortex-p-4 vortex-text-center vortex-opacity-30">
-                                            <Clock size={20} className="vortex-m-auto vortex-mb-2" />
-                                            <p className="vortex-text-tiny">NO_RECENT_HISTORY</p>
-                                        </div>
-                                    ) : (
-                                        recentTokens.map((t) => (
-                                            <li key={t.address} className="vortex-mb-2">
-                                                <button className="vortex-list-item-clickable vortex-full-width" onClick={() => router.push(`/token/${t.address}`)}>
-                                                    <div className="vortex-flex-between">
-                                                        <div className="vortex-flex-start vortex-gap-2">
-                                                            <img
-                                                                src={t.logoURI || `https://dd.dexscreener.com/ds-data/tokens/solana/${t.address}.png`}
-                                                                alt=""
-                                                                className="vortex-logo-mini vortex-border-radius-full"
-                                                                onError={(e) => { (e.target as HTMLImageElement).src = '/logo-placeholder.png'; }}
-                                                            />
-                                                            <div className="vortex-flex-column vortex-align-start">
-                                                                <div className="vortex-text-bold vortex-text-sm">{t.symbol}/SOL</div>
-                                                                <div className="vortex-text-tiny vortex-text-muted">{t.name.slice(0, 15)}</div>
-                                                            </div>
-                                                        </div>
-                                                        <ArrowUpRight size={14} className="vortex-opacity-30 vortex-tactical-icon" />
-                                                    </div>
-                                                </button>
-                                            </li>
-                                        ))
-                                    )}
-                                </ul>
-                            </VortexPanel>
-                        </aside>
-
-                        <section className="vortex-dashboard-main animate-stagger vortex-animate-delay-200">
-                            <VortexPanel title="DISCOVERY_HUB" subTitle="MARKET_RECON" glowColor="yellow" className="vortex-mb-4">
-                                <div className="vortex-flex-between vortex-mb-2">
-                                    <p className="vortex-text-xs vortex-text-muted vortex-m-0">Real-time market reconnaissance protocols.</p>
-                                    <div className="vortex-flex-center vortex-gap-3">
-                                        <div className="vortex-relative" ref={searchRef}>
-                                            <Search size={16} className="vortex-text-muted vortex-abs-center-y vortex-left-12" />
-                                            <input
-                                                type="text"
-                                                id="vortex-main-search"
-                                                aria-label="Search tokens or wallets"
-                                                placeholder="Scan contract address..."
-                                                className="vortex-input-field vortex-search-input-pl vortex-w-320"
-                                                ref={searchInputRef}
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                onFocus={handleSearchFocus}
-                                                onKeyDown={handleKeyDown}
-                                            />
-                                            {searchLoading && <Loader2 size={14} className="vortex-text-green animate-spin vortex-abs-center-y vortex-right-12" />}
-                                            {showOverlay && (
-                                                <div className="vortex-search-overlay">
-                                                    {searchQuery.length < 2 ? (
-                                                        <div className="vortex-search-suggestions">
-                                                            <div className="vortex-suggestion-group">
-                                                                <div className="vortex-suggestion-header">TRENDING NOW</div>
-                                                                {trendingSuggestions.map(token => (
-                                                                    <div
-                                                                        key={token.address}
-                                                                        className="vortex-search-item"
-                                                                        onClick={() => router.push(`/token/${token.address}`)}
-                                                                        tabIndex={0}
-                                                                        onKeyDown={(e) => {
-                                                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                                                e.preventDefault();
-                                                                                router.push(`/token/${token.address}`);
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        <div className="vortex-flex-start vortex-gap-3">
-                                                                            <img src={token.logoURI} alt="" className="vortex-logo-mini vortex-border-radius-full"
-                                                                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                                                                            />
-                                                                            <span className="vortex-text-sm vortex-text-bold">{token.symbol}</span>
-                                                                        </div>
-                                                                        <span className="vortex-text-xs vortex-text-muted">{token.name}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        searchResults.map((res, idx) => (
-                                                            <div
-                                                                key={res.address}
-                                                                className={`vortex-search-item ${focusedIndex === idx ? 'focused' : ''}`}
-                                                                onClick={() => router.push(`/token/${res.address}`)}
-                                                                tabIndex={0}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter' || e.key === ' ') {
-                                                                        e.preventDefault();
-                                                                        router.push(`/token/${res.address}`);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <div className="vortex-flex-start vortex-gap-3">
-                                                                    <img src={res.logoURI} alt="" className="vortex-logo-mini vortex-border-radius-full"
-                                                                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                                                                    />
-                                                                    <div className="vortex-flex-column">
-                                                                        <div className="vortex-text-sm vortex-text-bold">{res.symbol}</div>
-                                                                        <div className="vortex-text-tiny vortex-text-muted">{res.name}</div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="vortex-flex-column vortex-align-end">
-                                                                    <div className="vortex-text-sm text-vortex-cyan">{formatCurrency(res.priceUsd, 4)}</div>
-                                                                    <div className="vortex-flex vortex-gap-1">
-                                                                        {res.securityTags?.slice(0, 2).map((tag: string) => (
-                                                                            <span key={tag} className="recon-tag-safe vortex-text-tiny">{tag}</span>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <VortexButton
-                                            variant="secondary"
-                                            className="vortex-h-10"
-                                            onClick={() => notify('info', 'ADVANCED_FILTERS_LOCKED: Acquire the Vortex Elite NFT to unlock.')}
-                                        >
-                                            <Filter size={14} className="vortex-mr-2" />
-                                            FILTERS
-                                        </VortexButton>
-                                    </div>
-                                </div>
-
-                                <div className="vortex-tabs-wrapper vortex-mb-4">
-                                    <div className="vortex-tabs-scroll-container">
-                                        {[
-                                            { id: 'verified', label: 'VERIFIED' },
-                                            { id: 'trending', label: 'TRENDING' },
-                                            { id: 'new', label: 'NEW_PAIRS' },
-                                            { id: 'pumpfun', label: 'PUMP_FUN' },
-                                            { id: 'gainers', label: 'GAINERS' },
-                                            { id: 'losers', label: 'TOP_LOSERS' },
-                                            { id: 'top100', label: 'TOP_100' }
-                                        ].map((tab: any) => (
-                                            <button
-                                                key={tab.id}
-                                                onClick={() => setActiveTab(tab.id as DiscoveryType)}
-                                                className={`vortex-tab-button-elite ${activeTab === tab.id ? 'active' : ''}`}
-                                            >
-                                                {tab.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="vortex-data-table-container">
-                                    <table className="vortex-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>ASSET</th>
-                                                <th>PRICE</th>
-                                                <th>24H_SHIFT</th>
-                                                <th>VOLUME</th>
-                                                <th>LIQUIDITY</th>
-                                                <th className="vortex-hide-mobile">SECURITY</th>
-                                                <th></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {discoveryLoading ? (
-                                                <tr>
-                                                    <td colSpan={7} className="vortex-p-0">
-                                                        <div className="vortex-hud-loader">
-                                                            <div className="vortex-hud-scanner"></div>
-                                                            <div className="vortex-flex-center vortex-gap-3 vortex-h-40">
-                                                                <Loader2 size={24} className="text-vortex-yellow animate-spin" />
-                                                                <span className="vortex-text-sm vortex-text-bold text-vortex-yellow vortex-font-mono animate-pulse">
-                                                                    SYNCHRONIZING_NEURAL_MESH... [RECON_MODE_ACTIVE]
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ) : tokens.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={7} className="vortex-text-center vortex-p-10 vortex-text-muted">
-                                                        <Activity size={24} className="vortex-m-auto vortex-mb-2 vortex-opacity-30" />
-                                                        <p className="vortex-text-tiny vortex-font-mono">NO_ACTIVE_RECONNAISSANCE_DATA_IN_THIS_SECTOR</p>
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                tokens.map((token) => (
-                                                    <tr
-                                                        key={token.address}
-                                                        className="clickable-row glitch-text"
-                                                        onClick={() => router.push(`/token/${token.address}`)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                                e.preventDefault();
-                                                                router.push(`/token/${token.address}`);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <td>
-                                                            <div className="vortex-flex-start vortex-gap-3">
-                                                                <img src={token.logoURI} alt="" className="vortex-logo-mini vortex-border-radius-full" />
-                                                                <div className="vortex-flex-column">
-                                                                    <div className="vortex-flex-start vortex-gap-2">
-                                                                        <span className="vortex-text-sm vortex-text-bold">{token.symbol}/SOL</span>
-                                                                        {token.tier && token.tier !== 'Basic' && (
-                                                                            <ShieldCheck size={14} className="text-vortex-cyan animate-pulse" />
-                                                                        )}
-                                                                    </div>
-                                                                    <span className="vortex-text-tiny vortex-text-muted">{token.name}</span>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <span className="vortex-text-sm text-vortex-cyan">{formatCurrency(token.priceUsd, 6)}</span>
-                                                        </td>
-                                                        <td className={`${token.priceChange24h >= 0 ? 'text-vortex-yellow' : 'text-vortex-red'} vortex-text-bold`}>
-                                                            {formatPercent(token.priceChange24h)}
-                                                        </td>
-                                                        <td>{formatCompact(token.volume24h)}</td>
-                                                        <td>{formatCompact(token.liquidityUsd)}</td>
-                                                        <td className="vortex-hide-mobile">
-                                                            <div className="vortex-flex-start vortex-gap-1">
-                                                                {token.securityTags?.map((tag: string) => (
-                                                                    <span key={tag} className="badge-vortex badge-verified badge-vortex-mini">{tag.slice(0, 2)}</span>
-                                                                ))}
-                                                            </div>
-                                                        </td>
-                                                        <td className="vortex-text-right">
-                                                            <ArrowUpRight size={14} className="vortex-opacity-30 vortex-tactical-icon" />
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </VortexPanel>
-                        </section>
-                    </div>
-                </div>
-            </div>
-            <MobileNav />
-        </main>
-    );
+    const { refetch } = market;
+    useEffect(() => subscribeToServerStream(undefined, true, event => { if (event.type === 'discovery') void refetch(); }), [refetch]);
+    const portfolio = useQuery({ queryKey: ['portfolio', publicKey?.toBase58()], queryFn: () => getUserPortfolio(publicKey!.toBase58(), isElite), enabled: connected && !!publicKey, refetchInterval: 45000 });
+    const tokens = market.data || [];
+    const selectTab = (tab: string) => { const next = new URLSearchParams(params.toString()); next.set('tab', tab); router.replace('/terminal?' + next.toString(), { scroll: false }); };
+    return <main className="vortex-workspace">
+        <div className="vortex-page-heading"><div><span className="vortex-eyebrow">MARKET OVERVIEW</span><h1>Find your signal.</h1><p>Explore Solana tokens, trading activity, and liquidity.</p></div><span className="vortex-data-status"><span className="vortex-status-dot" />{market.isFetching ? 'Updating market data' : market.dataUpdatedAt ? 'Updated ' + new Date(market.dataUpdatedAt).toLocaleTimeString() : 'Connecting to market data'}</span></div>
+        <BoostedTicker />
+        <div className="vortex-market-layout">
+            <section className="vortex-market-main" aria-label="Token markets">
+                <div className="vortex-market-toolbar"><label className="vortex-market-search" htmlFor="market-search"><Search size={18} aria-hidden /><input ref={input} id="market-search" type="search" autoComplete="off" spellCheck={false} placeholder="Search token name or mint address" value={search} onChange={e => setSearch(e.target.value)} /><span className="vortex-sr-only">Search token name or mint address</span></label><button className="vortex-icon-btn" aria-label="Refresh market data" disabled={market.isFetching} onClick={() => market.refetch()}><RefreshCw size={18} aria-hidden /></button></div>
+                <div className="vortex-market-filters" aria-label="Market categories">{tabs.map(([key, label]) => <button key={key} aria-pressed={activeTab === key} onClick={() => selectTab(key)}>{label}</button>)}</div>
+                <div className="vortex-market-meta"><span>{query.length >= 2 ? 'Search results' : 'Solana / ' + tabs.find(([key]) => key === activeTab)?.[1]}</span><span>{tokens.length} tokens · 24h metrics</span></div>
+                {market.isError ? <div className="vortex-empty" role="alert"><Activity size={28} aria-hidden /><h2>Market data is unavailable</h2><p>Your connection or the data provider may be busy. Try again in a moment.</p><button className="btn-vortex btn-vortex-secondary" onClick={() => market.refetch()}>Try again</button></div> :
+                    <div className="vortex-data-table-container" tabIndex={0} role="region" aria-label="Scrollable token market table"><table className="vortex-data-table"><thead><tr><th scope="col">Token</th><th scope="col">Price</th><th scope="col">24h change</th><th scope="col">Volume</th><th scope="col">Liquidity</th><th scope="col">Profile</th></tr></thead><tbody>
+                    {market.isLoading ? Array.from({ length: 7 }, (_, i) => <tr key={i}><td colSpan={6}><div className="vortex-market-skeleton" aria-label="Loading token" role={i === 0 ? 'status' : undefined} /></td></tr>) :
+                        tokens.map(token => <tr key={token.address}><td><Link className="vortex-token-link" href={'/token/' + token.address}><span className="vortex-token-avatar">{token.symbol?.slice(0, 2) || '?'}</span><span><strong>{token.symbol}</strong><small>{token.name}</small></span><ArrowUpRight size={14} aria-hidden /></Link></td><td>{formatCurrency(token.priceUsd, 6)}</td><td className={token.priceChange24h >= 0 ? 'vortex-positive' : 'vortex-negative'}>{token.priceChange24h == null ? '—' : formatPercent(token.priceChange24h)}</td><td>{formatCompact(token.volume24h)}</td><td>{formatCompact(token.liquidityUsd)}</td><td><span className="vortex-profile-label">{token.tier && token.tier !== 'Basic' ? token.tier + ' · Paid' : 'Standard'}</span></td></tr>)}
+                    </tbody></table>{!market.isLoading && tokens.length === 0 && <div className="vortex-empty"><h2>No tokens found</h2><p>Try a full mint address or another market category.</p><button className="btn-vortex btn-vortex-secondary" onClick={() => { setSearch(''); selectTab('trending'); }}>Browse trending</button></div>}</div>}
+                <p className="vortex-table-footnote">Data may be delayed. Paid profiles are promotional and do not certify token safety.</p>
+            </section>
+            <aside className="vortex-market-sidebar">
+                <section ref={portfolioRef}><VortexPanel title="Your portfolio" subTitle="Wallet overview" glowColor="none">
+                    {!connected ? <div className="vortex-empty"><Wallet size={24} aria-hidden /><p>Connect your wallet to see your holdings alongside the market.</p><WalletMultiButton /></div> : portfolio.isLoading ? <p role="status">Loading holdings…</p> : portfolio.isError ? <div><p>Could not load holdings.</p><button className="btn-vortex btn-vortex-secondary" onClick={() => portfolio.refetch()}>Retry</button></div> : !portfolio.data?.length ? <p>No holdings found for this wallet.</p> :
+                        <ul className="vortex-featured-list">{portfolio.data.map(item => <li key={item.address}><Link href={'/token/' + item.address}><strong>{item.symbol}</strong><span>{formatCurrency(item.valueUsd)}</span></Link></li>)}</ul>}
+                </VortexPanel></section>
+                <BurnLeaderboard />
+                <VortexPanel title="Recently viewed" glowColor="none">{recent.length ? <ul className="vortex-featured-list">{recent.slice(0, 5).map(token => <li key={token.address}><Link href={'/token/' + token.address}><strong>{token.symbol}</strong><span>{token.name} ↗</span></Link></li>)}</ul> : <p className="vortex-text-muted">Tokens you explore will appear here.</p>}</VortexPanel>
+                <div className="vortex-project-callout"><span className="vortex-eyebrow">BUILDING ON SOLANA?</span><h3>Make your profile count.</h3><p>Add your project identity and official links.</p><Link href="/#projects">Explore profile upgrades ↗</Link></div>
+            </aside>
+        </div><MobileNav />
+    </main>;
 }
+export default function TerminalPage() { return <Suspense fallback={<main className="vortex-workspace" role="status">Loading markets…</main>}><Terminal /></Suspense>; }

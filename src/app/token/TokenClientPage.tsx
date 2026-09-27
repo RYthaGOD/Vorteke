@@ -107,15 +107,15 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
     if (!isMounted) return null;
 
     // Tactical Failure Recovery Layer
-    if (error && !token) {
+    if (!tokenLoading && !token) {
         return (
             <div className="app-container">
                 <div className="vortex-container-centered">
                     <VortexPanel className="vortex-p-8 vortex-center-column" glowColor="none">
-                        <ShieldAlert className="vortex-text-red vortex-mb-4" size={48} />
-                        <h2 className="vortex-h2 vortex-mb-2">UPLINK_FAILURE</h2>
-                        <p className="vortex-text-muted vortex-mb-6">The neural mesh is struggling to resolve this asset. This is likely due to RPC rate limiting.</p>
-                        <VortexButton onClick={() => refetchToken()}>RETRY_CONNECTION</VortexButton>
+                        <ShieldAlert className="vortex-text-red vortex-mb-4" size={48} aria-hidden="true" />
+                        <h2 className="vortex-h2 vortex-mb-2">Token unavailable</h2>
+                        <p className="vortex-text-muted vortex-mb-6">We could not load this token. Check the mint address or retry in a moment.</p>
+                        <VortexButton onClick={() => refetchToken()}>Retry</VortexButton>
                     </VortexPanel>
                 </div>
                 <MobileNav />
@@ -125,15 +125,15 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
 
     return (
         <div className={`vortex-app-root ${isElite ? 'vortex-tier-elite' : ''}`}>
-            <GlobalNotification />
+
             <div className="vortex-container-centered">
                 <main className="vortex-token-page">
                     {/* HUD Header - Always visible, skeletons if loading */}
                     <VortexPanel className="vortex-mb-4" glowColor="cyan">
                         {tokenLoading && !token ? (
-                            <div className="vortex-flex-between vortex-px-4">
+                            <div className="vortex-flex-between vortex-px-4" role="status" aria-live="polite" aria-label="Loading token data">
                                 <div className="vortex-flex-start vortex-gap-4">
-                                    <div className="vortex-logo-icon vortex-logo-md vortex-animate-pulse"></div>
+                                    <div className="vortex-logo-icon vortex-logo-md vortex-animate-pulse" aria-hidden="true"></div>
                                     <div className="vortex-flex-column">
                                         <div className="vortex-skeleton vortex-h-6 vortex-w-32 vortex-mb-2"></div>
                                         <div className="vortex-skeleton vortex-h-4 vortex-w-48"></div>
@@ -178,10 +178,10 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                     {token?.advancedMetrics?.transferFeeBps ? (
                         <div className="vortex-mb-4 vortex-p-4 vortex-bg-red vortex-bg-opacity-10 vortex-border vortex-border-vortex-red vortex-border-radius-md animate-pulse">
                             <div className="vortex-flex-start vortex-gap-3">
-                                <ShieldAlert size={24} className="text-vortex-red" />
+                                <ShieldAlert size={24} className="text-vortex-red" aria-hidden="true" />
                                 <div className="vortex-flex-column">
-                                    <span className="vortex-text-lg vortex-text-red vortex-text-bold">CRITICAL: MALICIOUS_CONTRACT_DETECTED</span>
-                                    <span className="vortex-text-sm vortex-text-muted">TOKEN2022 EXTENSION: A {((token.advancedMetrics.transferFeeBps || 0) / 100).toFixed(1)}% transfer tax is hardcoded into this asset. Swaps will incur massive penalties.</span>
+                                    <span className="vortex-text-lg vortex-text-red vortex-text-bold">Transfer fee enabled</span>
+                                    <span className="vortex-text-sm vortex-text-muted">TOKEN2022 EXTENSION: A {((token.advancedMetrics.transferFeeBps || 0) / 100).toFixed(1)}% transfer fee is configured on this asset. Review the expected output before trading.</span>
                                 </div>
                             </div>
                         </div>
@@ -195,9 +195,9 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                         <Zap size={24} className="vortex-animate-pulse" />
                                     </div>
                                     <div className="vortex-flex-column">
-                                        <h3 className="vortex-text-lg vortex-text-bold text-vortex-cyan vortex-m-0">UNCLAIMED_TACTICAL_ASSET</h3>
+                                        <h3 className="vortex-text-lg vortex-text-bold text-vortex-cyan vortex-m-0">Make this profile yours</h3>
                                         <p className="vortex-text-sm vortex-text-muted vortex-m-0 vortex-max-w-xl">
-                                            This token profile is operating on basic telemetry. Claim ownership to inject permanent social routing, custom intel briefs, and unlock the Elite Security Badge on the global Vortex discovery network.
+                                            Claim your project profile to add an official logo, banner, and social links. Paid profiles are not security certifications.
                                         </p>
                                     </div>
                                 </div>
@@ -277,7 +277,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <span className="vortex-text-muted vortex-text-tiny">
+                                                        <span className="vortex-text-muted vortex-text-tiny" title={tx.wallet}>
                                                             {tx.wallet.slice(0, 4)}...{tx.wallet.slice(-4)}
                                                         </span>
                                                     </div>
@@ -303,18 +303,18 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                 <div className="vortex-col-span-8">
                                     <div className="vortex-grid-2 vortex-gap-4">
                                         <BundlePanel token={token} onEnhance={() => setShowEnhanceModal(true)} />
-                                        <VortexPanel title="VORTEX_VERDICT" subTitle={token.isSafe ? 'OPTIMAL' : 'DEGRADED_OPS'} glowColor="yellow">
+                                        <VortexPanel title="Market signals" subTitle={token.isSafe ? 'Checks available' : 'Review required'} glowColor="yellow">
                                             <div className="vortex-flex-between vortex-mb-4">
                                                 <div className="vortex-text-center">
                                                     <div className="vortex-text-tiny vortex-text-muted">SCAN_STATUS</div>
                                                     <div className={`vortex-text-lg vortex-font-bold ${token.isSafe ? 'text-vortex-yellow' : 'text-vortex-red'}`}>
-                                                        {token.isSafe ? 'OPTIMAL' : 'RISK_DETECTED'}
+                                                        {token.isSafe ? 'Checks available' : 'Unverified'}
                                                     </div>
                                                 </div>
                                                 <div className="vortex-divider-v"></div>
                                                 <div className="vortex-text-center vortex-relative">
                                                     <div className="vortex-text-tiny vortex-text-muted">VELOCITY_PULSE</div>
-                                                    <div className={`vortex-text-lg vortex-font-bold ${token.advancedMetrics.marketVelocity?.score || 0 > 70 ? 'text-vortex-yellow' : 'text-vortex-cyan'}`}>
+                                                    <div className={`vortex-text-lg vortex-font-bold ${(token.advancedMetrics.marketVelocity?.score || 0) > 70 ? 'text-vortex-yellow' : 'text-vortex-cyan'}`}>
                                                         {token.advancedMetrics.marketVelocity?.activityLevel || 'DORMANT'}
                                                     </div>
                                                 </div>
@@ -330,7 +330,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                     </div>
                                 </div>
                                 <div className="vortex-col-span-4">
-                                    <VortexPanel title="TACTICAL_METRICS" className="vortex-full-height">
+                                    <VortexPanel title="Token metrics" className="vortex-full-height">
                                         <div className="vortex-metric-card">
                                             <span className="vortex-text-tiny vortex-text-muted">VOLUME_VELOCITY</span>
                                             <div className="vortex-flex-between vortex-mt-1">
@@ -372,13 +372,144 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* New: Advanced Capital Efficiency */}
+                                        <div className="vortex-metric-card vortex-mt-4">
+                                            <span className="vortex-text-tiny vortex-text-muted">CAPITAL_EFFICIENCY</span>
+                                            <div className="vortex-flex-between vortex-mt-1">
+                                                <span className="vortex-text-bright vortex-text-bold">
+                                                    {token.fdv > 0 ? ((token.liquidityUsd / token.fdv) * 100).toFixed(2) : '0'}%
+                                                </span>
+                                                <span className="vortex-text-tiny vortex-text-muted">LIQ / FDV RATIO</span>
+                                            </div>
+                                        </div>
+
+                                        {/* New: Advanced Sentiment Metrics */}
+                                        <div className="vortex-metric-card vortex-mt-4">
+                                            <span className="vortex-text-tiny vortex-text-muted">MARKET_SENTIMENT</span>
+                                            <div className="vortex-flex-between vortex-mt-1">
+                                                <span className="text-vortex-green vortex-text-bold">
+                                                    {token.advancedMetrics?.velocitySentiment?.buyPercent.toFixed(0)}% BUY
+                                                </span>
+                                                <span className="text-vortex-red vortex-text-bold">
+                                                    {token.advancedMetrics?.velocitySentiment?.sellPercent.toFixed(0)}% SELL
+                                                </span>
+                                            </div>
+                                            <div className="vortex-progress-bg vortex-progress-sm vortex-mt-1 vortex-flex">
+                                                <div
+                                                    className="vortex-bg-green"
+                                                    style={{ width: `${token.advancedMetrics?.velocitySentiment?.buyPercent}%` }}
+                                                />
+                                                <div
+                                                    className="vortex-bg-red"
+                                                    style={{ width: `${token.advancedMetrics?.velocitySentiment?.sellPercent}%` }}
+                                                />
+                                            </div>
+                                        </div>
                                     </VortexPanel>
                                 </div>
                             </div>
                         </div>
                     )}
+                            {/* FORENSIC INTELLIGENCE GRID */}
+                            {token && (
+                            <div className="vortex-container-centered vortex-mt-4">
+                                <VortexPanel title="FORENSIC_INTELLIGENCE_GRID" subTitle="DEEP_ANALYTICS_V2" glowColor="cyan">
+                                    <div className="vortex-grid-4 vortex-gap-4">
+                                        {/* Supply Dynamics */}
+                                        <div className="vortex-p-4 vortex-bg-obsidian-soft vortex-border-radius-sm">
+                                            <div className="vortex-flex-start vortex-gap-2 vortex-mb-3">
+                                                <Layers size={16} className="text-vortex-cyan" />
+                                                <span className="vortex-text-sm vortex-text-bold">SUPPLY_DYNAMICS</span>
+                                            </div>
+                                            <div className="vortex-flex-between vortex-mb-2">
+                                                <span className="vortex-text-tiny vortex-text-muted">MARKET_CAP</span>
+                                                <span className="vortex-text-sm vortex-text-bold">{formatCurrency(token.mcap)}</span>
+                                            </div>
+                                            <div className="vortex-flex-between vortex-mb-2">
+                                                <span className="vortex-text-tiny vortex-text-muted">FDV</span>
+                                                <span className="vortex-text-sm vortex-text-bold">{formatCurrency(token.fdv)}</span>
+                                            </div>
+                                            <div className="vortex-flex-between">
+                                                <span className="vortex-text-tiny vortex-text-muted">CIRCULATING</span>
+                                                <span className="vortex-text-sm text-vortex-cyan">
+                                                    {token.fdv > 0 ? ((token.mcap / token.fdv) * 100).toFixed(1) : 0}%
+                                                </span>
+                                            </div>
+                                        </div>
 
-                    {/* VORTEX VERDICT — Tactical Signal Panel */}
+                                        {/* Liquidity Profile */}
+                                        <div className="vortex-p-4 vortex-bg-obsidian-soft vortex-border-radius-sm">
+                                            <div className="vortex-flex-start vortex-gap-2 vortex-mb-3">
+                                                <Activity size={16} className="text-vortex-green" />
+                                                <span className="vortex-text-sm vortex-text-bold">LIQUIDITY_PROFILE</span>
+                                            </div>
+                                            <div className="vortex-flex-between vortex-mb-2">
+                                                <span className="vortex-text-tiny vortex-text-muted">POOLED_USD</span>
+                                                <span className="vortex-text-sm vortex-text-bold">{formatCurrency(token.liquidityUsd)}</span>
+                                            </div>
+                                            <div className="vortex-flex-between vortex-mb-2">
+                                                <span className="vortex-text-tiny vortex-text-muted">24H_VOLUME</span>
+                                                <span className="vortex-text-sm vortex-text-bold">{formatCurrency(token.volume24h)}</span>
+                                            </div>
+                                            <div className="vortex-flex-between">
+                                                <span className="vortex-text-tiny vortex-text-muted">VOL/LIQ_RATIO</span>
+                                                <span className="vortex-text-sm text-vortex-yellow">
+                                                    {token.liquidityUsd > 0 ? (token.volume24h / token.liquidityUsd).toFixed(2) : 0}x
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Security Architecture */}
+                                        <div className="vortex-p-4 vortex-bg-obsidian-soft vortex-border-radius-sm">
+                                            <div className="vortex-flex-start vortex-gap-2 vortex-mb-3">
+                                                <ShieldCheck size={16} className={token.isSafe ? "text-vortex-cyan" : "text-vortex-red"} />
+                                                <span className="vortex-text-sm vortex-text-bold">SECURITY_ARCH</span>
+                                            </div>
+                                            <div className="vortex-flex-between vortex-mb-2">
+                                                <span className="vortex-text-tiny vortex-text-muted">MINT_AUTH</span>
+                                                <span className={`vortex-text-tiny ${token.advancedMetrics?.mintAuthority === 'renounced' ? 'text-vortex-cyan' : 'text-vortex-red'}`}>
+                                                    {token.advancedMetrics?.mintAuthority === 'renounced' ? 'RENOUNCED' : 'ACTIVE'}
+                                                </span>
+                                            </div>
+                                            <div className="vortex-flex-between vortex-mb-2">
+                                                <span className="vortex-text-tiny vortex-text-muted">FREEZE_AUTH</span>
+                                                <span className={`vortex-text-tiny ${token.advancedMetrics?.freezeAuthority === 'renounced' ? 'text-vortex-cyan' : 'text-vortex-red'}`}>
+                                                    {token.advancedMetrics?.freezeAuthority === 'renounced' ? 'RENOUNCED' : 'ACTIVE'}
+                                                </span>
+                                            </div>
+                                            <div className="vortex-flex-between">
+                                                <span className="vortex-text-tiny vortex-text-muted">TRANSFER_TAX</span>
+                                                <span className={`vortex-text-tiny ${(token.advancedMetrics?.transferFeeBps || 0) > 0 ? 'text-vortex-red' : 'text-vortex-cyan'}`}>
+                                                    {((token.advancedMetrics?.transferFeeBps || 0) / 100).toFixed(1)}%
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Network Telemetry */}
+                                        <div className="vortex-p-4 vortex-bg-obsidian-soft vortex-border-radius-sm">
+                                            <div className="vortex-flex-start vortex-gap-2 vortex-mb-3">
+                                                <Globe size={16} className="text-vortex-purple" />
+                                                <span className="vortex-text-sm vortex-text-bold">NETWORK_TELEMETRY</span>
+                                            </div>
+                                            <div className="vortex-flex-between vortex-mb-2">
+                                                <span className="vortex-text-tiny vortex-text-muted">DATA_SOURCE</span>
+                                                <span className="vortex-text-tiny text-vortex-purple">GECKO_V2_RPC</span>
+                                            </div>
+                                            <div className="vortex-flex-between vortex-mb-2">
+                                                <span className="vortex-text-tiny vortex-text-muted">ROUTING</span>
+                                                <span className="vortex-text-tiny text-vortex-yellow">JUPITER_V6</span>
+                                            </div>
+                                            <div className="vortex-flex-between">
+                                                <span className="vortex-text-tiny vortex-text-muted">LATENCY</span>
+                                                <span className="vortex-text-tiny text-vortex-cyan">{rpcLatency}ms</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </VortexPanel>
+                            </div>
+                            )}
+                            {/* VORTEX VERDICT — Tactical Signal Panel */}
                     {token && txs.length > 0 && (
                         <div className="vortex-container-centered vortex-mt-4">
                             <VortexVerdict token={token} recentTxs={txs} />
@@ -389,6 +520,14 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
             <div className="vortex-no-capture">
                 <MobileNav />
             </div>
+            {showEnhanceModal && address && (
+                <EnhancementModal
+                    address={address}
+                    onClose={() => setShowEnhanceModal(false)}
+                    onPurchase={() => refetchToken()}
+                    notify={notify}
+                />
+            )}
         </div >
     );
 }

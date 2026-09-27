@@ -8,22 +8,23 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
     let displayName = `${address.slice(0, 4)}...${address.slice(-4)}`;
     let symbol = '';
 
-    // SOL_GLOBAL_OVERRIDE: Prevent SSR misidentification (FOGO)
-    if (address === 'So11111111111111111111111111111111111111112') {
-        displayName = 'Solana';
-        symbol = 'SOL';
-    } else {
-        try {
-            const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
-            const data = await res.json();
-            if (data.pairs && data.pairs.length > 0) {
-                const pair = data.pairs[0];
-                displayName = pair.baseToken.name;
-                symbol = pair.baseToken.symbol;
-            }
-        } catch {
-            // Fallback to address if API fails during SSR
+    // VORTEX_SOVEREIGN_RECON: Fetch real token metadata from DB for perfect SEO
+    try {
+        const { prisma } = await import('@/lib/prisma');
+        const token = await prisma.token.findUnique({ where: { address } });
+        const enhancement = await prisma.enhancement.findUnique({ where: { address } });
+
+        if (token) {
+            displayName = token.name || displayName;
+            symbol = token.symbol || '';
         }
+        
+        // Add dynamic OG image if available
+        if (enhancement?.iconURI || token?.logoURI) {
+            // We can pass this to OG images later
+        }
+    } catch (e) {
+        console.warn("SSR_METADATA_FETCH_FAILED", e);
     }
 
     const title = `VORTEX | ${displayName} ${symbol ? `(${symbol})` : ''} - Live Intelligence`;

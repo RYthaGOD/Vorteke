@@ -51,12 +51,12 @@ export const ScreenerHeader = React.memo(({
                                 <span className="vortex-tagline">{token.symbol}</span>
                                 {token.tier === 'Elite' && (
                                     <span className="badge-vortex badge-pro vortex-flex-start vortex-gap-1">
-                                        <Zap size={10} className="text-vortex-cyan" /> ELITE
+                                        <Zap size={10} className="text-vortex-cyan" aria-hidden="true" /> ELITE
                                     </span>
                                 )}
                                 {token.tier === 'Enhanced' && (
                                     <span className="badge-vortex badge-verified vortex-flex-start vortex-gap-1">
-                                        <ShieldCheck size={10} className="text-vortex-cyan" /> VERIFIED
+                                        <ShieldCheck size={10} className="text-vortex-cyan" aria-hidden="true" /> VERIFIED
                                     </span>
                                 )}
                             </div>
@@ -84,7 +84,10 @@ export const ScreenerHeader = React.memo(({
                         </div>
                         <div className="vortex-flex-column">
                             <span className="vortex-label vortex-text-tiny vortex-m-0">NODE_STATUS</span>
-                            <span className={`vortex-text-xs vortex-text-mono ${telemetry.rpcHealth === 'OPTIMAL' ? 'text-vortex-yellow' : 'text-vortex-red'}`}>
+                            <span className={`vortex-text-xs vortex-text-mono ${
+                                telemetry.rpcHealth === 'OPTIMAL' ? 'text-vortex-yellow' : 
+                                telemetry.rpcHealth === 'DEGRADED' ? 'text-vortex-cyan' : 'text-vortex-red'
+                            }`}>
                                 {telemetry.rpcHealth}
                             </span>
                         </div>
@@ -94,27 +97,33 @@ export const ScreenerHeader = React.memo(({
                 <div className="vortex-flex-start vortex-gap-3 vortex-no-capture flex-wrap">
                     <div className="vortex-flex-start vortex-gap-2">
                         <button
+                            type="button"
                             className="btn-vortex btn-vortex-sm btn-vortex-icon-only"
                             onClick={onRefresh}
                             disabled={refreshLoading}
                             title="RECALIBRATE_TELEMETRY"
+                            aria-label="Recalibrate telemetry"
+                            aria-busy={refreshLoading}
                         >
-                            <RefreshCcw size={14} className={refreshLoading ? 'animate-spin' : ''} />
+                            <RefreshCcw size={14} className={refreshLoading ? 'animate-spin' : ''} aria-hidden="true" />
                         </button>
                         <button
+                            type="button"
                             className={`btn-vortex btn-vortex-sm ${isCapturing ? 'vortex-bg-purple animate-pulse' : 'btn-vortex-outline-purple'}`}
                             onClick={onCapture}
                             title="GENERATE_RECON_REPORT"
+                            aria-busy={isCapturing}
                         >
-                            <Camera size={14} className="vortex-mr-2" />
+                            <Camera size={14} className="vortex-mr-2" aria-hidden="true" />
                             {isCapturing ? 'CAPTURING...' : 'CAPTURE'}
                         </button>
                         {token.tier !== 'Elite' && (
                             <button
+                                type="button"
                                 className={`btn-vortex btn-vortex-sm ${token.tier === 'Enhanced' ? 'btn-vortex-primary vortex-bg-purple' : 'btn-vortex-primary'}`}
                                 onClick={onEnhance}
                             >
-                                <Zap size={14} className={`vortex-mr-2 ${token.tier === 'Enhanced' ? 'text-vortex-white' : ''}`} />
+                                <Zap size={14} className={`vortex-mr-2 ${token.tier === 'Enhanced' ? 'text-vortex-white' : ''}`} aria-hidden="true" />
                                 {token.tier === 'Enhanced' ? 'UPGRADE_TO_ELITE' : 'VERIFY_TOKEN'}
                             </button>
                         )}

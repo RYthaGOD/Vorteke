@@ -18,6 +18,8 @@ export default function ElitePage() {
     const { publicKey, connected, signMessage } = useVortexAuth();
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [accessKey, setAccessKey] = useState('');
+    const [keyError, setKeyError] = useState<string | null>(null);
     const notify = useNotificationStore(state => state.notify);
     const router = useRouter();
 
@@ -39,7 +41,7 @@ export default function ElitePage() {
                 <div className="vortex-flex-column vortex-center vortex-gap-6 animate-pulse">
                     <div className="vortex-logo-geometry size-xl text-vortex-cyan" />
                     <div className="vortex-text-tiny vortex-text-bold vortex-ls-wide vortex-uppercase text-vortex-cyan">
-                        VERIFYING_ELITE_CREDENTIALS...
+                        Checking your access…
                     </div>
                 </div>
             </main>
@@ -51,19 +53,19 @@ export default function ElitePage() {
             <main className="vortex-main vortex-center">
                 <div className="vortex-container-sm">
                     <VortexPanel
-                        title="TACTICAL_GATEKEEPER_V3"
-                        subTitle="ELITE_ENCRYPTED_SECTOR"
+                        title="Elite intelligence"
+                        subTitle="Access required"
                         glowColor="yellow"
                         showCorners={true}
                         variant="glass"
                     >
                         <div className="vortex-flex-column vortex-center vortex-gap-8 vortex-py-8">
                             <div className="gate-icon hud-flicker">
-                                <ShieldAlert size={48} className="text-vortex-yellow" />
+                                <ShieldAlert size={48} className="text-vortex-yellow" aria-hidden="true" />
                             </div>
 
                             <div className="vortex-text-center px-4">
-                                <h2 className="vortex-text-xl vortex-text-extrabold vortex-mb-2">ACCESS_LOCKED</h2>
+                                <h2 className="vortex-text-xl vortex-text-extrabold vortex-mb-2">Your research workspace</h2>
                                 <p className="vortex-text-xs vortex-text-muted vortex-max-w-xs vortex-mx-auto">
                                     This terminal requires Vortex Elite authorization. Hold an Elite Pass NFT or provide a verified Alpha access key.
                                 </p>
@@ -76,48 +78,76 @@ export default function ElitePage() {
                                 </div>
                             ) : (
                                 <div className="vortex-w-full px-8">
-                                    <div className="vortex-divider-text">ENTER_ALPHA_KEY</div>
-                                    <div className="vortex-flex vortex-gap-2 vortex-mt-4">
-                                        <input
-                                            type="password"
-                                            className="vortex-input-tactical"
-                                            placeholder="INPUT_ACCESS_KEY"
-                                            onKeyDown={async (e) => {
-                                                if (e.key === 'Enter' && e.currentTarget.value && publicKey && signMessage) {
-                                                    setIsSubmitting(true);
-                                                    try {
-                                                        const code = e.currentTarget.value;
-                                                        const timestamp = Date.now();
-                                                        const message = `VORTEX_PROVISION_ACCESS:${publicKey.toBase58()}:${timestamp}`;
-                                                        const signatureBytes = await signMessage(new TextEncoder().encode(message));
-                                                        const signature = Buffer.from(signatureBytes).toString('base64');
+                                    <div className="vortex-divider-text">Enter your access code</div>
+                                    <form
+                                        className="vortex-flex vortex-gap-2 vortex-mt-4"
+                                        onSubmit={async (e) => {
+                                            e.preventDefault();
+                                            if (!accessKey.trim() || !publicKey || !signMessage || isSubmitting) return;
+                                            setIsSubmitting(true);
+                                            setKeyError(null);
+                                            try {
+                                                const code = accessKey.trim();
+                                                const timestamp = Date.now();
+                                                const message = `VORTEX_PROVISION_ACCESS:${publicKey.toBase58()}:${timestamp}`;
+                                                const signatureBytes = await signMessage(new TextEncoder().encode(message));
+                                                const signature = Buffer.from(signatureBytes).toString('base64');
 
-                                                        const res = await fetch('/api/auth/provision', {
-                                                            method: 'POST',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ wallet: publicKey.toBase58(), code, signature, timestamp })
-                                                        });
+                                                const res = await fetch('/api/auth/provision', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ wallet: publicKey.toBase58(), code, signature, timestamp })
+                                                });
 
-                                                        if (res.ok) setIsVerified(true);
-                                                        else notify('error', 'INVALID_ACCESS_KEY: Clearance denied.');
-                                                    } catch (err) {
-                                                        notify('error', 'SIGNATURE_REJECTED: Wallet refused to sign.');
-                                                    } finally {
-                                                        setIsSubmitting(false);
-                                                    }
+                                                if (res.ok) {
+                                                    setIsVerified(true);
+                                                } else {
+                                                    setKeyError('That access key was not accepted.');
+                                                    notify('error', 'INVALID_ACCESS_KEY: Clearance denied.');
                                                 }
-                                            }}
+                                            } catch (err) {
+                                                setKeyError('Your wallet declined to sign the verification message.');
+                                                notify('error', 'SIGNATURE_REJECTED: Wallet refused to sign.');
+                                            } finally {
+                                                setIsSubmitting(false);
+                                            }
+                                        }}
+                                    >
+                                        <label htmlFor="vortex-alpha-key" className="vortex-sr-only">Alpha access key</label>
+                                        <input
+                                            id="vortex-alpha-key"
+                                            type="password"
+                                            autoComplete="off"
+                                            spellCheck={false}
+                                            className="vortex-input-tactical"
+                                            placeholder="Access code"
+                                            value={accessKey}
+                                            onChange={(e) => { setAccessKey(e.target.value); setKeyError(null); }}
+                                            aria-invalid={keyError ? true : undefined}
+                                            aria-describedby={keyError ? 'alpha-key-error' : undefined}
+                                            disabled={isSubmitting}
                                         />
-                                        <div className="vortex-btn-icon text-vortex-yellow">
-                                            {isSubmitting && <Loader2 size={18} className="animate-spin" />}
-                                        </div>
-                                    </div>
-                                    <p className="vortex-text-tiny vortex-text-muted vortex-mt-2 vortex-text-center">PRESS_ENTER_TO_DECRYPT</p>
+                                        <button
+                                            type="submit"
+                                            className="vortex-btn-icon vortex-icon-btn text-vortex-yellow"
+                                            aria-label="Submit access key"
+                                            disabled={isSubmitting || !accessKey.trim()}
+                                            aria-busy={isSubmitting}
+                                        >
+                                            <Loader2 size={18} className={isSubmitting ? 'animate-spin' : ''} aria-hidden="true"  />
+                                        </button>
+                                    </form>
+                                    {keyError && (
+                                        <p id="alpha-key-error" role="alert" className="vortex-text-tiny vortex-text-red vortex-mt-2 vortex-text-center">
+                                            {keyError}
+                                        </p>
+                                    )}
+                                    <p className="vortex-text-tiny vortex-text-muted vortex-mt-2 vortex-text-center">Submit your code to verify access.</p>
                                 </div>
                             )}
 
-                            <button className="vortex-btn-secondary vortex-w-full mt-4" onClick={() => router.push('/')}>
-                                RETURN_TO_BASE
+                            <button className="vortex-btn-secondary vortex-w-full mt-4" onClick={() => router.push('/terminal')}>
+                                Back to markets
                             </button>
                         </div>
                     </VortexPanel>
@@ -142,7 +172,36 @@ export default function ElitePage() {
 
     return (
         <main className="app-container">
-            <div className="main-content vortex-pt-8">
+            <div className="vortex-container-centered">
+                <header className="vortex-header">
+                    <div className="brand-section vortex-flex-start vortex-gap-4">
+                        <div onClick={() => router.push('/terminal')} style={{ cursor: 'pointer' }}>
+                            <div className="vortex-logo-geometry size-sm text-vortex-cyan" />
+                        </div>
+                        <div className="vortex-flex-column">
+                            <div className="vortex-logo-text glitch-text">VORTEX</div>
+                            <span className="vortex-tagline">Master the Singularity.</span>
+                        </div>
+                    </div>
+
+                    <nav className="nav-cluster">
+                        <button className="nav-item vortex-glitch-hover" onClick={() => router.push('/terminal')}>
+                            Screener
+                        </button>
+                        <button className="nav-item vortex-glitch-hover" onClick={() => router.push('/launches')}>
+                            Launches
+                        </button>
+                        <button className="nav-item active vortex-glitch-hover">
+                            Elite Analytics
+                        </button>
+                    </nav>
+                    <div className="header-actions">
+                        <WalletMultiButton className="vortex-wallet-btn" />
+                    </div>
+                </header>
+            </div>
+
+            <div className="vortex-container-centered vortex-mt-6 animate-stagger">
                 <EliteDashboard />
             </div>
         </main>

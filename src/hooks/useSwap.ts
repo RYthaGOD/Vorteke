@@ -125,7 +125,7 @@ export function useSwapQuote(
             }
         };
 
-        const timer = setTimeout(fetchQuote, 500);
+        const timer = setTimeout(fetchQuote, 150);
         return () => {
             clearTimeout(timer);
             abortController.abort();

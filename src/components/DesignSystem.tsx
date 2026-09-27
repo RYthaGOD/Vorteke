@@ -1,6 +1,8 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useId } from 'react';
+import { createPortal } from 'react-dom';
+import { useDialog } from '@/hooks/useDialog';
 
 interface VortexPanelProps {
     children: ReactNode;
@@ -12,13 +14,14 @@ interface VortexPanelProps {
     showCorners?: boolean;
 }
 
+// Purely decorative corner brackets — no content is conveyed to assistive tech.
 const CornerAccents = ({ colorClass = '' }) => (
-    <>
+    <span aria-hidden="true">
         <div className={`vortex-corner-tl ${colorClass}`} />
         <div className={`vortex-corner-tr ${colorClass}`} />
         <div className={`vortex-corner-bl ${colorClass}`} />
         <div className={`vortex-corner-br ${colorClass}`} />
-    </>
+    </span>
 );
 
 /**
@@ -74,15 +77,19 @@ export const VortexButton: React.FC<{
 
         return (
             <button
+                type="button"
                 onClick={onClick}
                 className={`${variantClass} ${className} ${isLoading ? 'vortex-opacity-50' : ''}`}
                 disabled={isLoading}
+                aria-busy={isLoading}
             >
                 {icon && <span className="vortex-mr-2">{icon}</span>}
                 {isLoading ? 'SYNCING...' : children}
             </button>
         );
     };
+
+
 
 export const Modal: React.FC<{
     isOpen: boolean;
@@ -91,22 +98,39 @@ export const Modal: React.FC<{
     children: ReactNode;
     size?: 'sm' | 'md' | 'lg';
 }> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+    const titleId = useId();
+    const dialogRef = useDialog(isOpen, onClose);
+
     if (!isOpen) return null;
 
     const sizeClass = size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-4xl' : 'max-w-2xl';
 
-    return (
+    return createPortal(
         <div className="vortex-modal-overlay">
-            <div className={`vortex-modal-container ${sizeClass} animate-slide-up`}>
+            <div
+                className={`vortex-modal-container ${sizeClass} animate-fade-in`}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                ref={dialogRef}
+                tabIndex={-1}
+            >
                 <div className="vortex-modal-header">
-                    <h2 className="vortex-h3 vortex-m-0">{title}</h2>
-                    <button onClick={onClose} className="vortex-modal-close">×</button>
+                    <h2 id={titleId} className="vortex-h3 vortex-m-0">{title}</h2>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="vortex-modal-close"
+                        aria-label="Close dialog"
+                    >
+                        ×
+                    </button>
                 </div>
                 <div className="vortex-modal-body">
                     {children}
                 </div>
             </div>
-        </div>
+        </div>, document.body
     );
 };
 
@@ -123,9 +147,13 @@ export const VortexLogo: React.FC<{
     return (
         <div className={`vortex-logo-container ${className} vortex-relative vortex-flex-center`}>
             {/* Pure SVG Implementation: Zero Background, Infinite Fidelity - Optimized for low-end GPUs */}
+            {/* Decorative brand mark — callers pair it with visible "VORTEX" text or
+                supply their own accessible name on the wrapping link/button. */}
             <svg
                 viewBox="0 0 200 200"
                 className={`vortex-singularity-logo ${sizeClasses}`}
+                aria-hidden="true"
+                focusable="false"
             >
                 {/* Background Core Engine Glow (Using standard gradient fill) */}
                 <circle cx="100" cy="100" r="50" fill="url(#coreGlow)" />
@@ -171,4 +199,3 @@ export const VortexLogo: React.FC<{
         </div>
     );
 };
-

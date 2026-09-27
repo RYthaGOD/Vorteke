@@ -22,7 +22,9 @@
   /* Typography Layer */
   --text-primary: #FFFFFF;
   --text-secondary: #A1A1AA;
-  --text-muted: rgba(161, 161, 170, 0.5);
+  /* A11y fix: 0.5 opacity measured ~2.7:1 against --surface-obsidian/--surface-panel,
+     failing WCAG AA (4.5:1) for body text. 0.75 measures ~4.6:1. */
+  --text-muted: rgba(161, 161, 170, 0.75);
   --text-dim: rgba(161, 161, 170, 0.1);
 
   /* Functional Status */
@@ -50,6 +52,250 @@
   --shadow-deep: 0 20px 50px -12px rgba(0, 0, 0, 0.9);
 
   --vortex-gradient-hyper: linear-gradient(135deg, var(--accent-vortex-cyan), var(--accent-vortex-yellow));
+
+  /* Bug fix: these names are referenced 40+ times throughout this file and in
+     component styles (e.g. .vortex-input-field's `color: var(--text-vortex-white)`)
+     but were never defined anywhere. Every var() using them was invalid, so inherited
+     properties silently fell back to the nearest ancestor's value and non-inherited
+     properties fell back to their initial value — masking the intended visual
+     hierarchy. Aliased to the existing tokens above; no new colors introduced.
+     --text-vortex-muted intentionally maps to --text-secondary (solid, ~7.7:1
+     contrast), not --text-muted (rgba @ 75% opacity, still lower contrast), since
+     most of its call sites are real interactive labels, not decorative text. */
+  --text-vortex-white: var(--text-primary);
+  --text-vortex-gray: var(--text-secondary);
+  --text-vortex-muted: var(--text-secondary);
+  --text-vortex-red: var(--accent-vortex-red);
+  --bg-surface-elevated: var(--surface-elevated);
+  --bg-surface-hover: var(--surface-elevated);
+  --radius-vortex-sm: var(--radius-tactical);
+  --radius-vortex-md: var(--radius-tactical);
+  --radius-vortex-lg: var(--radius-smooth);
+}
+
+/* A11y: visible keyboard focus ring, site-wide. Never outline:none without this. */
+:focus-visible {
+  outline: 2px solid var(--accent-vortex-cyan);
+  outline-offset: 2px;
+  border-radius: var(--radius-tactical);
+}
+
+/* A11y: icon-only round/ghost button referenced across modals (EnhancementModal,
+   UpdateMetadataModal, SwapPanel) but previously left undefined here, so it rendered
+   with no padding/hover/focus affordance and a sub-40px hit target. */
+.vortex-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-tactical);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.vortex-icon-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-vortex);
+}
+
+/* A11y: respect reduced-motion preference site-wide. Vortex uses many decorative
+   pulse/glitch/shimmer animations that should not run for users who opted out. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Bug fix: DesignSystem.tsx's shared <Modal> primitive renders
+   .vortex-modal-overlay / -container / -header / -close / -body, and
+   EnhancementModal.tsx's hand-rolled modal renders .vortex-modal-overlay /
+   -content, but NONE of these had any rule anywhere in this file — every modal
+   in the app rendered with no overlay, no positioning, and no sizing. Built from
+   tokens already used for other overlay/panel surfaces (.glass-panel, --shadow-deep). */
+.vortex-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.vortex-modal-container,
+.vortex-modal-content {
+  background: var(--surface-elevated);
+  border: var(--border-tactical);
+  border-radius: var(--radius-smooth);
+  box-shadow: var(--shadow-deep);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 24px;
+}
+
+.vortex-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  background: var(--surface-elevated);
+  z-index: 1;
+}
+
+.vortex-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-tactical);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.vortex-modal-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vortex-modal-body {
+  padding: 24px;
+}
+
+.vortex-max-w-2xl {
+  max-width: 42rem;
+}
+
+/* Bug fix: MobileNav.tsx's 4 bottom-nav buttons had no base rule — only a
+   descendant selector coloring the icon existed elsewhere in this file. They were
+   relying entirely on unstyled native <button> flow: no guaranteed icon-over-label
+   layout, no guaranteed 40x40px touch target. */
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-hud);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.mobile-nav-item:hover {
+  color: var(--text-primary);
+}
+
+.mobile-nav-item.active {
+  color: var(--accent-vortex-yellow);
+}
+
+/* Bug fix: these utility classes are referenced throughout terminal/page.tsx,
+   ScreenerHeader.tsx, and TokenChart.tsx but had no rule anywhere — pure color/style
+   aliases to values already defined elsewhere in this file, no new design decisions. */
+.text-vortex-yellow {
+  color: var(--accent-vortex-yellow);
+}
+
+.text-vortex-cyan {
+  color: var(--accent-vortex-cyan);
+}
+
+.text-vortex-muted {
+  color: var(--text-secondary);
+}
+
+.vortex-text-purple {
+  /* Matches the Elite-tier secondary accent already used for "purple" elsewhere
+     in this file (--accent-solana-secondary). */
+  color: #A855F7;
+}
+
+.vortex-border-vortex-purple {
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.vortex-glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.15), inset 0 0 10px rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.3) !important;
+}
+
+.vortex-bg-obsidian-soft {
+  background: rgba(5, 5, 6, 0.4);
+}
+
+.vortex-border-dashed {
+  border-style: dashed;
+}
+
+.btn-vortex-outline-purple {
+  background: transparent;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #A855F7;
+}
+
+.btn-vortex-outline-purple:hover {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: #A855F7;
+}
+
+/* Bug fix: TokenChart's engine-toggle/timeframe buttons use .btn-vortex-mini, which
+   had no rule anywhere — unstyled native button, no guaranteed 40px hit target. */
+.btn-vortex-mini {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 10px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-tactical);
+  cursor: pointer;
+  font-family: var(--font-data);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-vortex-mini:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-vortex-mini.active {
+  border-color: var(--accent-vortex-yellow);
 }
 
 
@@ -98,7 +344,13 @@ body {
   background-size: var(--bg-grid-size);
   color: #FFFFFF;
   font-family: var(--font-main);
-  height: 100vh;
+  /* Bug fix: `height: 100vh` (instead of `min-height`) combined with
+     `overflow-y: auto` on BOTH html and body made them compete as scroll
+     containers — verified in a real browser that wheel/scroll input silently
+     did nothing, trapping every page taller than the viewport (the landing
+     page's feature/economy/footer sections were completely unreachable).
+     min-height still covers short pages full-bleed without capping tall ones. */
+  min-height: 100vh;
   width: 100vw;
   overflow-x: hidden;
   overflow-y: auto;
@@ -474,6 +726,24 @@ h3,
 .nav-cluster {
   display: flex;
   gap: 32px;
+}
+
+@media (max-width: 768px) {
+  .vortex-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+  }
+  .nav-cluster {
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .nav-item {
+    font-size: 0.75rem;
+    padding: 8px 12px;
+  }
 }
 
 .nav-item {
@@ -1836,11 +2106,20 @@ h3,
   border: 0;
 }
 
+/* A11y fix: this rule wins the cascade over the earlier .btn-vortex-icon-only
+   definition (same specificity, later in file), but was leaving the hit target at
+   32px wide with 4px padding — well under the 40x40px touch-target minimum. Setting
+   width/min-height explicitly here so nothing from the earlier rule survives. */
 .btn-vortex-icon-only {
   background: transparent;
   border: none;
-  padding: 4px;
-  min-width: auto;
+  padding: 8px;
+  width: auto;
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .clickable-row {

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, Shield, Zap, Globe, Cpu } from 'lucide-react';
+import { SOLANA_NETWORK } from '@/lib/constants';
 
 export default function CommandPage() {
     const [history, setHistory] = useState<string[]>([
@@ -16,7 +17,7 @@ export default function CommandPage() {
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        bottomRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }, [history]);
 
     const handleCommand = async (e: React.FormEvent) => {
@@ -36,13 +37,13 @@ export default function CommandPage() {
                 response = 'COMMANDS: help, clear, status, net, scan <addr>, elite <wallet>, quote <addr>';
                 break;
             case 'status':
-                response = 'SYSTEM_OK | LATENCY [22ms] | NODES [ACTIVE: 4] | VORTEX_STRATA [v1.0.42]';
+                response = 'Terminal ready. Provider health is shown on each token page after data loads.';
                 break;
             case 'clear':
                 setHistory([]);
                 return;
             case 'net':
-                response = 'SOLANA_MAINNET_CONNECTED | RPC: HELIUS_PREMIUM | JITO_TURBO: ON';
+                response = 'Configured network: ' + SOLANA_NETWORK + '. Connectivity is checked when data is requested.';
                 break;
             case 'scan':
                 if (!args[1]) { response = 'USAGE: scan <token_address>'; break; }
@@ -92,13 +93,18 @@ export default function CommandPage() {
             <div className="vortex-container vortex-pt-32">
                 <div className="vortex-flex-center vortex-mb-8">
                     <div className="vortex-flex-start vortex-gap-2 text-vortex-cyan">
-                        <Terminal size={24} />
+                        <Terminal size={24} aria-hidden="true" />
                         <span className="vortex-h3 vortex-m-0">COMMAND_STRATA</span>
                     </div>
                 </div>
 
                 <div className="vortex-terminal-window vortex-bg-obsidian-2 vortex-border-cyan vortex-p-6 vortex-rounded-lg shadow-vortex-cyan min-h-[500px] vortex-flex-column">
-                    <div className="vortex-terminal-content vortex-flex-1 vortex-overflow-y-auto vortex-mb-4 vortex-scrollbar-none">
+                    <div
+                        className="vortex-terminal-content vortex-flex-1 vortex-overflow-y-auto vortex-mb-4 vortex-scrollbar-none"
+                        role="log"
+                        aria-live="polite"
+                        aria-label="Command output"
+                    >
                         {history.map((line, i) => (
                             <div key={i} className={`vortex-text-sm vortex-mb-1 ${line.startsWith('>') ? 'text-vortex-white' : 'text-vortex-cyan/80'}`}>
                                 {line}
@@ -108,12 +114,18 @@ export default function CommandPage() {
                     </div>
 
                     <form onSubmit={handleCommand} className="vortex-flex-start vortex-gap-2">
-                        <span className="text-vortex-cyan">&gt;</span>
+                        <span className="text-vortex-cyan" aria-hidden="true">&gt;</span>
+                        <label htmlFor="vortex-command-input" className="vortex-sr-only">Command input</label>
                         <input
+                            id="vortex-command-input"
                             type="text"
+                            inputMode="text"
+                            autoComplete="off"
+                            spellCheck={false}
+                            aria-label="Command input"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            className="vortex-terminal-input vortex-bg-transparent vortex-border-none vortex-text-white vortex-text-sm vortex-full-width focus:outline-none"
+                            className="vortex-terminal-input vortex-bg-transparent vortex-border-none vortex-text-white vortex-text-sm vortex-full-width"
                             autoFocus
                         />
                     </form>
@@ -122,24 +134,24 @@ export default function CommandPage() {
                 <div className="vortex-grid-3 vortex-gap-4 vortex-mt-8">
                     <div className="vortex-glass-card vortex-p-4 vortex-flex-column vortex-gap-2">
                         <div className="vortex-flex-start vortex-gap-2 text-vortex-yellow">
-                            <Shield size={16} />
+                            <Shield size={16} aria-hidden="true" />
                             <span className="vortex-text-tiny vortex-text-bold">SECURE_PIPE</span>
                         </div>
-                        <p className="vortex-text-xs vortex-text-muted vortex-m-0">End-to-end encrypted terminal session.</p>
+                        <p className="vortex-text-xs vortex-text-muted vortex-m-0">Read-only market queries. No wallet transactions are signed here.</p>
                     </div>
                     <div className="vortex-glass-card vortex-p-4 vortex-flex-column vortex-gap-2">
                         <div className="vortex-flex-start vortex-gap-2 text-vortex-cyan">
-                            <Cpu size={16} />
+                            <Cpu size={16} aria-hidden="true" />
                             <span className="vortex-text-tiny vortex-text-bold">NEURAL_SYNC</span>
                         </div>
                         <p className="vortex-text-xs vortex-text-muted vortex-m-0">Direct RPC injection enabled.</p>
                     </div>
                     <div className="vortex-glass-card vortex-p-4 vortex-flex-column vortex-gap-2">
                         <div className="vortex-flex-start vortex-gap-2 text-vortex-purple">
-                            <Globe size={16} />
+                            <Globe size={16} aria-hidden="true" />
                             <span className="vortex-text-tiny vortex-text-bold">GRID_ACCESS</span>
                         </div>
-                        <p className="vortex-text-xs vortex-text-muted vortex-m-0">Multi-cluster monitoring active.</p>
+                        <p className="vortex-text-xs vortex-text-muted vortex-m-0">Network: {SOLANA_NETWORK}</p>
                     </div>
                 </div>
             </div>

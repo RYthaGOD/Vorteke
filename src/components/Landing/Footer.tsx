@@ -40,7 +40,7 @@ export function Footer() {
 
             <div className="footer-bottom">
                 <div className="copyright">
-                    Â© 2026 VORTEX PROTOCOL. ALL_RIGHTS_RESERVED.
+                    © 2026 VORTEX PROTOCOL. ALL_RIGHTS_RESERVED.
                 </div>
                 <div className="uptime-status">
                     <div className="status-indicator"></div>

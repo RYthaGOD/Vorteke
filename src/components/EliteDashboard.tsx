@@ -59,8 +59,8 @@ export default function EliteDashboard() {
     if (loading) {
         return (
             <VortexPanel title="ELITE_INTEL" subTitle="SYNCHRONIZING">
-                <div className="vortex-flex-column vortex-center vortex-py-20">
-                    <Loader2 className="vortex-animate-spin text-vortex-yellow vortex-mb-4" size={32} />
+                <div className="vortex-flex-column vortex-center vortex-py-20" role="status" aria-live="polite">
+                    <Loader2 className="vortex-animate-spin text-vortex-yellow vortex-mb-4" size={32} aria-hidden="true" />
                     <span className="vortex-text-tiny vortex-text-muted">SYNCING_VORTEX_DAEMON...</span>
                 </div>
             </VortexPanel>
@@ -79,7 +79,7 @@ export default function EliteDashboard() {
                 <div className="vortex-col-4">
                     <VortexPanel variant="glass" glowColor="cyan" className="vortex-h-full">
                         <div className="vortex-flex-start vortex-gap-2 vortex-mb-3">
-                            <Activity size={14} className="text-vortex-cyan" />
+                            <Activity size={14} className="text-vortex-cyan" aria-hidden="true" />
                             <h3 className="vortex-text-tiny vortex-text-bold vortex-uppercase vortex-m-0">PULSE_STREAM_2.0</h3>
                         </div>
                         <div className="vortex-terminal-small">
@@ -88,7 +88,7 @@ export default function EliteDashboard() {
                             ) : (
                                 pulse.map((tx) => (
                                     <div key={tx.signature} className="terminal-line animate-fade-in">
-                                        <span className={tx.type === 'BUY' ? 'text-vortex-yellow' : 'text-vortex-red'}>[{tx.type}]</span> {tx.amountSol.toFixed(2)} SOL :: {tx.wallet.slice(0, 4)}...
+                                        <span className={tx.type === 'BUY' ? 'text-vortex-yellow' : 'text-vortex-red'}>[{tx.type}]</span> {tx.amountSol.toFixed(2)} SOL :: <span title={tx.wallet}>{tx.wallet.slice(0, 4)}...</span>
                                     </div>
                                 ))
                             )}
@@ -101,7 +101,7 @@ export default function EliteDashboard() {
                 <div className="vortex-col-4">
                     <VortexPanel variant="glass" glowColor="cyan" className="vortex-h-full">
                         <div className="vortex-flex-start vortex-gap-2 vortex-mb-3">
-                            <Target size={14} className="text-vortex-cyan" />
+                            <Target size={14} className="text-vortex-cyan" aria-hidden="true" />
                             <h3 className="vortex-text-tiny vortex-text-bold vortex-uppercase vortex-m-0">TARGET_METRICS</h3>
                         </div>
                         {targetToken ? (
@@ -139,7 +139,7 @@ export default function EliteDashboard() {
                 <div className="vortex-col-4">
                     <VortexPanel variant="glass" glowColor="yellow" className="vortex-h-full">
                         <div className="vortex-flex-start vortex-gap-2 vortex-mb-3">
-                            <Shield size={14} className="text-vortex-yellow" />
+                            <Shield size={14} className="text-vortex-yellow" aria-hidden="true" />
                             <h3 className="vortex-text-tiny vortex-text-bold vortex-uppercase vortex-m-0">THREAT_LEVEL</h3>
                         </div>
                         <div className="vortex-flex-column vortex-center vortex-py-4">
@@ -155,6 +155,60 @@ export default function EliteDashboard() {
                         </div>
                     </VortexPanel>
                 </div>
+            </div>
+
+            {/* DEX Burn Leaderboard */}
+            <div className="vortex-mt-6">
+                <VortexPanel variant="glass" glowColor="cyan">
+                    <div className="vortex-flex-between vortex-mb-4">
+                        <div className="vortex-flex-start vortex-gap-2">
+                            <Activity size={16} className="text-vortex-cyan" />
+                            <h3 className="vortex-card-title vortex-text-lg">$DEX_BURN_LEADERBOARD</h3>
+                        </div>
+                        <span className="badge-vortex badge-verified">LIVE_INDEX</span>
+                    </div>
+                    
+                    <div className="vortex-grid-3 vortex-gap-4">
+                        <div className="vortex-p-4 vortex-bg-obsidian-soft vortex-border-radius-md vortex-border vortex-border-cyan vortex-relative overflow-hidden">
+                            <div className="vortex-glow-bg vortex-bg-cyan vortex-opacity-10"></div>
+                            <div className="vortex-flex-between vortex-mb-2">
+                                <span className="vortex-text-lg vortex-text-bold">RANK_01</span>
+                                <span className="vortex-text-sm text-vortex-cyan">$JUP</span>
+                            </div>
+                            <div className="vortex-flex-between">
+                                <span className="vortex-text-tiny vortex-text-muted">TOTAL_BURNED</span>
+                                <span className="vortex-text-sm vortex-text-bold text-vortex-yellow">1,450,000 $DEX</span>
+                            </div>
+                        </div>
+
+                        <div className="vortex-p-4 vortex-bg-obsidian-soft vortex-border-radius-md">
+                            <div className="vortex-flex-between vortex-mb-2">
+                                <span className="vortex-text-lg vortex-text-bold">RANK_02</span>
+                                <span className="vortex-text-sm text-vortex-purple">$PYTH</span>
+                            </div>
+                            <div className="vortex-flex-between">
+                                <span className="vortex-text-tiny vortex-text-muted">TOTAL_BURNED</span>
+                                <span className="vortex-text-sm vortex-text-bold text-vortex-yellow">890,500 $DEX</span>
+                            </div>
+                        </div>
+
+                        <div className="vortex-p-4 vortex-bg-obsidian-soft vortex-border-radius-md">
+                            <div className="vortex-flex-between vortex-mb-2">
+                                <span className="vortex-text-lg vortex-text-bold">RANK_03</span>
+                                <span className="vortex-text-sm text-vortex-green">$BONK</span>
+                            </div>
+                            <div className="vortex-flex-between">
+                                <span className="vortex-text-tiny vortex-text-muted">TOTAL_BURNED</span>
+                                <span className="vortex-text-sm vortex-text-bold text-vortex-yellow">420,000 $DEX</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="vortex-mt-4 vortex-p-3 vortex-bg-cyan vortex-bg-opacity-10 vortex-border-radius-sm">
+                        <p className="vortex-text-xs text-vortex-cyan vortex-m-0">
+                            Protocol mechanics: When a token creator enhances their profile or buys a Trending Boost, 100% of the SOL fee is atomically swapped via Jupiter to buy and burn $DEX.
+                        </p>
+                    </div>
+                </VortexPanel>
             </div>
 
             <style jsx>{`

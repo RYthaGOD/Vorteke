@@ -8,35 +8,40 @@ export function MobileNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="vortex-mobile-nav">
+        <nav className="vortex-mobile-nav" aria-label="Primary">
             <button
-                onClick={() => router.push('/')}
-                className={`mobile-nav-item ${pathname === '/' ? 'active' : ''}`}
+                type="button"
+                onClick={() => router.push('/terminal')}
+                className={`mobile-nav-item ${pathname === '/terminal' ? 'active' : ''}`}
+                aria-current={pathname === '/terminal' ? 'page' : undefined}
             >
-                <LayoutDashboard size={22} className="vortex-mb-1 vortex-tactical-icon" />
-                <span>HUB</span>
+                <LayoutDashboard size={22} className="vortex-mb-1 vortex-tactical-icon" aria-hidden="true" />
+                <span>Markets</span>
             </button>
             <button
+                type="button"
                 onClick={() => {
-                    if (pathname !== '/') {
-                        router.push('/?focusSearch=true');
+                    if (pathname !== '/terminal') {
+                        router.push('/terminal?focusSearch=true');
                     } else {
-                        document.querySelector<HTMLInputElement>('.vortex-search-input-pl')?.focus();
+                        document.querySelector<HTMLInputElement>('#market-search')?.focus();
                     }
                 }}
                 className="mobile-nav-item"
             >
-                <Search size={22} className="vortex-mb-1 vortex-tactical-icon" />
-                <span>SCAN</span>
+                <Search size={22} className="vortex-mb-1 vortex-tactical-icon" aria-hidden="true" />
+                <span>Search</span>
             </button>
             <button
+                type="button"
                 className="mobile-nav-item"
-                onClick={() => router.push('/?tab=portfolio')}
+                onClick={() => router.push('/terminal?tab=portfolio')}
             >
-                <Wallet size={22} className="vortex-mb-1 vortex-tactical-icon" />
-                <span>ASSETS</span>
+                <Wallet size={22} className="vortex-mb-1 vortex-tactical-icon" aria-hidden="true" />
+                <span>Portfolio</span>
             </button>
             <button
+                type="button"
                 className="mobile-nav-item"
                 onClick={() => {
                     if (pathname.startsWith('/token/')) {
@@ -47,8 +52,8 @@ export function MobileNav() {
                     }
                 }}
             >
-                <Zap size={22} className="vortex-mb-1 vortex-tactical-icon" />
-                <span>ELITE</span>
+                <Zap size={22} className="vortex-mb-1 vortex-tactical-icon" aria-hidden="true" />
+                <span>Elite</span>
             </button>
 
         </nav>

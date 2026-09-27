@@ -7,14 +7,14 @@ import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
 
-import { RPC_ENDPOINTS } from '@/lib/constants';
+import { RPC_ENDPOINTS, SOLANA_NETWORK } from '@/lib/constants';
 
 // Default styles that can be overridden by your app
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
     // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'.
-    const network = WalletAdapterNetwork.Mainnet;
+    const network = SOLANA_NETWORK === 'devnet' ? WalletAdapterNetwork.Devnet : WalletAdapterNetwork.Mainnet;
 
     const [endpoint, setEndpoint] = React.useState<string>(RPC_ENDPOINTS[0] || clusterApiUrl(network));
 
@@ -54,7 +54,7 @@ export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
     const wallets = useMemo(
         () => [
             new PhantomWalletAdapter(),
-            new SolflareWalletAdapter(),
+            new SolflareWalletAdapter({ network }),
         ],
         []
     );

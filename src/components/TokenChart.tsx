@@ -11,8 +11,17 @@ interface TokenChartProps {
     onTimeframeChange: (tf: Timeframe | any) => void;
 }
 
+// Bug fix: lightweight-charts draws to <canvas>, so it cannot consume CSS custom
+// properties directly — it needs resolved color strings. Reading them from the DOM
+// here (instead of hardcoding hex a second time) keeps the chart's brand colors
+// driven by the single source of truth in globals.css :root.
+function cssVar(name: string, fallback: string): string {
+    if (typeof window === 'undefined') return fallback;
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+}
+
 export function TokenChart({ address, initialData, realtimeTx, timeframe, onTimeframeChange }: TokenChartProps) {
-    const [useIframe, setUseIframe] = useState(false);
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<any>(null);
     const seriesRef = useRef<any>(null);
@@ -32,7 +41,7 @@ export function TokenChart({ address, initialData, realtimeTx, timeframe, onTime
         const chart = createChart(chartContainerRef.current, {
             layout: {
                 background: { type: ColorType.Solid, color: 'transparent' },
-                textColor: '#A1A1AA',
+                textColor: cssVar('--text-secondary', '#A1A1AA'),
                 fontSize: 11,
                 fontFamily: 'JetBrains Mono',
             },
@@ -65,12 +74,15 @@ export function TokenChart({ address, initialData, realtimeTx, timeframe, onTime
             },
         });
 
+        const upColor = cssVar('--accent-vortex-yellow', '#E5FF00');
+        const downColor = cssVar('--accent-vortex-red', '#EF4444');
+
         const series = chart.addCandlestickSeries({
-            upColor: '#E5FF00',
-            downColor: '#EF4444',
+            upColor,
+            downColor,
             borderVisible: false,
-            wickUpColor: '#E5FF00',
-            wickDownColor: '#EF4444',
+            wickUpColor: upColor,
+            wickDownColor: downColor,
             priceFormat: {
                 type: 'price',
                 precision: 9, // Increased for extreme memecoins
@@ -87,7 +99,7 @@ export function TokenChart({ address, initialData, realtimeTx, timeframe, onTime
         });
 
         const volumeSeries = chart.addHistogramSeries({
-            color: '#E5FF00',
+            color: upColor,
             priceFormat: {
                 type: 'volume',
             },
@@ -185,7 +197,7 @@ export function TokenChart({ address, initialData, realtimeTx, timeframe, onTime
             seriesRef.current.setData(chartData);
             volumeSeriesRef.current.setData(volumeData);
 
-            // Indicators
+            // TACTICALMemoization: Indicators only recalculate when chartData or address changes
             const ema20 = calculateEMA(chartData, 20);
             const ema50 = calculateEMA(chartData, 50);
             const rsi = calculateRSI(chartData, 14);
@@ -197,48 +209,50 @@ export function TokenChart({ address, initialData, realtimeTx, timeframe, onTime
             // CRITICAL: Force chart to fit all data, eliminating blank space
             chartRef.current.timeScale().fitContent();
 
-            // Update Legend with high-fidelity HUD style
+            // Legend Update (HUD)
             if (legendRef.current && rsi.length > 0) {
-                const lastRsi = rsi[rsi.length - 1].value;
-                const lastEma20 = ema20[ema20.length - 1].value;
-                const lastEma50 = ema50[ema50.length - 1]?.value;
+                const lRsi = rsi[rsi.length - 1].value;
+                const lEma20 = ema20[ema20.length - 1].value;
+                const lEma50 = ema50[ema50.length - 1]?.value;
 
+                // NOTE: EMA20/EMA50/RSI dot+line colors (purple/blue/amber) are a
+                // data-viz indicator palette, distinct from the brand accent tokens —
+                // left as-is intentionally. Swapped only the panel chrome and the
+                // muted labels to reference the real tokens instead of re-deriving them.
                 legendRef.current.innerHTML = `
-                    <div class="glass-panel" style="padding: 6px 12px; font-size: 10px; border-radius: 2px; background: rgba(10, 10, 12, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05);">
+                    <div class="glass-panel" style="padding: 6px 12px; font-size: 10px; border-radius: 2px; background: var(--surface-glass); backdrop-filter: blur(8px); border: var(--border-vortex);">
                         <div style="display: flex; gap: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 700; letter-spacing: 0.5px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(168, 85, 247, 0.8);"></div>
-                                <span style="color: rgba(255, 255, 255, 0.4)">EMA_20:</span>
-                                <span style="color: rgba(168, 85, 247, 1)">${lastEma20.toFixed(6)}</span>
+                                <span style="color: var(--text-secondary)">EMA_20:</span>
+                                <span style="color: rgba(168, 85, 247, 1)">${lEma20.toFixed(6)}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <div style="width: 6px; height: 6px; border-radius: 50%; background: rgba(59, 130, 246, 0.8);"></div>
-                                <span style="color: rgba(255, 255, 255, 0.4)">EMA_50:</span>
-                                <span style="color: rgba(59, 130, 246, 1)">${lastEma50.toFixed(6)}</span>
+                                <span style="color: var(--text-secondary)">EMA_50:</span>
+                                <span style="color: rgba(59, 130, 246, 1)">${lEma50.toFixed(6)}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <div style="width: 6px; height: 6px; border-radius: 50%; background: #F59E0B;"></div>
-                                <span style="color: rgba(255, 255, 255, 0.4)">RSI:</span>
-                                <span style="color: #F59E0B">${lastRsi.toFixed(2)}</span>
+                                <span style="color: var(--text-secondary)">RSI:</span>
+                                <span style="color: #F59E0B">${lRsi.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
                 `;
             }
 
-
-            // Add specialized markers based on volume anomalies (Real Whale Recon)
-            const avgVolume = volumeData.reduce((acc, d) => acc + d.value, 0) / volumeData.length;
+            // Whale Recon Markers
+            const avgVol = volumeData.reduce((acc, d) => acc + d.value, 0) / volumeData.length;
             const markers = initialData
-                .filter(d => d.volume > avgVolume * 4)
+                .filter(d => d.volume > avgVol * 4)
                 .map(d => ({
                     time: d.time as Time,
                     position: 'aboveBar' as const,
-                    color: '#E5FF00',
+                    color: cssVar('--accent-vortex-yellow', '#E5FF00'),
                     shape: 'arrowDown' as const,
                     text: 'WHALE_TX',
                 }))
-                // Markers MUST be strictly sorted by time ascending to prevent LW Charts crash
                 .sort((a, b) => (a.time as number) - (b.time as number));
 
             seriesRef.current.setMarkers(markers);
@@ -332,69 +346,45 @@ export function TokenChart({ address, initialData, realtimeTx, timeframe, onTime
         <div className="vortex-relative vortex-full-size vortex-chart-h">
             {/* Control Bar HUD */}
             <div className="vortex-abs-top-right vortex-p-4 vortex-z-10 vortex-flex vortex-gap-2">
-                <button
-                    className={`btn-vortex-mini ${useIframe ? 'active text-vortex-cyan' : 'vortex-text-muted'} vortex-text-tiny`}
-                    onClick={() => setUseIframe(!useIframe)}
-                    title="Toggle Reliability Mode (DexScreener Embed)"
-                >
-                    {useIframe ? 'ENGINE: LIVE_EMBED' : 'ENGINE: CANVAS_NATIVE'}
-                </button>
-                <div className="vortex-divider-v vortex-mx-1" style={{ height: '14px', alignSelf: 'center' }}></div>
                 {['1S', '1M', '5M', '15M', '1H', '1D'].map(tf => (
                     <button
+                        type="button"
                         key={tf}
                         className={`btn-vortex-mini ${tf === timeframe ? 'active text-vortex-yellow' : 'vortex-text-muted'} vortex-text-tiny`}
                         onClick={() => onTimeframeChange(tf as Timeframe)}
+                        aria-pressed={tf === timeframe}
                     >
                         {tf}
                     </button>
                 ))}
             </div>
 
-            {useIframe ? (
-                <div className="vortex-full-size vortex-bg-obsidian">
-                    <iframe
-                        src={`https://dexscreener.com/solana/${address}?embed=1&theme=dark&trades=0&info=0`}
-                        style={{ width: '100%', height: '100%', border: '0' }}
-                        title="Market View"
-                    />
-                </div>
-            ) : (
-                <>
-                    <div
-                        ref={chartContainerRef}
-                        className="vortex-full-size"
-                        role="img"
-                        aria-label="Interactive Token Price Chart"
-                    />
-                    {(!initialData || initialData.length <= 1) && (
-                        <div className="vortex-abs-center vortex-z-20 vortex-flex-column vortex-center vortex-bg-obsidian-90 vortex-p-6 vortex-border-vortex">
-                            <span className="vortex-text-red vortex-text-bold vortex-font-mono animate-pulse vortex-mb-2">
-                                [!] DATA_UPLINK_DEGRADED
-                            </span>
-                            <span className="vortex-text-tiny vortex-text-muted vortex-text-center">
-                                Historical OHLCV stream is currently unavailable.<br />
-                                Real-time telemetry is still active.
-                            </span>
-                            <button
-                                className="btn-vortex-mini vortex-mt-4 text-vortex-cyan"
-                                onClick={() => setUseIframe(true)}
-                            >
-                                SWITCH_TO_LIVE_EMBED
-                            </button>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* Indicator Legend HUD (Native Canvas only) */}
-            {!useIframe && (
+            <>
                 <div
-                    ref={legendRef}
-                    className="vortex-abs-top-left vortex-p-4 vortex-z-10"
-                    style={{ pointerEvents: 'none' }}
+                    ref={chartContainerRef}
+                    className="vortex-full-size"
+                    role="img"
+                    aria-label="Interactive Token Price Chart"
                 />
-            )}
+                {(!initialData || initialData.length <= 1) && (
+                    <div className="vortex-abs-center vortex-z-20 vortex-flex-column vortex-center vortex-bg-obsidian-90 vortex-p-6 vortex-border-vortex">
+                        <span className="vortex-text-red vortex-text-bold vortex-font-mono animate-pulse vortex-mb-2">
+                            [!] DATA_UPLINK_DEGRADED
+                        </span>
+                        <span className="vortex-text-tiny vortex-text-muted vortex-text-center">
+                            Historical OHLCV stream is currently unavailable.<br />
+                            Real-time telemetry is still active.
+                        </span>
+                    </div>
+                )}
+            </>
+
+            {/* Indicator Legend HUD */}
+            <div
+                ref={legendRef}
+                className="vortex-abs-top-left vortex-p-4 vortex-z-10"
+                style={{ pointerEvents: 'none' }}
+            />
         </div>
     );
 }
