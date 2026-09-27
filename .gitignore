@@ -32,3 +32,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local test wallets, databases, and browser artifacts
+/.scratch/
+/prisma/*.db
+/prisma/*.db-journal
+/test-results/
+
+# Local data stores, scratch and stale nested clone
+/data/sqlite/
+/data/parquet/
+/tmp/
+/Vorteke/
