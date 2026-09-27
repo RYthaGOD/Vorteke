@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-    provider  = "postgresql"
+    provider  = "sqlite"
     url       = env("DATABASE_URL")
-    directUrl = env("DIRECT_URL")
 }
 
 model Token {
@@ -20,8 +19,8 @@ model Token {
     fdv             Float    @default(0)
     mcap            Float    @default(0)
     tier            String   @default("Basic")
-    securityTags    Json?
-    advancedMetrics Json?
+    securityTags    String?
+    advancedMetrics String?
     creator         String?
     lastUpdated     DateTime @default(now())
 
@@ -32,14 +31,19 @@ model Enhancement {
     address           String    @id
     tier              String    @default("Basic")
     owner             String?
-    socials           Json?
+    socials           String?
     customDescription String?
     bannerURI         String?
     iconURI           String?
     lastPaymentTx     String?   @unique
     lastPaymentTime   DateTime?
+    
+    // VORTEX Burn Mechanics
+    burnAmount        Float     @default(0)
+    vtxBurnSignature  String?   @unique
 
     @@index([lastPaymentTx])
+    @@index([burnAmount(sort: Desc)])
 }
 
 model Claim {
@@ -66,5 +70,36 @@ model DeepScanRecord {
     signature String   @id
     address   String
     wallet    String
+    createdAt DateTime @default(now())
+}
+
+model ApiKey {
+    key                String   @id @default(uuid())
+    email              String
+    tier               String   @default("free") // free | starter | pro | enterprise
+    requestsThisPeriod Int      @default(0)
+    periodStart        DateTime @default(now())
+    revoked            Boolean  @default(false)
+    createdAt          DateTime @default(now())
+    lastUsedAt          DateTime?
+
+    @@index([email])
+}
+
+model PaymentIntent {
+    id String @id @default(uuid())
+    wallet String
+    address String
+    tier String
+    lamports Int
+    createdAt DateTime @default(now())
+    expiresAt DateTime
+    receipt PaymentReceipt?
+}
+
+model PaymentReceipt {
+    signature String @id
+    intentId String @unique
+    intent PaymentIntent @relation(fields: [intentId], references: [id])
     createdAt DateTime @default(now())
 }

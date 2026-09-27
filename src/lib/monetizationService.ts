@@ -1,8 +1,9 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 // @ts-ignore
 import nacl from 'tweetnacl';
-import { RPC_ENDPOINTS, PROTECTED_MINT_ADDRESSES, TREASURY_ENHANCEMENTS } from './constants';
+import { RPC_ENDPOINTS, PROTECTED_MINT_ADDRESSES, TREASURY_ENHANCEMENTS, TIER_PRICES_SOL } from './constants';
 import { getResilientConnection } from './solana/connection';
+import { buildBuyAndBurnTransaction } from './solana/transactionBuilder';
 
 export type TokenTier = 'Basic' | 'Enhanced' | 'Elite' | 'DeepScan';
 
@@ -119,27 +120,22 @@ export const fetchTokenEnhancement = async (address: string): Promise<TokenEnhan
 
 export const purchaseEnhancement = async (address: string, tier: TokenTier, wallet: string): Promise<string | null> => {
     try {
-        // Absolute Source of Truth: Standard pricing in SOL lamports
-        const solPrice = tier === 'Elite' ? 0.75 : 0.25;
+        const solPrice = TIER_PRICES_SOL[tier] ?? TIER_PRICES_SOL.Enhanced;
         const amountLamports = Math.floor(solPrice * 1_000_000_000);
 
+        console.log(`[VORTEX] Requesting direct SOL payment for ${tier} tier...`);
         const resp = await fetch('/api/pay/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                wallet,
-                amount: amountLamports,
-                address,
-                tier,
-            })
+            body: JSON.stringify({ wallet, amount: amountLamports, address, tier })
         });
 
-        if (!resp.ok) throw new Error("PAYMENT_INIT_FAILED");
+        if (!resp.ok) throw new Error((await resp.json()).error || "PAYMENT_INIT_FAILED");
         const { transaction } = await resp.json();
         return transaction;
     } catch (e: any) {
         console.error("PURCHASE FAILURE:", e);
-        return null;
+        throw e;
     }
 };
 
@@ -148,8 +144,7 @@ export const purchaseDeepScan = async (address: string, wallet: string): Promise
         const isElite = await verifyEliteAccess(wallet);
         if (isElite) return 'ELITE_BYPASS';
 
-        const scanFeeSol = 0.05; // Standardized Deep Scan Fee
-        const scanFeeLamports = Math.floor(scanFeeSol * 1_000_000_000);
+        const scanFeeLamports = Math.floor(TIER_PRICES_SOL.DeepScan * 1_000_000_000);
 
         const resp = await fetch('/api/pay/initiate', {
             method: 'POST',
@@ -173,6 +168,7 @@ export const verifyPayment = async (signature: string, address: string, tier: To
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ signature, address, tier, wallet })
         });
+        if (res.ok) enhancementCache.delete(address);
         return res.ok;
     } catch {
         return false;

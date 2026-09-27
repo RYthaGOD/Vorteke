@@ -8,7 +8,8 @@ export const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY || '';
 
 
 // System-wide RPC fallback topology
-export const RPC_ENDPOINTS = [
+export const SOLANA_NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet' ? 'devnet' : 'mainnet-beta';
+export const RPC_ENDPOINTS = SOLANA_NETWORK === 'devnet' ? ['https://api.devnet.solana.com'] : [
     HELIUS_RPC,
     'https://api.mainnet-beta.solana.com'
 ].filter(Boolean);
@@ -28,6 +29,17 @@ export const JUPITER_QUOTE_API = 'https://quote-api.jup.ag/v6';
 export const TREASURY_SWAPS = 'C29gx6Wq2fvuBXrj9YjoTTFYHXhsB5dD5cWd7bmu9PDp'; // Vortex Treasury Alpha
 export const TREASURY_ENHANCEMENTS = 'jawKuQ3xtcYoAuqE9jyG2H35sv2pWJSzsyjoNpsxG38'; // Elite Enhancements Revenue
 export const VORTEX_OPS = '8hLpEK6D2msZnC2HKeaxHiEiTLLSwRvd31FqUCNrYnP2'; // Vortex Ops Beta
+export const VTX_MINT = 'VTXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxMINT'; // Placeholder until launch
+
+// Single source of truth for tier pricing in SOL. /api/pay/initiate builds the charge
+// and /api/pay/verify checks the treasury received it — both must read from here.
+// (Previously these were hardcoded separately in each file and had drifted out of sync,
+// which made every payment verification fail. See src/app/api/pay/verify/route.ts.)
+export const TIER_PRICES_SOL: Record<string, number> = {
+    Enhanced: 0.20, // ~$29 "BOOST_PROFILE"
+    Elite: 0.035,   // ~$5 "TRENDING_BOOST"
+    DeepScan: 0.05,
+};
 
 // Jito-Turbo Protocol Constants
 export const JITO_TIP_ACCOUNTS = [

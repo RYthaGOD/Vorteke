@@ -1,56 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { TREASURY_ENHANCEMENTS, RPC_ENDPOINTS } from '@/lib/constants';
+import { PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { TREASURY_ENHANCEMENTS, TIER_PRICES_SOL } from '@/lib/constants';
 import { getResilientConnection } from '@/lib/solana/connection';
+import { prisma } from '@/lib/prisma';
+import { MEMO_PROGRAM } from '@/lib/payments/validate.mjs';
 
 export async function POST(request: NextRequest) {
     try {
-        const { wallet, amount, address, tier } = await request.json();
-
-        if (!wallet || (typeof amount !== 'number') || !address || !tier) {
-            return NextResponse.json({ error: 'MISSING_PARAMETERS' }, { status: 400 });
-        }
-
-        // FIX: Validate tier against allowlist to prevent spoofed values
-        const VALID_TIERS = ['Enhanced', 'Elite', 'DeepScan'];
-        if (!VALID_TIERS.includes(tier)) {
-            return NextResponse.json({ error: 'INVALID_TIER' }, { status: 400 });
-        }
-
-        try {
-            new PublicKey(wallet);
-            new PublicKey(address);
-        } catch {
+        const { wallet, address, tier } = await request.json();
+        if (typeof wallet !== 'string' || typeof address !== 'string' || !['Enhanced', 'Elite', 'DeepScan'].includes(tier))
+            return NextResponse.json({ error: 'INVALID_PAYMENT_REQUEST' }, { status: 400 });
+        try { new PublicKey(wallet); new PublicKey(address); } catch {
             return NextResponse.json({ error: 'INVALID_SOLANA_ADDRESS' }, { status: 400 });
         }
-
+        if (tier !== 'DeepScan') {
+            const profile = await prisma.enhancement.findUnique({ where: { address } });
+            if (profile?.owner !== wallet) return NextResponse.json({ error: 'CLAIM_PROJECT_FIRST' }, { status: 403 });
+        }
+        const lamports = Math.round(TIER_PRICES_SOL[tier] * 1e9);
         const { blockhash } = await getResilientConnection(c => c.getLatestBlockhash());
+        const intent = await prisma.paymentIntent.create({ data: {
+            wallet, address, tier, lamports, expiresAt: new Date(Date.now() + 10 * 60_000),
+        } });
         const fromPubkey = new PublicKey(wallet);
-        const transaction = new Transaction();
-
-        const toPubkey = new PublicKey(TREASURY_ENHANCEMENTS);
-        transaction.add(
-            SystemProgram.transfer({
-                fromPubkey,
-                toPubkey,
-                lamports: Math.floor(amount),
-            })
+        const transaction = new Transaction({ recentBlockhash: blockhash, feePayer: fromPubkey }).add(
+            SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(TREASURY_ENHANCEMENTS), lamports }),
+            new TransactionInstruction({ programId: new PublicKey(MEMO_PROGRAM), keys: [], data: Buffer.from('VORTEX_PAY:' + intent.id) }),
         );
-
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = fromPubkey;
-
-        const serializedTransaction = transaction.serialize({
-            requireAllSignatures: false,
-            verifySignatures: false,
-        });
-
-        return NextResponse.json({
-            transaction: serializedTransaction.toString('base64'),
-            message: `VORTEX_UPGRADE::${address}::${tier}::SOL_PAY`
-        });
-    } catch (e: any) {
-        console.error("PAYMENT_INIT_ERROR:", e);
-        return NextResponse.json({ error: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
+        return NextResponse.json({ transaction: transaction.serialize({ requireAllSignatures: false }).toString('base64'), lamports, intentId: intent.id });
+    } catch (error) {
+        console.error('PAYMENT_INIT_ERROR', error);
+        return NextResponse.json({ error: 'PAYMENT_UNAVAILABLE' }, { status: 503 });
     }
 }

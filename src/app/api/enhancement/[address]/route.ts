@@ -24,7 +24,12 @@ export async function GET(
         }
 
         // Sanitize socials to avoid malformed JSON breaking the frontend
-        const rawSocials = enhancement.socials as any || {};
+        let rawSocials: any = {};
+        if (enhancement.socials) {
+            try {
+                rawSocials = JSON.parse(enhancement.socials as string);
+            } catch (e) {}
+        }
         const sanitizedSocials = {
             twitter: typeof rawSocials.twitter === 'string' ? rawSocials.twitter : undefined,
             telegram: typeof rawSocials.telegram === 'string' ? rawSocials.telegram : undefined,

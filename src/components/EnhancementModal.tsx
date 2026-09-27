@@ -1,279 +1,99 @@
 'use client';
-import React, { useState } from 'react';
-import { X, Zap, ShieldCheck, Check, Flame, Percent } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, ExternalLink, RefreshCw } from 'lucide-react';
 import { purchaseEnhancement, claimProject, verifyPayment } from '@/lib/monetizationService';
-import { Transaction, VersionedTransaction } from '@solana/web3.js';
+import { Transaction } from '@solana/web3.js';
 import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { Modal } from './DesignSystem';
+import { SOLANA_NETWORK, TIER_PRICES_SOL, TREASURY_ENHANCEMENTS } from '@/lib/constants';
 import bs58 from 'bs58';
 
-interface EnhancementModalProps {
-    address: string;
-    onClose: () => void;
-    onPurchase: () => void;
+type Tier = 'Enhanced' | 'Elite';
+type Pending = { signature: string; tier: Tier; wallet: string };
+export function EnhancementModal({ address, onClose, onPurchase, notify }: {
+    address: string; onClose: () => void; onPurchase: () => void;
     notify: (type: 'success' | 'error' | 'info', msg: string) => void;
-}
-
-export function EnhancementModal({ address, onClose, onPurchase, notify }: EnhancementModalProps) {
+}) {
     const { connection } = useConnection();
     const { publicKey, connected } = useVortexAuth();
     const { signMessage, sendTransaction } = useWallet();
-    const [claiming, setClaiming] = useState(false);
-    const [upgrading, setUpgrading] = useState(false);
-
-    const handleClaim = async () => {
-        if (!publicKey || !signMessage) {
-            notify('error', 'WALLET_NOT_CONNECTED');
-            return;
-        }
-
-        setClaiming(true);
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState('');
+    const [pending, setPending] = useState<Pending | null>(null);
+    const wallet = publicKey?.toBase58();
+    const storageKey = 'vortex-payment:' + SOLANA_NETWORK + ':' + address + ':' + wallet;
+    useEffect(() => {
+        setPending(null);
+        try {
+            const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+            if (saved && typeof saved.signature === 'string' && ['Enhanced', 'Elite'].includes(saved.tier) && saved.wallet === wallet) setPending(saved);
+        } catch { /* Storage can be unavailable in private browsing. */ }
+    }, [storageKey, wallet]);
+    const remember = (value: Pending | null) => {
+        setPending(value);
+        try { if (value) localStorage.setItem(storageKey, JSON.stringify(value)); else localStorage.removeItem(storageKey); } catch {}
+    };
+    const recheck = async (payment: Pending) => {
+        const success = await verifyPayment(payment.signature, address, payment.tier, payment.wallet);
+        if (success) {
+            remember(null);
+            notify('success', 'Your profile upgrade is active.');
+            onPurchase(); onClose();
+        } else setMessage('Waiting for verification. Recheck this payment before making another purchase. If the transaction failed, no upgrade charge was settled.');
+    };
+    const claim = async () => {
+        if (!wallet || !signMessage) return;
+        setBusy(true); setMessage('');
         try {
             const timestamp = Date.now();
-            const message = `VORTEX_CLAIM::${address}::${publicKey.toBase58()}::${timestamp}`;
-            const messageBytes = new TextEncoder().encode(message);
-            const signatureBytes = await signMessage(messageBytes);
-            const signature = bs58.encode(signatureBytes);
-
-            const success = await claimProject(address, publicKey.toBase58(), signature, timestamp);
-            if (success) {
-                notify('success', 'CLAIM_VERIFIED: Project infrastructure linked.');
-                onPurchase();
-                onClose();
-            } else {
-                notify('error', 'CLAIM_DENIED: Signature invalid or protected asset.');
-            }
-        } catch (e: any) {
-            notify('error', `ERROR: ${e.message || 'CLAIM_FAILED'}`);
-        } finally {
-            setClaiming(false);
-        }
+            const bytes = await signMessage(new TextEncoder().encode('VORTEX_CLAIM::' + address + '::' + wallet + '::' + timestamp));
+            if (!await claimProject(address, wallet, bs58.encode(bytes), timestamp)) throw new Error('Could not claim this profile. Use its creator or mint-authority wallet; existing claims cannot be overwritten.');
+            setMessage('Profile claimed. Choose your upgrade below.');
+            onPurchase();
+        } catch (error) { setMessage(error instanceof Error ? error.message : 'Claim failed. Try again.'); }
+        finally { setBusy(false); }
     };
-
-    const handleUpgrade = async (tier: 'Enhanced' | 'Elite') => {
-        if (!publicKey || !sendTransaction) {
-            notify('error', 'WALLET_NOT_CONNECTED');
-            return;
-        }
-
-        setUpgrading(true);
+    const purchase = async (tier: Tier) => {
+        if (!wallet || busy || pending) return;
+        setBusy(true); setMessage('Preparing your payment…');
         try {
-            notify('info', `INITIATING_${tier.toUpperCase()}_PROTOCOL...`);
-            const txBase64 = await purchaseEnhancement(address, tier, publicKey.toBase58());
-
-            if (!txBase64) {
-                notify('error', 'INITIATION_FAILED: Server could not prepare transaction.');
-                return;
-            }
-
-            const buffer = Buffer.from(txBase64, 'base64');
-            let transaction: Transaction | VersionedTransaction;
-            try {
-                transaction = VersionedTransaction.deserialize(buffer);
-            } catch {
-                transaction = Transaction.from(buffer);
-            }
-
-            const signature = await sendTransaction(transaction, connection);
-            notify('info', 'TRANSACTION_BROADCAST: Awaiting settlement...');
-
-            const success = await verifyPayment(signature, address, tier, publicKey.toBase58());
-
-            if (success) {
-                notify('success', `${tier.toUpperCase()}_ACTIVATED: Systems operational.`);
-                onPurchase();
-                onClose();
-            } else {
-                notify('error', 'VERIFICATION_PENDING: Check status in 30s.');
-            }
-        } catch (e: any) {
-            notify('error', `ERROR: ${e.message || 'UPGRADE_FAILED'}`);
-        } finally {
-            setUpgrading(false);
-        }
+            const encoded = await purchaseEnhancement(address, tier, wallet);
+            if (!encoded) throw new Error('Could not prepare payment.');
+            const transaction = Transaction.from(Buffer.from(encoded, 'base64'));
+            const signature = await sendTransaction(transaction, connection, { skipPreflight: false });
+            const payment = { signature, tier, wallet };
+            remember(payment);
+            setMessage('Payment submitted. Waiting for final confirmation…');
+            await recheck(payment);
+        } catch (error) {
+            const text = error instanceof Error ? error.message : 'Payment could not be completed.';
+            setMessage(text === 'CLAIM_PROJECT_FIRST' ? 'Claim this profile with your project wallet before purchasing.' : text);
+        } finally { setBusy(false); }
     };
-
-    return (
-        <div className="vortex-modal-overlay">
-            <div className="vortex-modal-content vortex-max-w-2xl">
-                <div className="vortex-flex-between vortex-mb-6">
-                    <div className="vortex-flex-start vortex-gap-3">
-                        <Zap size={24} className="text-vortex-cyan animate-pulse" />
-                        <h2 className="vortex-modal-title">Strategic Enhancement Protocol</h2>
-                    </div>
-                    <button onClick={onClose} className="vortex-icon-btn">
-                        <X size={24} />
-                    </button>
-                </div>
-
-                {/* Claim Flow Section */}
-                <div className="vortex-panel vortex-mb-6 vortex-bg-glass vortex-border-dashed border-vortex-cyan">
-                    <div className="vortex-flex-between">
-                        <div className="vortex-flex-start vortex-gap-4">
-                            <div className="vortex-p-2 vortex-bg-cyan vortex-bg-opacity-10 text-vortex-cyan vortex-border-radius-full">
-                                <ShieldCheck size={20} />
-                            </div>
-                            <div className="vortex-flex-column">
-                                <span className="vortex-text-sm vortex-text-bold">CLAIM_PROJECT_OWNERSHIP</span>
-                                <p className="vortex-text-tiny vortex-text-muted">Establish cryptographically proven control to edit links & banners.</p>
-                            </div>
-                        </div>
-                        <button
-                            className="btn-vortex btn-vortex-sm btn-vortex-outline-cyan vortex-px-4"
-                            onClick={handleClaim}
-                            disabled={claiming || upgrading}
-                        >
-                            {claiming ? 'VERIFYING...' : 'INITIATE_CLAIM'}
-                        </button>
-                    </div>
-                </div>
-
-                <div className="vortex-grid-2 vortex-gap-4 vortex-mb-8">
-                    <div className="vortex-panel vortex-border-cyan">
-                        <div className="vortex-flex-between vortex-mb-2">
-                            <h3 className="vortex-card-title vortex-text-lg">CORE_VERIFIED</h3>
-                            <div className="price-tag text-vortex-cyan">0.25 SOL</div>
-                        </div>
-                        <p className="vortex-text-xs vortex-text-muted vortex-mb-4">Standard verification for the recon terminal.</p>
-                        <div className="vortex-flex-column vortex-gap-2 vortex-mb-6">
-                            <div className="vortex-flex-start vortex-gap-2 vortex-text-xs"><Check size={14} className="text-vortex-cyan" /> Verified Badge</div>
-                            <div className="vortex-flex-start vortex-gap-2 vortex-text-xs"><Check size={14} className="text-vortex-cyan" /> Social Link Sync</div>
-                        </div>
-                        <button className="btn-vortex btn-vortex-primary vortex-w-full" onClick={() => handleUpgrade('Enhanced')} disabled={upgrading || claiming}>
-                            {upgrading ? 'ACTIVATING...' : 'ENHANCE_PROTOCOL'}
-                        </button>
-                    </div>
-
-                    <div className="vortex-panel vortex-border-purple vortex-glow-purple">
-                        <div className="vortex-flex-between vortex-mb-2">
-                            <h3 className="vortex-card-title vortex-text-lg">ELITE_RECON</h3>
-                            <div className="price-tag text-vortex-purple">0.75 SOL</div>
-                        </div>
-                        <p className="vortex-text-xs vortex-text-muted vortex-mb-4">Military-grade intel and priority global indexing.</p>
-                        <div className="vortex-flex-column vortex-gap-2 vortex-mb-6">
-                            <div className="vortex-flex-start vortex-gap-2 vortex-text-xs"><Check size={14} className="text-vortex-cyan" /> Live Whale Telemetry</div>
-                            <div className="vortex-flex-start vortex-gap-2 vortex-text-xs"><Check size={14} className="text-vortex-purple" /> Global Trending Priority</div>
-                        </div>
-                        <button className="btn-vortex btn-vortex-primary vortex-bg-purple vortex-w-full" onClick={() => handleUpgrade('Elite')} disabled={upgrading || claiming}>
-                            {upgrading ? 'ACTIVATING...' : 'ACTIVATE_ELITE'}
-                        </button>
-                    </div>
-                </div>
-
-                <div className="vortex-input-container">
-                    <div className="vortex-flex-between vortex-mb-2">
-                        <div className="vortex-flex-start vortex-gap-2">
-                            <ShieldCheck size={16} className="text-vortex-yellow" />
-                            <span className="vortex-text-xs vortex-text-bold">PAYMENT_GATED_PROTOCOL</span>
-                        </div>
-                        <div className="vortex-flex-start vortex-gap-2">
-                            {!connected ? (
-                                <span className="vortex-text-tiny vortex-text-muted">CONNECT_WALLET_FOR_ACCESS</span>
-                            ) : (
-                                <input
-                                    type="password"
-                                    placeholder="ACCESS_CODE"
-                                    className="vortex-input-field vortex-text-tiny vortex-w-24 vortex-h-6"
-                                    onKeyDown={async (e) => {
-                                        if (e.key === 'Enter') {
-                                            const code = (e.target as HTMLInputElement).value;
-                                            if (publicKey) {
-                                                try {
-                                                    const res = await fetch('/api/auth/provision', {
-                                                        method: 'POST',
-                                                        headers: { 'Content-Type': 'application/json' },
-                                                        body: JSON.stringify({ wallet: publicKey.toBase58(), code })
-                                                    });
-                                                    if (res.ok) {
-                                                        notify('success', 'ELITE_ACCESS_GRANTED: 7-Day Window Active.');
-                                                        onPurchase();
-                                                    } else {
-                                                        notify('error', 'INVALID_ACCESS_CODE');
-                                                    }
-                                                } catch {
-                                                    notify('error', 'PROVISIONING_ERROR');
-                                                }
-                                                (e.target as HTMLInputElement).value = '';
-                                            }
-                                        }
-                                    }}
-                                />
-                            )}
-                        </div>
-                    </div>
-                    <p className="vortex-text-tiny vortex-text-muted">
-                        Testing with access codes bypasses payments for 7 days during protocol rollout.
-                    </p>
-                </div>
-            </div>
-
-            <style jsx>{`
-                .vtx-economy-banner {
-                    background: rgba(229, 255, 0, 0.05); /* Gold Tint */
-                    border: 1px dashed rgba(229, 255, 0, 0.3);
-                    padding: 16px;
-                    border-radius: 4px;
-                }
-
-                .vtx-toggle-container {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                }
-
-                .toggle-label {
-                    font-size: 10px;
-                    font-weight: 800;
-                    color: rgba(255, 255, 255, 0.3);
-                    letter-spacing: 1px;
-                }
-
-                .toggle-label.active {
-                    color: #fff;
-                }
-
-                .vtx-toggle {
-                    width: 48px;
-                    height: 24px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 100px;
-                    position: relative;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                }
-
-                .vtx-active {
-                    background: var(--accent-vortex-yellow);
-                    border-color: var(--accent-vortex-yellow);
-                    box-shadow: 0 0 15px rgba(229, 255, 0, 0.4);
-                }
-
-                .toggle-knob {
-                    position: absolute;
-                    top: 2px;
-                    left: 2px;
-                    width: 18px;
-                    height: 18px;
-                    background: #fff;
-                    border-radius: 50%;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                }
-
-                .vtx-active .toggle-knob {
-                    transform: translateX(24px);
-                }
-
-                .price-tag {
-                    font-size: 11px;
-                    font-weight: 900;
-                    letter-spacing: 1px;
-                    padding: 4px 8px;
-                    background: rgba(255, 255, 255, 0.05);
-                    border-radius: 4px;
-                }
-            `}</style>
-
-        </div >
-    );
+    return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title="Upgrade your token profile" size="lg">
+        <p className="vortex-purchase-intro">Give traders a clear view of your project. One-time SOL payments, with no subscription.</p>
+        <div className="vortex-purchase-context"><span>Token profile</span><code title={address}>{address.slice(0, 8)}…{address.slice(-8)}</code><span>{SOLANA_NETWORK}</span></div>
+        {!connected ? <div className="vortex-empty"><p>Connect your project wallet to claim and upgrade this profile.</p><WalletMultiButton /></div> :
+            <div className="vortex-claim-row"><div><strong>01 / Claim your profile</strong><p>Sign a message to prove wallet control. This step costs no SOL.</p></div><button className="btn-vortex btn-vortex-secondary" disabled={busy || !!pending} onClick={claim}>Claim profile</button></div>}
+        <div className="vortex-purchase-grid">
+            {(['Enhanced', 'Elite'] as Tier[]).map(tier => <section key={tier} className="vortex-plan">
+                <span className="vortex-eyebrow">{tier === 'Enhanced' ? 'PROJECT IDENTITY' : 'PROJECT VISIBILITY'}</span>
+                <h3>{tier === 'Enhanced' ? 'Enhanced profile' : 'Trending boost'}</h3>
+                <p className="vortex-plan-price">{TIER_PRICES_SOL[tier]} <span>SOL</span></p>
+                <ul>{(tier === 'Enhanced' ? ['Custom banner and logo', 'Website and social links', 'One-time profile upgrade'] : ['Priority discovery placement', 'Elite profile badge', 'Placement is paid promotion']).map(item => <li key={item}><Check size={16} aria-hidden />{item}</li>)}</ul>
+                <button className="btn-vortex btn-vortex-primary" disabled={!connected || busy || !!pending} aria-busy={busy} onClick={() => purchase(tier)}>Pay {TIER_PRICES_SOL[tier]} SOL</button>
+            </section>)}
+        </div>
+        <p className="vortex-text-muted">Network fees are additional and shown by your wallet. Paid placement is not a safety endorsement or a guarantee of views.</p>
+        <p className="vortex-payment-destination">Recipient: <a href={'https://solscan.io/account/' + TREASURY_ENHANCEMENTS + (SOLANA_NETWORK === 'devnet' ? '?cluster=devnet' : '')} target="_blank" rel="noreferrer">VORTEX treasury <ExternalLink size={12} aria-hidden /></a></p>
+        {message && <p role="status" className="vortex-inline-notice">{message}</p>}
+        {pending && <div className="vortex-payment-recovery">
+            <strong>Payment saved — do not pay again</strong>
+            <a href={'https://solscan.io/tx/' + pending.signature + (SOLANA_NETWORK === 'devnet' ? '?cluster=devnet' : '')} target="_blank" rel="noreferrer">View transaction <ExternalLink size={14} aria-hidden /></a>
+            <button className="btn-vortex btn-vortex-secondary" disabled={busy} onClick={async () => { setBusy(true); try { await recheck(pending); } finally { setBusy(false); } }}><RefreshCw size={16} aria-hidden /> Recheck payment</button>
+        </div>}
+        <p className="vortex-text-muted">Have an access code? <a href="/elite">Open Elite access</a>.</p>
+    </Modal>;
 }

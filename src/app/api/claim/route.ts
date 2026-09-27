@@ -4,6 +4,7 @@ import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 import { prisma } from '@/lib/prisma';
 import { PROTECTED_MINT_ADDRESSES } from '@/lib/constants';
+import { getResilientConnection } from '@/lib/solana/connection';
 
 export async function POST(request: NextRequest) {
     try {
@@ -55,8 +56,21 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'ASSET_ALREADY_CLAIMED' }, { status: 403 });
         }
 
-        // 3. Persist Claim
-        await prisma.enhancement.upsert({
+        if (!existing?.owner) {
+            const token = await prisma.token.findUnique({ where: { address } });
+            const mint = await getResilientConnection(c => c.getParsedAccountInfo(new PublicKey(address)));
+            const data = mint.value?.data;
+            const authority = data && 'parsed' in data ? data.parsed?.info?.mintAuthority : null;
+            if (authority !== wallet && token?.creator !== wallet) {
+                return NextResponse.json({ error: 'PROJECT_AUTHORITY_NOT_VERIFIED' }, { status: 403 });
+            }
+        }
+
+        // Atomic conditional claim prevents concurrent requests replacing an owner.
+        await prisma.$transaction(async db => {
+        const current = await db.enhancement.findUnique({ where: { address } });
+        if (current?.owner && current.owner !== wallet) throw new Error('ASSET_ALREADY_CLAIMED');
+        await db.enhancement.upsert({
             where: { address },
             update: { owner: wallet },
             create: {
@@ -67,13 +81,16 @@ export async function POST(request: NextRequest) {
         });
 
         // Log the claim event
-        await prisma.claim.create({
-            data: {
+        await db.claim.upsert({
+            where: { address_wallet: { address, wallet } },
+            update: { signature, timestamp: new Date(timestampNum) },
+            create: {
                 address,
                 wallet,
                 signature,
                 timestamp: new Date(timestampNum)
             }
+        });
         });
 
         return NextResponse.json({ success: true });
@@ -136,7 +153,7 @@ export async function PATCH(request: NextRequest) {
         await prisma.enhancement.update({
             where: { address },
             data: {
-                socials: metadata.socials || existing.socials,
+                socials: metadata.socials ? JSON.stringify(metadata.socials) : existing.socials,
                 customDescription: metadata.customDescription || existing.customDescription,
                 bannerURI: metadata.bannerURI || existing.bannerURI,
                 iconURI: metadata.iconURI || existing.iconURI
@@ -149,4 +166,3 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
     }
 }
-
