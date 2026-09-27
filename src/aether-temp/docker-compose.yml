@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  aether-index:
+    build: .
+    container_name: aether-index
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/graphql"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

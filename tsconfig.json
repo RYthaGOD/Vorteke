@@ -41,6 +41,7 @@
   "exclude": [
     "node_modules",
     "scripts",
-    "src/aether-temp"
+    "src/aether-temp",
+    "Vorteke"
   ]
 }

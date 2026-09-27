@@ -33,9 +33,8 @@ const nextConfig = {
                     },
                     {
                         key: 'Content-Security-Policy',
-                        // FIX: Hardened CSP (Removed unsafe-eval, unsafe-inline where possible, blocked wildcard iframes)
-                        // UPDATE: Added Solflare and wallet domains for production compatibility
-                        value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss: https://*.solflare.com https://connect.solflare.com https://*.jup.ag; frame-src 'self' https://jup.ag https://*.jup.ag https://*.solflare.com https://connect.solflare.com; object-src 'none'; base-uri 'self';",
+                        // FIX: Hardened CSP (Removed dexscreener domains, conditional unsafe-eval for dev)
+                        value: `default-src 'self'; script-src 'self' ${process.env.NODE_ENV === 'development' ? "'unsafe-eval'" : ""} 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss: https://*.solflare.com https://connect.solflare.com https://*.jup.ag; frame-src 'self' https://jup.ag https://*.jup.ag https://*.solflare.com https://connect.solflare.com; object-src 'none'; base-uri 'self';`,
                     },
                 ],
             },
