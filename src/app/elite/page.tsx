@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { verifyEliteAccess } from '@/lib/monetizationService';
 import { useVortexAuth } from '@/hooks/useVortexAuth';
 import EliteDashboard from '@/components/EliteDashboard';
@@ -21,7 +21,6 @@ export default function ElitePage() {
     const [accessKey, setAccessKey] = useState('');
     const [keyError, setKeyError] = useState<string | null>(null);
     const notify = useNotificationStore(state => state.notify);
-    const router = useRouter();
 
     useEffect(() => {
         const verify = async () => {
@@ -56,7 +55,7 @@ export default function ElitePage() {
                         title="Elite intelligence"
                         subTitle="Access required"
                         glowColor="yellow"
-                        showCorners={true}
+                        showCorners={false}
                         variant="glass"
                     >
                         <div className="vortex-flex-column vortex-center vortex-gap-8 vortex-py-8">
@@ -66,14 +65,13 @@ export default function ElitePage() {
 
                             <div className="vortex-text-center px-4">
                                 <h2 className="vortex-text-xl vortex-text-extrabold vortex-mb-2">Your research workspace</h2>
-                                <p className="vortex-text-xs vortex-text-muted vortex-max-w-xs vortex-mx-auto">
-                                    This terminal requires Vortex Elite authorization. Hold an Elite Pass NFT or provide a verified Alpha access key.
+                                <p className="vortex-text-sm vortex-text-secondary vortex-max-w-xs vortex-mx-auto">
+                                    Elite is for holders of the Elite Pass NFT or an access code. Connect your wallet to check.
                                 </p>
                             </div>
 
                             {!connected ? (
                                 <div className="vortex-flex-column vortex-center vortex-gap-4 vortex-w-full px-8">
-                                    <div className="vortex-text-tiny vortex-text-muted vortex-font-mono text-vortex-cyan">AUTHORIZATION_PENDING...</div>
                                     <WalletMultiButton className="vortex-wallet-btn" />
                                 </div>
                             ) : (
@@ -152,13 +150,13 @@ export default function ElitePage() {
                                             {keyError}
                                         </p>
                                     )}
-                                    <p className="vortex-text-tiny vortex-text-muted vortex-mt-2 vortex-text-center">Submit your code to verify access.</p>
+                                    <p className="vortex-text-xs vortex-text-secondary vortex-mt-2 vortex-text-center">No Elite Pass found in this wallet. Have an access code? Enter it above.</p>
                                 </div>
                             )}
 
-                            <button className="vortex-btn-secondary vortex-w-full mt-4" onClick={() => router.push('/terminal')}>
+                            <Link className="vortex-btn-secondary vortex-w-full mt-4" href="/terminal">
                                 Back to markets
-                            </button>
+                            </Link>
                         </div>
                     </VortexPanel>
                 </div>
@@ -182,34 +180,6 @@ export default function ElitePage() {
 
     return (
         <main className="app-container">
-            <div className="vortex-container-centered">
-                <header className="vortex-header">
-                    <div className="brand-section vortex-flex-start vortex-gap-4">
-                        <div onClick={() => router.push('/terminal')} style={{ cursor: 'pointer' }}>
-                            <div className="vortex-logo-geometry size-sm text-vortex-cyan" />
-                        </div>
-                        <div className="vortex-flex-column">
-                            <div className="vortex-logo-text glitch-text">VORTEX</div>
-                            <span className="vortex-tagline">Master the Singularity.</span>
-                        </div>
-                    </div>
-
-                    <nav className="nav-cluster">
-                        <button className="nav-item vortex-glitch-hover" onClick={() => router.push('/terminal')}>
-                            Screener
-                        </button>
-                        <button className="nav-item vortex-glitch-hover" onClick={() => router.push('/launches')}>
-                            Launches
-                        </button>
-                        <button className="nav-item active vortex-glitch-hover">
-                            Elite Analytics
-                        </button>
-                    </nav>
-                    <div className="header-actions">
-                        <WalletMultiButton className="vortex-wallet-btn" />
-                    </div>
-                </header>
-            </div>
 
             <div className="vortex-container-centered vortex-mt-6 animate-stagger">
                 <EliteDashboard />

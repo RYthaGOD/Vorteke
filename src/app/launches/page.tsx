@@ -1,24 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Rocket, Clock, ShieldCheck, ArrowRight, Activity, Search, RefreshCw, AlertTriangle } from 'lucide-react';
-import { VortexLogo, VortexPanel, VortexButton } from '@/components/DesignSystem';
+import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 import { MobileNav } from '@/components/MobileNav';
 import { formatCurrency, formatCompact } from '@/lib/dataService';
-import { useVortexAuth } from '@/hooks/useVortexAuth';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 export default function NewLaunchesPage() {
-    const router = useRouter();
-    const { connected } = useVortexAuth();
-    const [mounted, setMounted] = useState(false);
     const [searchFilter, setSearchFilter] = useState('');
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
     const { data: launches = [], isLoading, isError, isRefetching, refetch } = useQuery({
         queryKey: ['new_launches'],
@@ -47,35 +38,6 @@ export default function NewLaunchesPage() {
 
     return (
         <main className="app-container">
-            <div className="vortex-container-centered">
-                {/* Standard Vortex Header */}
-                <header className="vortex-header">
-                    <div className="brand-section vortex-flex-start vortex-gap-4">
-                        <div onClick={() => router.push('/')} style={{ cursor: 'pointer' }}>
-                            <VortexLogo size="mini" />
-                        </div>
-                        <div className="vortex-flex-column">
-                            <div className="vortex-logo-text glitch-text">VORTEX</div>
-                            <span className="vortex-tagline text-vortex-cyan">Launchpad Radar.</span>
-                        </div>
-                    </div>
-
-                    <nav className="nav-cluster">
-                        <button className="nav-item vortex-glitch-hover" onClick={() => router.push('/terminal')}>
-                            Screener
-                        </button>
-                        <button className="nav-item active vortex-glitch-hover">
-                            Launches
-                        </button>
-                        <button className="nav-item vortex-glitch-hover" onClick={() => router.push('/elite')}>
-                            Elite Analytics
-                        </button>
-                    </nav>
-                    <div className="header-actions">
-                        {mounted ? <WalletMultiButton className="vortex-wallet-btn" /> : <div className="btn-vortex btn-vortex-primary vortex-opacity-50">INITIALIZING...</div>}
-                    </div>
-                </header>
-            </div>
 
             <div className="vortex-container-centered vortex-mt-6 animate-stagger">
                 {/* Hero / Filter Section */}
@@ -83,34 +45,35 @@ export default function NewLaunchesPage() {
                     <div className="vortex-flex-between vortex-wrap vortex-gap-4">
                         <div className="vortex-flex-column">
                             <p className="vortex-text-sm vortex-text-muted vortex-m-0">
-                                Monitoring global liquidity injections across Solana DEXs in real-time.
+                                New liquidity pools across Solana DEXs, refreshed every 15 seconds.
                             </p>
                             <div className="vortex-flex-start vortex-gap-2 vortex-mt-2">
-                                <span className="recon-tag-safe vortex-bg-obsidian">Raydium</span>
-                                <span className="recon-tag-safe vortex-bg-obsidian">Pump.fun</span>
-                                <span className="recon-tag-safe vortex-bg-obsidian">Meteora</span>
+                                <span className="vortex-profile-label">Raydium</span>
+                                <span className="vortex-profile-label">Pump.fun</span>
+                                <span className="vortex-profile-label">Meteora</span>
                             </div>
                         </div>
                         
                         <div className="vortex-flex-center vortex-gap-3">
-                            <div className="vortex-relative">
-                                <Search size={16} className="vortex-text-muted vortex-abs-center-y vortex-left-12" />
+                            <label className="vortex-market-search">
+                                <Search size={18} aria-hidden />
                                 <input
                                     type="search"
                                     aria-label="Filter new pairs"
-                                    placeholder="Filter launches..."
-                                    className="vortex-input-field vortex-search-input-pl vortex-w-320"
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    placeholder="Filter pairs"
                                     value={searchFilter}
                                     onChange={(e) => setSearchFilter(e.target.value)}
                                 />
-                            </div>
+                            </label>
                             <VortexButton 
                                 variant="secondary" 
                                 className={`vortex-h-10 ${isRefetching ? 'vortex-animate-pulse' : ''}`}
                                 onClick={() => refetch()}
                             >
-                                <RefreshCw size={14} className={`vortex-mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-                                REFRESH
+                                <RefreshCw size={14} className={`vortex-mr-2 ${isRefetching ? 'animate-spin' : ''}`} aria-hidden />
+                                Refresh
                             </VortexButton>
                         </div>
                     </div>
@@ -124,9 +87,9 @@ export default function NewLaunchesPage() {
                             <p className="vortex-font-mono vortex-text-cyan">Loading new pairs…</p>
                         </div>
                     ) : filteredLaunches.length === 0 ? (
-                        <div className="vortex-p-12 vortex-text-center vortex-opacity-50">
-                            <AlertTriangle size={32} className="vortex-m-auto vortex-mb-4 text-vortex-yellow" />
-                            <p className="vortex-font-mono">No pairs match your filters. Clear the search or refresh.</p>
+                        <div className="vortex-empty">
+                            <AlertTriangle size={28} aria-hidden />
+                            {searchFilter ? <><h2>No pairs match &ldquo;{searchFilter}&rdquo;</h2><p>Try another name or symbol.</p><button className="btn-vortex btn-vortex-secondary" onClick={() => setSearchFilter('')}>Clear search</button></> : <><h2>No new pairs yet</h2><p>New pools appear here as they launch. This list refreshes every 15 seconds.</p></>}
                         </div>
                     ) : (
                         <div className="vortex-table-container">
@@ -182,12 +145,9 @@ export default function NewLaunchesPage() {
                                                 {formatCurrency(launch.volume24h)}
                                             </td>
                                             <td className="vortex-text-right">
-                                                <VortexButton 
-                                                    variant="primary" 
-                                                    onClick={() => router.push(`/token/${launch.address}`)}
-                                                >
-                                                    Explore <ArrowRight size={14} className="vortex-ml-2" />
-                                                </VortexButton>
+                                                <Link className="btn-vortex btn-vortex-primary" href={`/token/${launch.address}`}>
+                                                    Explore <ArrowRight size={14} className="vortex-ml-2" aria-hidden />
+                                                </Link>
                                             </td>
                                         </tr>
                                     ))}
