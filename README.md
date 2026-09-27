@@ -17,13 +17,13 @@ VORTEX is a Next.js Solana DEX screener/terminal. Its primary business model is 
 Flow: `EnhancementModal.tsx` → `purchaseEnhancement()` in `monetizationService.ts` → `POST /api/pay/initiate` (builds unsigned SOL transfer to `TREASURY_ENHANCEMENTS`) → wallet signs & sends → `POST /api/pay/verify` (confirms the transfer landed, upserts `Enhancement`).
 
 **Known gaps, not yet fixed:**
-- No `$VTX` token exists. The burn flow (buy-and-burn builder, burn copy, Burn Leaderboard) was removed; the live path is a direct SOL transfer to treasury. `Enhancement.burnAmount` is still in the Prisma schema and can be dropped during the Postgres migration.
+- No `$VTX` token exists. The burn flow (buy-and-burn builder, burn copy, Burn Leaderboard) was removed; the live path is a direct SOL transfer to treasury.
 - Elite trial access codes are read from `ELITE_ACCESS_CODES` (comma-separated). Unset means redemption is disabled.
 
 ## 🛠️ Stack
 
 - **Framework**: Next.js 15 + React Server Components
-- **Database**: SQLite locally (Prisma ORM) — **do not deploy this to Vercel as-is**, see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md): serverless functions wipe the SQLite file on every cold start, taking every `Enhancement`, `ApiKey`, and payment record with it. Switch to Postgres before any real deployment.
+- **Database**: PostgreSQL on Railway (Prisma ORM, migrations in `prisma/migrations/`). See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 - **Data Sources**: Helius RPC + GeckoTerminal proxy + Jupiter routing
 - **Decoder**: Custom transaction parser (`src/lib/solana/txDecoder.ts`) — reconciles signer balance deltas so bot-routed trades (Trojan, BananaGun) still resolve to correct buy/sell direction and size
 
@@ -40,14 +40,14 @@ Flow: `EnhancementModal.tsx` → `purchaseEnhancement()` in `monetizationService
 
 ```bash
 cp .env.example .env.local
-# fill in your Helius API key; DATABASE_URL defaults to local SQLite
+# fill in HELIUS_API_KEY and DATABASE_URL (Postgres, see docs/DEPLOYMENT.md)
 npm install
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 npm run dev
 ```
 
-No hosted deployment exists yet — see the Postgres warning above before deploying anywhere serverless.
+The database is provisioned on Railway; the web service is not deployed yet (see docs/DEPLOYMENT.md).
 
 ---
 

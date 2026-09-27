@@ -1,50 +1,27 @@
-# 🚀 VORTEX Deployment Architecture Guide
+# Deployment
 
-**CRITICAL WARNING: DO NOT DEPLOY TO VERCEL USING SQLITE**
+VORTEX runs on Railway with a Railway Postgres database (project `vorteke`).
 
-During the local development phase, we successfully bypassed the connection errors to your remote Supabase instance by migrating the Prisma schema to use a local `dev.db` (SQLite) file. 
+## Database
 
-While this allows for flawless, blazing-fast local iteration and offline development, **it is fundamentally incompatible with Vercel's serverless environment.**
+- Prisma uses PostgreSQL (`prisma/schema.prisma`). Schema changes go through migrations in `prisma/migrations/`, never `prisma db push` against production.
+- On deploy, `railway.json` runs `npx prisma migrate deploy` before `next start`. It only applies pending migrations and never drops data.
+- To change the schema locally: edit `schema.prisma`, then run `npx prisma migrate dev --name <change>` against a dev database and commit the new migration folder.
 
-## The Serverless Database Problem
-Vercel operates using ephemeral, stateless serverless functions. 
-If you deploy `Vorteke` right now, Vercel will spin up a function, create a brand-new `dev.db` file, and process the request. **The moment that function goes idle, it will be destroyed—along with the entire SQLite database.**
-Every user's Elite status, every token's `$DEX` burn amount, and every DeepScan record will be instantly wiped on every cold boot.
+## Local development against Railway Postgres
 
-## How to Fix This Before Mainnet Launch
+The Postgres service is only reachable on Railway's private network until a public TCP proxy is enabled:
 
-To prepare VORTEX for production, you must switch back to a persistent PostgreSQL instance (like Supabase, Neon, or Vercel Postgres).
+1. Railway dashboard → project `vorteke` → **Postgres** → **Settings** → **Networking** → **TCP Proxy** → enable (port 5432).
+2. Copy `DATABASE_PUBLIC_URL` from the Postgres service's **Variables** tab into `.env.local` as `DATABASE_URL`.
+3. `npx prisma migrate deploy` to create the tables, then `npm run dev`.
 
-### Step 1: Fix Your Remote PostgreSQL Instance
-Ensure your Supabase project (Project ID: `nviprdqpwrghznzkevns`) is actually active, un-paused, and allows connections from your deployment region.
+Prefer a separate database for development once real payments land, so local testing can't touch production records.
 
-### Step 2: Revert Prisma to PostgreSQL
-In `prisma/schema.prisma`, change the provider back:
-```prisma
-datasource db {
-    provider  = "postgresql"
-    url       = env("DATABASE_URL")
-    directUrl = env("DIRECT_URL")
-}
-```
+## App service (not created yet)
 
-### Step 3: Re-Enable JSON Fields
-Change the fields back to the native `Json?` type since PostgreSQL natively supports JSON indexing, which is much faster than parsing strings on the fly:
-```prisma
-model Token {
-    // ...
-    securityTags    Json?
-    advancedMetrics Json?
-}
+1. `railway add --service web --repo RYthaGOD/Vorteke`
+2. Set its variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}` (private network), plus everything under "Required at runtime" in `.env.example` (`HELIUS_API_KEY`, `BIRDEYE_API_KEY`, `NEXT_PUBLIC_ADMIN_PUBKEY`, `NEXT_PUBLIC_SOLANA_RPC_PRIMARY`, `VORTEX_JWT_SECRET`). Production start fails fast if any are missing (`src/lib/server/env.ts`).
+3. Generate a domain with `railway domain`.
 
-model Enhancement {
-    // ...
-    socials           Json?
-}
-```
-*(Remember to revert the `JSON.parse` / `JSON.stringify` logic in `src/app/api/claim/route.ts` and `src/app/api/enhancement/[address]/route.ts` when you do this!)*
-
-### Step 4: Update Production `.env`
-Ensure your Vercel Environment Variables contain the exact, verified connection strings for `DATABASE_URL` and `DIRECT_URL`.
-
-Once these steps are completed, your application will be fully scalable, robust, and ready to dominate the Dex Screener monopoly.
+Do not deploy to Vercel with this setup: that's fine for the app, but keep the database on Postgres, never SQLite.

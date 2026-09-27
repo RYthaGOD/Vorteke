@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-    provider  = "sqlite"
+    provider  = "postgresql"
     url       = env("DATABASE_URL")
 }
 
@@ -37,13 +37,8 @@ model Enhancement {
     iconURI           String?
     lastPaymentTx     String?   @unique
     lastPaymentTime   DateTime?
-    
-    // VORTEX Burn Mechanics
-    burnAmount        Float     @default(0)
-    vtxBurnSignature  String?   @unique
 
     @@index([lastPaymentTx])
-    @@index([burnAmount(sort: Desc)])
 }
 
 model Claim {

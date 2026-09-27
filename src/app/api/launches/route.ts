@@ -61,7 +61,6 @@ export async function GET() {
                 return {
                     ...launch,
                     tier: enh.tier,
-                    burnAmount: enh.burnAmount,
                     logoURI: enh.iconURI,
                     isVerified: true
                 };
