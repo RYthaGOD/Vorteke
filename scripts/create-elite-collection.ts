@@ -5,7 +5,7 @@ import {
     ruleSet,
     createCollectionV1,
 } from '@metaplex-foundation/mpl-core';
-import { createNoopSigner, generateSigner, signerIdentity } from '@metaplex-foundation/umi';
+import { createNoopSigner, generateSigner, signerIdentity, createSignerFromKeypair } from '@metaplex-foundation/umi';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { fromWeb3JsKeypair, fromWeb3JsPublicKey } from '@metaplex-foundation/umi-web3js-adapters';
 import * as fs from 'fs';
@@ -33,8 +33,9 @@ async function main() {
     const secretKey = Uint8Array.from(JSON.parse(fs.readFileSync(keypairPath, 'utf-8')));
     const keypair = Keypair.fromSecretKey(secretKey);
     const umiKeypair = fromWeb3JsKeypair(keypair);
+    const umiSigner = createSignerFromKeypair(umi, umiKeypair);
 
-    umi.use(signerIdentity(umiKeypair));
+    umi.use(signerIdentity(umiSigner));
 
     console.log("Using Authority:", keypair.publicKey.toBase58());
 
@@ -50,12 +51,15 @@ async function main() {
             uri: 'https://vortexsol.app/api/metadata/elite-collection', // Placeholder for Arweave/IPFS
             plugins: [
                 {
-                    type: 'Royalties',
-                    basisPoints: 500, // 5%
-                    creators: [
-                        { address: fromWeb3JsPublicKey(keypair.publicKey), percentage: 100 }
-                    ],
-                    ruleSet: ruleSet('None'),
+                    // @ts-ignore - Metaplex Core typing mismatch on 'Royalties'
+                    plugin: {
+                        type: 'Royalties',
+                        basisPoints: 500, // 5%
+                        creators: [
+                            { address: fromWeb3JsPublicKey(keypair.publicKey), percentage: 100 }
+                        ],
+                        ruleSet: ruleSet('None'),
+                    }
                 }
             ]
         }).sendAndConfirm(umi);

@@ -4,7 +4,8 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
-        "build": "npx prisma@5.22.0 generate && npx next build",
+        "build": "prisma generate && next build",
+        "test:payments": "node --test tests/payments.test.mjs",
         "start": "next start",
         "lint": "next lint"
     },
@@ -47,6 +48,7 @@
         "@types/node": "^20",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
+        "@types/lodash": "^4.17.15",
         "dotenv": "^17.3.1",
         "eslint": "^9",
         "eslint-config-next": "^15.1.0",
