@@ -3,7 +3,7 @@ import { ArrowUpRight, Radar, ChartNoAxesCombined, Layers, Check } from 'lucide-
 import { TIER_PRICES_SOL } from '@/lib/constants';
 
 export default function LandingPage() {
-    return <main className="vortex-home">
+    return <main id="main-content" className="vortex-home">
         <section className="vortex-home-hero">
             <div className="vortex-hero-copy">
                 <span className="vortex-eyebrow"><span className="vortex-status-dot" /> THE SOLANA MARKET TERMINAL</span>

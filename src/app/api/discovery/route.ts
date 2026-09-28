@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
         const data = tokens.map(token => { const profile = profiles.get(token.address); return { ...token, tier: profile?.tier || 'Basic', logoURI: profile?.iconURI || token.logoURI }; });
         if (type === 'gainers') data.sort((a, b) => (b.priceChange24h ?? -Infinity) - (a.priceChange24h ?? -Infinity));
         else if (type === 'losers') data.sort((a, b) => (a.priceChange24h ?? Infinity) - (b.priceChange24h ?? Infinity));
-        else if (type === 'trending') data.sort((a, b) => Number(b.tier === 'Elite') - Number(a.tier === 'Elite'));
+        // Paid placement is shown separately from the organic discovery order.
         return NextResponse.json(data);
     } catch (error) {
         console.error('DISCOVERY_UNAVAILABLE', error);

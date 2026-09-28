@@ -1,38 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const JUPITER_API_KEY = process.env.NEXT_PUBLIC_JUPITER_API_KEY || '';
-
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-
-        if (!body.quoteResponse || !body.userPublicKey) {
-            return NextResponse.json({ error: 'Missing required swap parameters' }, { status: 400 });
+        if (!body.quoteResponse || typeof body.userPublicKey !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(body.userPublicKey)) {
+            return NextResponse.json({ error: 'Missing required swap parameters.' }, { status: 400 });
         }
-
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-        };
-
-        if (JUPITER_API_KEY) {
-            headers['x-api-key'] = JUPITER_API_KEY;
-        }
-
-        const response = await fetch('https://quote-api.jup.ag/v6/swap', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
+        const key = process.env.JUPITER_API_KEY || process.env.NEXT_PUBLIC_JUPITER_API_KEY;
+        const response = await fetch('https://api.jup.ag/swap/v1/swap', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', ...(key ? { 'x-api-key': key } : {}) },
+            body: JSON.stringify(body), signal: AbortSignal.timeout(15000), cache: 'no-store',
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`JUPITER_SWAP_HTTP_${response.status} - ${errorText}`);
-        }
-
-        const data = await response.json();
-        return NextResponse.json(data);
-    } catch (error: any) {
-        console.error('JUP_SWAP_PROXY_ERROR:', error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        if (!response.ok) return NextResponse.json({ error: 'Could not prepare the swap. Refresh the quote and retry.' }, { status: 503 });
+        return NextResponse.json(await response.json());
+    } catch {
+        return NextResponse.json({ error: 'Could not prepare the swap. Try again shortly.' }, { status: 503 });
     }
 }

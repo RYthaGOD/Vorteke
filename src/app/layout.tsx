@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './revamp.css';
 import './utilities.css';
+import './pulse.css';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SolanaProvider } from '@/components/SolanaProvider';
 import { Providers } from './providers';

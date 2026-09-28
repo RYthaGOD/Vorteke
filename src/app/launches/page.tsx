@@ -37,7 +37,7 @@ export default function NewLaunchesPage() {
     );
 
     return (
-        <main className="app-container">
+        <main id="main-content" className="app-container">
 
             <div className="vortex-container-centered vortex-mt-6 animate-stagger">
                 {/* Hero / Filter Section */}

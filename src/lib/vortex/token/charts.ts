@@ -1,3 +1,4 @@
+import { normalizeCandles } from '../normalize-candles.mjs';
 import { aetherClient } from '../aetherClient';
 
 export interface ChartTick {
@@ -64,9 +65,9 @@ export const getInitialChartData = async (
         const time_to = Math.floor(Date.now() / 1000);
         const birdeyeRes = await fetch(`/api/proxy/birdeye?address=${address}&type=${birdeyeType}&time_from=${time_to - (5000 * intervalSeconds)}&time_to=${time_to}`, {
             signal: AbortSignal.timeout(10000)
-        });
+        }).catch(() => null);
 
-        if (birdeyeRes.ok) {
+        if (birdeyeRes?.ok) {
             const json = await birdeyeRes.json();
             const items = json?.data?.items || [];
             if (items.length > 5) {
@@ -129,25 +130,7 @@ export const getInitialChartData = async (
 /**
  * Normalizes diverse provider formats into the Vortex ChartTick standard.
  */
-const normalizeAndHarden = (items: any[], currentPrice: number): ChartTick[] => {
-    const fetchedTicks: ChartTick[] = items.map((item: any) => ({
-        time: item.unixTime || item.unix_time,
-        open: parseFloat((item.o || item.open || currentPrice).toFixed(10)),
-        high: parseFloat((item.h || item.high || currentPrice).toFixed(10)),
-        low: parseFloat((item.l || item.low || currentPrice).toFixed(10)),
-        close: parseFloat((item.c || item.close || currentPrice).toFixed(10)),
-        volume: parseFloat(item.v || item.volume || 0)
-    })).filter((t: ChartTick) => t.time > 0).sort((a: any, b: any) => a.time - b.time);
-
-    if (fetchedTicks.length > 0 && currentPrice > 0) {
-        const last = fetchedTicks[fetchedTicks.length - 1];
-        last.close = currentPrice;
-        if (currentPrice > last.high) last.high = currentPrice;
-        if (currentPrice < last.low) last.low = currentPrice;
-    }
-
-    return fetchedTicks;
-};
+const normalizeAndHarden = (items: any[], _currentPrice: number): ChartTick[] => normalizeCandles(items);
 
 /**
  * DEPRECATED: Use subscribeToLiveStream for unified price/transaction feed.

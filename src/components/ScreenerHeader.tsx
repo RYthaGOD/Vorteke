@@ -1,160 +1,23 @@
 'use client';
-import React from 'react';
-import { Camera, RefreshCcw, Zap, ShieldCheck } from 'lucide-react';
-import { TokenInfo, formatCurrency } from '@/lib/dataService';
+import { Camera, RefreshCcw, ArrowUpRight, ExternalLink } from 'lucide-react';
+import { TokenInfo, formatCurrency, formatCompact, formatPercent } from '@/lib/dataService';
+import { TokenAvatar } from './TokenAvatar';
 
 interface ScreenerHeaderProps {
     token: TokenInfo;
-    telemetry: {
-        rpcHealth: 'OPTIMAL' | 'DEGRADED' | 'DARK';
-        provider: string;
-        latency: number;
-        tier?: 'ELITE' | 'BASIC'; // Real Tier Indicator
-    };
     refreshLoading: boolean;
     isCapturing: boolean;
     onRefresh: () => void;
     onCapture: () => void;
     onEnhance: () => void;
-    isElite?: boolean;
 }
-
-export const ScreenerHeader = React.memo(({
-    token,
-    telemetry,
-    refreshLoading,
-    isCapturing,
-    onRefresh,
-    onCapture,
-    onEnhance,
-    isElite
-}: ScreenerHeaderProps) => {
-    return (
-        <div className="vortex-screener-header-container">
-            <div className="vortex-flex-between vortex-w-full vortex-gap-4 flex-wrap">
-                <div className="vortex-flex-start vortex-gap-6 flex-wrap">
-                    <div className="vortex-flex-start vortex-gap-4">
-                        {token.logoURI ? (
-                            <img src={token.logoURI} alt={token.name} className="vortex-logo-md vortex-border-radius-full" />
-                        ) : (
-                            <div className="vortex-logo-icon vortex-logo-md"></div>
-                        )}
-                        <div className="vortex-flex-column">
-                            <div className="vortex-flex-start vortex-gap-2 flex-wrap">
-                                <h1 className="vortex-card-title vortex-text-lg vortex-m-0">{token.name}</h1>
-                                <span className="vortex-tagline">{token.symbol}</span>
-                                {token.tier === 'Elite' && (
-                                    <span className="badge-vortex badge-pro vortex-flex-start vortex-gap-1">
-                                        <Zap size={10} className="text-vortex-cyan" aria-hidden="true" /> ELITE
-                                    </span>
-                                )}
-                                {token.tier === 'Enhanced' && (
-                                    <span className="badge-vortex badge-verified vortex-flex-start vortex-gap-1">
-                                        <ShieldCheck size={10} className="text-vortex-cyan" aria-hidden="true" /> VERIFIED
-                                    </span>
-                                )}
-                            </div>
-                            <div className="vortex-flex-start vortex-gap-3 vortex-mt-1">
-                                <span className="vortex-text-lg vortex-text-bold vortex-font-mono text-vortex-yellow">{formatCurrency(token.priceUsd)}</span>
-                                <span className={`vortex-text-tiny vortex-font-mono vortex-text-bold ${(token.priceChange24h ?? 0) > 0 ? 'text-vortex-yellow' :
-                                    (token.priceChange24h ?? 0) < 0 ? 'text-vortex-red' : 'text-vortex-muted'
-                                    }`}>
-                                    {(token.priceChange24h ?? 0) > 0 ? '+' : ''}{(token.priceChange24h ?? 0).toFixed(2)}%
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="vortex-flex-start vortex-gap-3 vortex-border-left-tactical vortex-pl-4 vortex-no-capture flex-wrap">
-                        <div className="vortex-flex-column vortex-mr-4">
-                            <span className="vortex-label vortex-text-tiny vortex-m-0">Your access</span>
-                            <span className={`vortex-text-xs vortex-text-bold ${telemetry.tier === 'ELITE' ? 'text-vortex-yellow' : 'text-vortex-muted'}`}>
-                                {telemetry.tier || 'BASIC'}
-                            </span>
-                        </div>
-                        <div className="vortex-flex-column">
-                            <span className="vortex-label vortex-text-tiny vortex-m-0">Load time</span>
-                            <span className="vortex-text-xs vortex-text-mono text-vortex-cyan">{telemetry.latency < 1000 ? telemetry.latency + ' ms' : (telemetry.latency / 1000).toFixed(1) + ' s'}</span>
-                        </div>
-                        <div className="vortex-flex-column">
-                            <span className="vortex-label vortex-text-tiny vortex-m-0">Data feed</span>
-                            <span className={`vortex-text-xs vortex-text-mono ${
-                                telemetry.rpcHealth === 'OPTIMAL' ? 'text-vortex-yellow' : 
-                                telemetry.rpcHealth === 'DEGRADED' ? 'text-vortex-cyan' : 'text-vortex-red'
-                            }`}>
-                                {telemetry.rpcHealth === 'OPTIMAL' ? 'Fast' : telemetry.rpcHealth === 'DEGRADED' ? 'Slow' : 'Very slow'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="vortex-flex-start vortex-gap-3 vortex-no-capture flex-wrap">
-                    <div className="vortex-flex-start vortex-gap-2">
-                        <button
-                            type="button"
-                            className="btn-vortex btn-vortex-sm btn-vortex-icon-only"
-                            onClick={onRefresh}
-                            disabled={refreshLoading}
-                            title="Refresh data"
-                            aria-label="Refresh data"
-                            aria-busy={refreshLoading}
-                        >
-                            <RefreshCcw size={14} className={refreshLoading ? 'animate-spin' : ''} aria-hidden="true" />
-                        </button>
-                        <button
-                            type="button"
-                            className={`btn-vortex btn-vortex-sm ${isCapturing ? 'vortex-bg-purple animate-pulse' : 'btn-vortex-outline-purple'}`}
-                            onClick={onCapture}
-                            title="Save a snapshot image of this page"
-                            aria-busy={isCapturing}
-                        >
-                            <Camera size={14} className="vortex-mr-2" aria-hidden="true" />
-                            {isCapturing ? 'Capturing…' : 'Snapshot'}
-                        </button>
-                        {token.tier !== 'Elite' && (
-                            <button
-                                type="button"
-                                className={`btn-vortex btn-vortex-sm ${token.tier === 'Enhanced' ? 'btn-vortex-primary vortex-bg-purple' : 'btn-vortex-primary'}`}
-                                onClick={onEnhance}
-                            >
-                                <Zap size={14} className={`vortex-mr-2 ${token.tier === 'Enhanced' ? 'text-vortex-white' : ''}`} aria-hidden="true" />
-                                {token.tier === 'Enhanced' ? 'Upgrade to Elite' : 'Upgrade profile'}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <style jsx>{`
-                .vortex-screener-header-container {
-                    width: 100%;
-                    padding: 4px 0;
-                }
-                .flex-wrap {
-                    flex-wrap: wrap;
-                }
-                .vortex-border-left-tactical {
-                    border-left: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                @media (max-width: 768px) {
-                    .vortex-border-left-tactical {
-                        border-left: none;
-                        border-top: 1px solid rgba(255, 255, 255, 0.1);
-                        padding-left: 0;
-                        padding-top: 12px;
-                        width: 100%;
-                        gap: 16px;
-                    }
-                    .vortex-flex-between {
-                        flex-direction: column;
-                        align-items: flex-start;
-                        gap: 16px;
-                    }
-                }
-            `}</style>
+export function ScreenerHeader({ token, refreshLoading, isCapturing, onRefresh, onCapture, onEnhance }: ScreenerHeaderProps) {
+    return <div className="vortex-screener-header-container">
+        <div className="vortex-screener-top">
+            <div className="vortex-token-identity"><TokenAvatar symbol={token.symbol} src={token.logoURI} /><div><h1>{token.symbol} <span className="vortex-pair-quote">/ USD</span></h1><p>{token.name} · Solana{token.tier && token.tier !== 'Basic' ? ' · ' + token.tier + ' paid profile' : ''}</p></div></div>
+            <div className="vortex-token-actions vortex-no-capture"><button className="vortex-icon-btn" onClick={onRefresh} disabled={refreshLoading} aria-label="Refresh token data"><RefreshCcw size={16} className={refreshLoading ? 'vortex-refreshing' : ''} aria-hidden /></button><button className="btn-vortex btn-vortex-secondary" onClick={onCapture} disabled={isCapturing} aria-busy={isCapturing}><Camera size={16} aria-hidden />{isCapturing ? 'Saving…' : 'Snapshot'}</button><button className="btn-vortex btn-vortex-secondary" onClick={onEnhance}>Project profile <ArrowUpRight size={16} aria-hidden /></button></div>
         </div>
-
-    );
-});
-
-ScreenerHeader.displayName = 'ScreenerHeader';
+        <div className="vortex-token-price-row"><span className="vortex-token-price">{token.priceUsd > 0 ? formatCurrency(token.priceUsd) : 'Price unavailable'}</span><span className={token.priceChange24h >= 0 ? 'vortex-positive' : 'vortex-negative'}>{token.priceChange24h == null ? '—' : formatPercent(token.priceChange24h)}<small>24h</small></span><a className="vortex-mint-link" href={'https://solscan.io/token/' + token.address} target="_blank" rel="noreferrer" title={token.address}>{token.address.slice(0, 5)}…{token.address.slice(-5)}<ExternalLink size={12} aria-hidden /><span className="vortex-sr-only">View token on Solscan</span></a></div>
+        <div className="vortex-token-stats">{[['Market cap', token.mcap > 0 ? '$' + formatCompact(token.mcap) : 'Unverified'], ['Liquidity', '$' + formatCompact(token.liquidityUsd)], ['24h volume', '$' + formatCompact(token.volume24h)], ['Fully diluted value', token.fdv > 0 ? '$' + formatCompact(token.fdv) : '—']].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+    </div>;
+}

@@ -1,18 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import { Connection, LAMPORTS_PER_SOL, PublicKey, VersionedTransaction, TransactionMessage, AddressLookupTableAccount, SystemProgram } from '@solana/web3.js';
+import { useState, useEffect } from 'react';
+import { LAMPORTS_PER_SOL, PublicKey, VersionedTransaction, AddressLookupTableAccount } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { TokenInfo, throttledFetch } from '@/lib/dataService';
+import { TokenInfo } from '@/lib/dataService';
 import { SOL_MINT, TREASURY_SWAPS, PROTOCOL_FLAT_FEE_LAMPORTS, JITO_TIP_ACCOUNTS, JITO_DEFAULT_TIP_LAMPORTS } from '@/lib/constants';
+import bs58 from 'bs58';
+import { prepareSwapTransaction } from '@/lib/solana/swapTransaction.mjs';
 import { captureException } from '@/lib/logger';
 
-interface DflowQuote {
-    inputMint: string;
-    outputMint: string;
-    inputAmount: string;
-    outputAmount: string;
-    priceImpact: string;
-    route: any;
-}
+interface SwapQuote { outAmount: number; priceImpact: number; feeBps: number; raw: Record<string, unknown>; }
 
 /**
  * Hook for managing SOL and Token balances.
@@ -64,75 +59,48 @@ export function useSwapBalances(token: TokenInfo) {
 /**
  * Hook for Jupiter V6 Quote resolution.
  */
-export function useSwapQuote(
-    token: TokenInfo,
-    amount: string,
-    slippage: string,
-    swapMode: 'BUY' | 'SELL'
-) {
-    const [quote, setQuote] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-
+export function useSwapQuote(token: TokenInfo, amount: string, slippage: string, swapMode: 'BUY' | 'SELL') {
     const inputMint = swapMode === 'BUY' ? SOL_MINT : token.address;
     const outputMint = swapMode === 'BUY' ? token.address : SOL_MINT;
     const inputDecimals = swapMode === 'BUY' ? 9 : token.decimals;
     const outputDecimals = swapMode === 'BUY' ? token.decimals : 9;
-
+    const key = [inputMint, outputMint, amount, slippage, inputDecimals, outputDecimals].join(':');
+    const [result, setResult] = useState<{ key: string; quote: SwapQuote | null; error: string | null } | null>(null);
+    const [pendingKey, setPendingKey] = useState<string | null>(null);
     useEffect(() => {
-        if (!amount || isNaN(parseFloat(amount))) {
-            setQuote(null);
+        const controller = new AbortController();
+        const value = Number(amount);
+        const inputAmount = Math.floor(value * 10 ** inputDecimals);
+        const slippageBps = slippage === 'Auto' ? 100 : Math.round(Number(slippage) * 100);
+        if (!amount || !Number.isFinite(value) || value <= 0 || !Number.isSafeInteger(inputAmount) || inputAmount <= 0 || !slippage.trim() || !Number.isFinite(slippageBps) || slippageBps < 0 || slippageBps > 5000 || inputMint === outputMint) {
+            setPendingKey(null);
+            setResult({ key, quote: null, error: amount && value > 0 ? 'Check the amount and slippage. Choose a different token to swap SOL.' : null });
             return;
         }
-
-        const abortController = new AbortController();
-
+        setPendingKey(key);
+        // Background refreshes keep the last quote on screen; only a new key clears it.
         const fetchQuote = async () => {
-            setLoading(true);
+            setPendingKey(key);
             try {
-                const inputAmount = Math.floor(parseFloat(amount) * Math.pow(10, inputDecimals));
-                const slippageBps = slippage === 'Auto' ? 100 : parseFloat(slippage) * 100;
-
-                const query = new URLSearchParams({
-                    inputMint,
-                    outputMint,
-                    amount: inputAmount.toString(),
-                    slippageBps: slippageBps.toString()
-                });
-
-                const quoteResponse = await fetch(`/api/proxy/jup-quote?${query.toString()}`, {
-                    signal: abortController.signal
-                });
-
-                if (!quoteResponse.ok) throw new Error('JUPITER_OFFLINE');
-                const data = await quoteResponse.json();
-
-                if (data.outAmount) {
-                    const jupQuote = {
-                        outAmount: parseFloat(data.outAmount) / Math.pow(10, outputDecimals),
-                        priceImpact: parseFloat(data.priceImpactPct) || 0,
-                        feeBps: 10,
-                        raw: data
-                    };
-
-                    if (!abortController.signal.aborted) {
-                        setQuote(jupQuote);
-                    }
-                }
-            } catch (e: any) {
-                if (e.name !== 'AbortError') console.error("QUOTE_ERROR:", e);
+                const query = new URLSearchParams({ inputMint, outputMint, amount: String(inputAmount), slippageBps: String(slippageBps) });
+                const response = await fetch('/api/proxy/jup-quote?' + query, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
+                if (!response.ok) throw new Error('Quote unavailable');
+                const data = await response.json();
+                const output = Number(data.outAmount) / 10 ** outputDecimals;
+                if (!Number.isFinite(output) || output <= 0) throw new Error('No route available');
+                if (!controller.signal.aborted) setResult({ key, error: null, quote: { outAmount: output, priceImpact: Number(data.priceImpactPct) || 0, feeBps: 10, raw: data } });
+            } catch {
+                if (!controller.signal.aborted) setResult({ key, quote: null, error: 'No quote available. Check the amount or try again shortly.' });
             } finally {
-                if (!abortController.signal.aborted) setLoading(false);
+                if (!controller.signal.aborted) setPendingKey(null);
             }
         };
-
-        const timer = setTimeout(fetchQuote, 150);
-        return () => {
-            clearTimeout(timer);
-            abortController.abort();
-        };
-    }, [amount, token.address, slippage, swapMode, inputMint, outputMint, inputDecimals, outputDecimals]);
-
-    return { quote, loading };
+        const timer = setTimeout(fetchQuote, 250);
+        const refresh = setInterval(fetchQuote, 15000);
+        return () => { clearTimeout(timer); clearInterval(refresh); controller.abort(); };
+    }, [key, amount, slippage, inputMint, outputMint, inputDecimals, outputDecimals]);
+    const current = result?.key === key ? result : null;
+    return { quote: current?.quote ?? null, error: current?.error ?? null, loading: pendingKey === key && !current };
 }
 
 /**
@@ -151,7 +119,7 @@ export function useSwapExecution(
     const executeSwap = async (
         amount: string,
         swapMode: 'BUY' | 'SELL',
-        quote: any,
+        quote: SwapQuote | null,
         slippage: string,
         priorityLevel: 'Normal' | 'Turbo'
     ) => {
@@ -181,10 +149,11 @@ export function useSwapExecution(
                 body: JSON.stringify(swapConfig)
             });
 
-            const { swapTransaction } = await swapRes.json();
+            if (!swapRes.ok) throw new Error('Could not prepare the swap. Refresh the quote and retry.');
+            const { swapTransaction, lastValidBlockHeight } = await swapRes.json();
             if (!swapTransaction) throw new Error("ROUTE_UNAVAILABLE");
 
-            const transaction = VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
+            let transaction = VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
 
             setExecStatus('PREPARING_TRANSACTION_STATE...');
             const altPks = transaction.message.addressTableLookups.map(a => a.accountKey);
@@ -197,30 +166,11 @@ export function useSwapExecution(
                 });
             }).filter((a): a is AddressLookupTableAccount => a !== null);
 
-            const message = TransactionMessage.decompile(transaction.message, { addressLookupTableAccounts });
-
-            if (!isElite) {
-                message.instructions.unshift(
-                    SystemProgram.transfer({
-                        fromPubkey: publicKey,
-                        toPubkey: new PublicKey(TREASURY_SWAPS),
-                        lamports: PROTOCOL_FLAT_FEE_LAMPORTS,
-                    })
-                );
-            }
-
-            if (priorityLevel === 'Turbo') {
-                const jitoTipAccount = JITO_TIP_ACCOUNTS[Math.floor(Math.random() * JITO_TIP_ACCOUNTS.length)];
-                message.instructions.push(
-                    SystemProgram.transfer({
-                        fromPubkey: publicKey,
-                        toPubkey: new PublicKey(jitoTipAccount),
-                        lamports: JITO_DEFAULT_TIP_LAMPORTS,
-                    })
-                );
-            }
-
-            transaction.message = message.compileToV0Message(addressLookupTableAccounts);
+            transaction = prepareSwapTransaction(transaction, publicKey, addressLookupTableAccounts, {
+                treasury: TREASURY_SWAPS,
+                feeLamports: isElite ? 0 : PROTOCOL_FLAT_FEE_LAMPORTS,
+                tip: priorityLevel === 'Turbo' ? { address: JITO_TIP_ACCOUNTS[Math.floor(Math.random() * JITO_TIP_ACCOUNTS.length)], lamports: JITO_DEFAULT_TIP_LAMPORTS } : undefined,
+            });
 
             setExecStatus('SIMULATING...');
             const simulation = await connection.simulateTransaction(transaction);
@@ -243,9 +193,9 @@ export function useSwapExecution(
                     if (!jitoRes.ok) throw new Error("JITO_BUNDLE_REJECTED");
                     const jitoData = await jitoRes.json();
 
-                    // Jito returns the signature string as 'result'
-                    sig = jitoData.result;
-                    if (!sig) throw new Error("JITO_SUBMISSION_FAILED");
+                    if (jitoData.error || !jitoData.result) throw new Error('JITO_SUBMISSION_FAILED');
+                    // sendBundle returns a bundle ID, not a transaction signature.
+                    sig = bs58.encode(signed.signatures[0]);
                 } catch (jitoErr: any) {
                     console.error("JITO_FAIL_FALLBACK", jitoErr);
                     // Fallback to standard transmission if Jito fails, so user doesn't lose the trade
@@ -257,7 +207,10 @@ export function useSwapExecution(
             }
 
             setExecStatus('CONFIRMING...');
-            await connection.confirmTransaction(sig, 'confirmed');
+            const confirmation = Number.isInteger(lastValidBlockHeight)
+                ? await connection.confirmTransaction({ signature: sig, blockhash: signed.message.recentBlockhash, lastValidBlockHeight }, 'confirmed')
+                : await connection.confirmTransaction(sig, 'confirmed');
+            if (confirmation.value.err) throw new Error('The transaction was confirmed with an error. No swap completed.');
 
             notify('success', `ORDER_EXECUTED: [${sig.slice(0, 8)}...]`);
             return true;

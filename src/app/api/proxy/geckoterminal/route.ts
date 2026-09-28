@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'No active pools found' }, { status: 404 });
         }
 
-        let geckoUrl = `https://api.geckoterminal.com/api/v2/networks/solana/pools/${poolAddress}/ohlcv/${type}?aggregate=${aggregate}&limit=${limit}`;
+        let geckoUrl = `https://api.geckoterminal.com/api/v2/networks/solana/pools/${poolAddress}/ohlcv/${type}?aggregate=${aggregate}&limit=${limit}&token=${encodeURIComponent(address)}`;
         if (beforeTimestamp) {
             geckoUrl += `&before_timestamp=${beforeTimestamp}`;
         }

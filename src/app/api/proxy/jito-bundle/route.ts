@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
                 jsonrpc: "2.0",
                 id: 1,
                 method: "sendBundle",
-                params: [[signedTransaction]]
+                // The client sends base64; sendBundle assumes base58 unless told otherwise.
+                params: [[signedTransaction], { encoding: 'base64' }]
             }),
         });
 

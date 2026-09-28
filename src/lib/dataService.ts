@@ -195,7 +195,7 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
                 }
             }),
             fetchHeliusMetadata(address) as Promise<any>,
-            throttledFetch(`https://api.jup.ag/price/v2?ids=${address}`).catch(() => null), // V2 Migration
+            throttledFetch(`/api/proxy/jup-price?ids=${address}`).catch(() => null), // V2 Migration
             getHolderConcentration(address).catch(() => ({ clusterDetected: false, clusterSize: 0, riskLevel: 'LOW' as const, top10Percent: 0 })),
             detectBundle(address).catch(() => ({ isBundled: false, percentage: 0, riskLevel: 'LOW' as const })),
             verifyLPBurn(address).catch(() => 'unverified' as const),
@@ -262,7 +262,7 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
         const heliusPrice = parseFloat(helius?.priceUsd || '0');
         const geckoPrice = parseFloat(geckoData?.data?.attributes?.price_usd || '0');
         const currentPrice = jupPrice || geckoPrice || heliusPrice || 0;
-        const mcap = supply > 0 ? (currentPrice * supply) : parseFloat(geckoData?.data?.attributes?.fdv_usd || '0');
+        const mcap = parseFloat(geckoData?.data?.attributes?.market_cap_usd || '0');
 
         // 4. Volume Velocity & Social Proxy (Approximated via Aether / Jupiter defaults)
         const v5m = jupVal?.volume24h ? jupVal.volume24h / 288 : 0; // rough heuristic if available
@@ -295,7 +295,7 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
             bannerURI: enh?.bannerURI,
             iconURI: enh?.iconURI,
             priceUsd: currentPrice,
-            priceChange24h: 0, // Fallback, would be injected by Aether historicals if needed
+            priceChange24h: Number.isFinite(jupVal?.priceChange24h) ? jupVal.priceChange24h : null,
             volume24h: jupVal?.volume24h || parseFloat(geckoData?.data?.attributes?.volume_usd?.h24 || '0'),
             liquidityUsd: parseFloat(geckoData?.data?.attributes?.total_reserve_in_usd || '0'), 
             fdv: (currentPrice * supply) || parseFloat(geckoData?.data?.attributes?.fdv_usd || '0'),
@@ -444,7 +444,7 @@ export const subscribeToServerStream = (address?: string, isDiscovery?: boolean,
     eventSource.addEventListener('tx', (e: any) => {
         try {
             const data = JSON.parse(e.data);
-            if (onUpdate) onUpdate({ type: 'tx', ...data });
+            if (onUpdate) onUpdate({ ...data, kind: 'tx' });
         } catch {}
     });
 

@@ -1,12 +1,11 @@
 'use client';
+import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
-import { TokenInfo, formatPercent } from '@/lib/dataService';
-import { ArrowDown, Zap, ShieldCheck, Settings2, ShieldAlert } from 'lucide-react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { LAMPORTS_PER_SOL, PublicKey, VersionedTransaction, TransactionMessage, AddressLookupTableAccount, SystemProgram } from '@solana/web3.js';
-import { JUPITER_QUOTE_API, SOL_MINT, TREASURY_SWAPS, PROTOCOL_FLAT_FEE_SOL, PROTOCOL_FLAT_FEE_LAMPORTS } from '@/lib/constants';
-import { captureException } from '@/lib/logger';
-import { verifyEliteAccess } from '@/lib/monetizationService';
+import { TokenInfo } from '@/lib/dataService';
+import { ArrowDown, Zap, Settings2, ShieldAlert } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { PROTOCOL_FLAT_FEE_SOL, SOL_MINT, JITO_DEFAULT_TIP_LAMPORTS } from '@/lib/constants';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 
 interface SwapPanelProps {
@@ -14,11 +13,6 @@ interface SwapPanelProps {
     notify: (type: 'success' | 'error' | 'info', msg: string) => void;
 }
 
-interface QuoteInfo {
-    outAmount: number;
-    priceImpact: number;
-    feeBps: number;
-}
 
 import { useVortexAuth } from '@/hooks/useVortexAuth';
 import { useSwapBalances, useSwapQuote, useSwapExecution } from '@/hooks/useSwap';
@@ -33,13 +27,16 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
 
     const { isElite } = useVortexAuth();
     const { balance, tokenBalance } = useSwapBalances(token);
-    const { quote, loading } = useSwapQuote(token, amount, slippage, swapMode);
+    const { quote, loading, error: quoteError } = useSwapQuote(token, amount, slippage, swapMode);
     // FIX: Pass isElite from useVortexAuth instead of letting useSwapExecution re-fetch it
     const { executeSwap, executing, execStatus } = useSwapExecution(token, notify, isElite);
 
     const { connected } = useWallet();
 
+    useEffect(() => { highImpactConfirmed.current = false; setShowHighImpactWarning(false); }, [amount, slippage, swapMode, token.address, quote]);
+
     const handleExecute = async () => {
+        if (!quote || loading || executing) return;
         if (!connected) {
             notify('error', 'AUTHORIZATION_REQUIRED: Connect wallet to execute order.');
             // Add subtle haptic/visual feedback if needed, but notify is core
@@ -59,9 +56,14 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
     };
 
 
+    if (token.address === SOL_MINT) return <VortexPanel title="Trade with SOL" subTitle="Your base currency" glowColor="cyan">
+        <p className="vortex-disclosure">Open a token to buy or sell it with SOL, or open the USDC market to swap between SOL and USDC.</p>
+        <div className="vortex-flex-column vortex-gap-3 vortex-mt-4"><Link className="btn-vortex btn-vortex-primary" href="/token/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">Swap SOL / USDC</Link><Link className="btn-vortex btn-vortex-secondary" href="/terminal">Explore token markets</Link></div>
+    </VortexPanel>;
+
     return (
         <VortexPanel
-            title="EXECUTE_ORDER"
+            title="Swap"
             subTitle={`SOL <> ${token.symbol}`}
             glowColor="cyan"
             className="vortex-relative"
@@ -70,12 +72,14 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                 <div className="vortex-flex-start vortex-gap-2">
                     <button
                         className={`vortex-tab ${swapMode === 'BUY' ? 'active' : ''}`}
+                        aria-pressed={swapMode === 'BUY'}
                         onClick={() => { setSwapMode('BUY'); setAmount(''); }}
                     >
                         BUY
                     </button>
                     <button
                         className={`vortex-tab ${swapMode === 'SELL' ? 'active' : ''}`}
+                        aria-pressed={swapMode === 'SELL'}
                         onClick={() => { setSwapMode('SELL'); setAmount(''); }}
                     >
                         SELL
@@ -89,6 +93,7 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                     <button
                         className="vortex-icon-btn vortex-p-1"
                         title="Execution Settings"
+                        aria-label="Execution settings"
                         onClick={() => notify('info', 'SETTINGS_PANEL_LOCKED: Acquire the Vortex Elite NFT to unlock.')}
                     >
                         <Settings2 size={16} className="text-vortex-gray" />
@@ -163,9 +168,12 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                     <div className="vortex-flex-between">
                         <input
                             type="text"
+                            inputMode="decimal"
+                            aria-label="Amount to swap"
+                            autoComplete="off"
                             placeholder="0.00"
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            onChange={(e) => { if (/^\d*\.?\d*$/.test(e.target.value)) setAmount(e.target.value); }}
                             className="vortex-input-field"
                         />
                         <div className="vortex-flex-start vortex-gap-2">
@@ -196,6 +204,7 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                 </div>
             </div>
 
+            {quoteError && <p className="vortex-quote-error" role="alert">{quoteError}</p>}
             {/* High Impact Warning */}
             {showHighImpactWarning && (
                 <div className="vortex-mt-4 vortex-p-4 vortex-bg-red vortex-bg-opacity-10 vortex-border vortex-border-vortex-red vortex-border-radius-md">
@@ -213,19 +222,14 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                 </div>
             )}
 
-            <VortexButton
-                isLoading={executing}
+            {!connected ? <div className="vortex-swap-connect"><WalletMultiButton /></div> : <button
+                type="button"
+                className="btn-vortex btn-vortex-primary vortex-full-width vortex-mt-6"
+                disabled={executing || loading || !quote || !Number.isFinite(Number(amount)) || Number(amount) <= 0}
+                aria-busy={executing}
                 onClick={handleExecute}
-                className="vortex-full-width vortex-mt-6 vortex-h-12 vortex-text-bold"
-                icon={<Zap size={18} fill="currentColor" />}
-            >
-                {executing ? execStatus : `EXECUTE ORDER (${PROTOCOL_FLAT_FEE_SOL} SOL VORTEX FEE)`}
-            </VortexButton>
-
-            <div className="vortex-flex-center vortex-mt-4 vortex-gap-2 vortex-text-muted vortex-text-xs">
-                <ShieldCheck size={12} />
-                MEV PROTECTED TERMINAL
-            </div>
+            >{executing ? execStatus : loading ? 'Getting quote…' : !quote ? 'Enter an amount' : swapMode === 'BUY' ? 'Buy ' + token.symbol : 'Sell ' + token.symbol}</button>}
+            <p className="vortex-disclosure">VORTEX fee: {isElite ? 0 : PROTOCOL_FLAT_FEE_SOL} SOL per swap{isElite ? " (Elite waiver)" : ""}. Network fees are additional.{priorityLevel === "Turbo" && " Turbo adds a " + (JITO_DEFAULT_TIP_LAMPORTS / 1e9) + " SOL tip and higher network priority fees."}</p>
         </VortexPanel>
     );
 }

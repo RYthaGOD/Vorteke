@@ -39,7 +39,7 @@ class AetherClient {
             const response = await axios.post(AETHER_API_URL, {
                 query,
                 variables
-            });
+            }, { timeout: 8000 });
             return response.data;
         } catch (error) {
             console.error('AETHER_QUERY_FAILURE:', error);

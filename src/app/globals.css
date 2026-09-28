@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
 :root {
   /* SOLANA COCKPIT - Elite Semantic Tokens (Unified 2026 Edition) */
@@ -1019,8 +1019,8 @@ h3,
 }
 
 .vortex-chart-h {
-  height: 700px !important;
-  min-height: 700px;
+  height: 520px;
+  min-height: 400px;
   width: 100%;
   position: relative;
   overflow: hidden;
@@ -1029,7 +1029,7 @@ h3,
 
 @media (max-width: 768px) {
   .vortex-chart-h {
-    height: 400px !important;
+    height: 400px;
     min-height: 400px;
   }
 }

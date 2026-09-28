@@ -36,7 +36,7 @@ export default function ElitePage() {
 
     if (isVerified === null) {
         return (
-            <main className="vortex-main vortex-center">
+            <main id="main-content" className="vortex-main vortex-center">
                 <div className="vortex-flex-column vortex-center vortex-gap-6 animate-pulse">
                     <div className="vortex-logo-geometry size-xl text-vortex-cyan" />
                     <div className="vortex-text-tiny vortex-text-bold vortex-ls-wide vortex-uppercase text-vortex-cyan">
@@ -49,7 +49,7 @@ export default function ElitePage() {
 
     if (!isVerified) {
         return (
-            <main className="vortex-main vortex-center">
+            <main id="main-content" className="vortex-main vortex-center">
                 <div className="vortex-container-sm">
                     <VortexPanel
                         title="Elite intelligence"
@@ -179,7 +179,7 @@ export default function ElitePage() {
 
 
     return (
-        <main className="app-container">
+        <main id="main-content" className="app-container">
 
             <div className="vortex-container-centered vortex-mt-6 animate-stagger">
                 <EliteDashboard />
