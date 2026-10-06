@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PublicKey } from '@solana/web3.js';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request) {
@@ -9,23 +10,21 @@ export async function GET(req: Request) {
         if (!wallet) {
             return NextResponse.json({ error: 'MISSING_WALLET' }, { status: 400 });
         }
+        try { new PublicKey(wallet); } catch {
+            return NextResponse.json({ error: 'INVALID_SOLANA_ADDRESS' }, { status: 400 });
+        }
 
-        const access = await (prisma as any).testAccess.findUnique({
-            where: { wallet }
-        });
-
+        const access = await prisma.eliteAccess.findUnique({ where: { wallet } });
         if (!access) {
             return NextResponse.json({ isElite: false });
         }
-
-        const now = new Date();
-        if (access.expiresAt < now) {
-            return NextResponse.json({ isElite: false, reason: 'EXPIRED' });
+        if (access.expiresAt < new Date()) {
+            return NextResponse.json({ isElite: false, reason: 'EXPIRED', expiresAt: access.expiresAt.toISOString() });
         }
 
         return NextResponse.json({
             isElite: true,
-            tier: access.tier,
+            source: access.source,
             expiresAt: access.expiresAt.toISOString()
         });
     } catch (e: any) {

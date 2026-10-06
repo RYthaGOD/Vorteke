@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { X, Globe, MessageCircle, ExternalLink, Save, Loader2, ShieldCheck } from 'lucide-react';
+import { X, Save, Loader2, ShieldCheck } from 'lucide-react';
 import { TokenInfo } from '@/lib/dataService';
 import { updateProjectMetadata } from '@/lib/monetizationService';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -26,26 +26,26 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
 
     const handleSave = async () => {
         if (!publicKey || !signMessage) {
-            notify('error', 'WALLET_NOT_CONNECTED');
+            notify('error', 'Connect the wallet that claimed this profile.');
             return;
         }
 
         // FIX: Validate URIs to prevent XSS via javascript: or data: URI injection
         const isValidHttpsUrl = (url: string) => !url || url.startsWith('https://');
         if (!isValidHttpsUrl(bannerURI)) {
-            notify('error', 'INVALID_BANNER_URI: Must start with https://');
+            notify('error', 'The banner link must start with https://.');
             return;
         }
         if (!isValidHttpsUrl(iconURI)) {
-            notify('error', 'INVALID_ICON_URI: Must start with https://');
+            notify('error', 'The logo link must start with https://.');
             return;
         }
         if (!isValidHttpsUrl(website)) {
-            notify('error', 'INVALID_WEBSITE_URI: Must start with https://');
+            notify('error', 'The website link must start with https://.');
             return;
         }
         if (description.length > 500) {
-            notify('error', 'DESCRIPTION_TOO_LONG: Max 500 characters.');
+            notify('error', 'The description can be at most 500 characters.');
             return;
         }
 
@@ -73,14 +73,14 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
             );
 
             if (success) {
-                notify('success', 'METADATA_SYNCHRONIZED: Project intelligence updated.');
+                notify('success', 'Your profile is updated.');
                 onSuccess();
             } else {
-                notify('error', 'UPDATE_PROTOCOL_FAILURE: Authorization rejected or server error.');
+                notify('error', 'The update was not saved. Check that your profile is Enhanced and try again.');
             }
         } catch (e: any) {
             console.error("METADATA_UPDATE_ERROR:", e);
-            notify('error', `ERROR: ${e.message || 'TRANSMISSION_FAILED'}`);
+            notify('error', e.message || 'The update could not be sent. Try again.');
         } finally {
             setSubmitting(false);
         }
@@ -92,7 +92,7 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
                 <div className="vortex-flex-between vortex-mb-6">
                     <div className="vortex-flex-start vortex-gap-2">
                         <ShieldCheck size={20} className="text-vortex-cyan" />
-                        <h2 className="vortex-modal-title">Edit Project Intelligence</h2>
+                        <h2 className="vortex-modal-title">Edit project profile</h2>
                     </div>
                     <button onClick={onClose} className="vortex-icon-btn">
                         <X size={24} />
@@ -173,7 +173,7 @@ export function UpdateMetadataModal({ token, onClose, onSuccess, notify }: Updat
                         </button>
                         <button className="btn-vortex btn-vortex-primary" onClick={handleSave} disabled={submitting}>
                             {submitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} className="vortex-mr-2" />}
-                            SAVE_CHANGES
+                            Save changes
                         </button>
                     </div>
                 </div>

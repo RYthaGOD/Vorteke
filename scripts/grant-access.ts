@@ -1,9 +1,9 @@
 /**
- * Admin grant of Elite access to a wallet (Elite workspace, no swap fee, free DeepScans).
+ * Admin grant of Elite access to a wallet (5-second prices, no swap fee, linked-wallet research).
  *
  *   npx tsx scripts/grant-access.ts <wallet> [expires, default 2099-12-31]
  *
- * Writes a TestAccess row, the same record /api/auth/elite-check reads.
+ * Writes an EliteAccess row (source 'grant'), the same record paid Elite access uses.
  * Needs DATABASE_URL pointing at the target database.
  */
 import { PrismaClient } from '@prisma/client';
@@ -20,10 +20,10 @@ const expiresAt = new Date(`${expires}T00:00:00Z`);
 if (Number.isNaN(expiresAt.getTime())) throw new Error(`Invalid expiry date: ${expires}`);
 
 const prisma = new PrismaClient();
-const data = { tier: 'Elite', expiresAt };
+const data = { expiresAt, source: 'grant' };
 
-prisma.testAccess
+prisma.eliteAccess
     .upsert({ where: { wallet }, update: data, create: { wallet, ...data } })
-    .then((row) => console.log(`Granted ${row.tier} to ${row.wallet} until ${row.expiresAt.toISOString()}`))
+    .then((row) => console.log(`Granted Elite to ${row.wallet} until ${row.expiresAt.toISOString()}`))
     .catch((e) => { console.error(e); process.exitCode = 1; })
     .finally(() => prisma.$disconnect());

@@ -29,7 +29,7 @@ model Token {
 
 model Enhancement {
     address           String    @id
-    tier              String    @default("Basic")
+    tier              String    @default("Basic") // Basic | Enhanced
     owner             String?
     socials           String?
     customDescription String?
@@ -37,8 +37,10 @@ model Enhancement {
     iconURI           String?
     lastPaymentTx     String?   @unique
     lastPaymentTime   DateTime?
+    boostExpiresAt    DateTime? // Promoted placement runs until this time
 
     @@index([lastPaymentTx])
+    @@index([boostExpiresAt])
 }
 
 model Claim {
@@ -52,15 +54,17 @@ model Claim {
     @@unique([address, wallet])
 }
 
-model TestAccess {
+model EliteAccess {
     wallet    String   @id
-    tier      String   @default("Elite")
     expiresAt DateTime
+    source    String   @default("grant") // paid | grant | code
     createdAt DateTime @default(now())
+    updatedAt DateTime @default(now()) @updatedAt
 
     @@index([expiresAt])
 }
 
+// No longer written: DeepScan became a free scan in October 2026. Kept so past records survive.
 model DeepScanRecord {
     signature String   @id
     address   String
@@ -85,8 +89,9 @@ model PaymentIntent {
     id String @id @default(uuid())
     wallet String
     address String
-    tier String
+    tier String // product: Enhanced | Boost | EliteAccess
     lamports Int
+    usdCents Int? // price in USD cents the lamports were quoted from
     createdAt DateTime @default(now())
     expiresAt DateTime
     receipt PaymentReceipt?
@@ -97,4 +102,13 @@ model PaymentReceipt {
     intentId String @unique
     intent PaymentIntent @relation(fields: [intentId], references: [id])
     createdAt DateTime @default(now())
+}
+
+// Daily counts of the five project-funnel steps, written by /api/event. No user data.
+model FunnelEvent {
+    day   String // UTC date, YYYY-MM-DD
+    name  String
+    count Int    @default(0)
+
+    @@id([day, name])
 }

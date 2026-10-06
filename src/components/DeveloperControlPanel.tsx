@@ -1,81 +1,47 @@
 'use client';
 import React, { useState } from 'react';
-import { Settings, Globe, MessageCircle, ExternalLink, Info, Edit3, Check } from 'lucide-react';
+import { Check, Edit3, Zap } from 'lucide-react';
 import { TokenInfo } from '@/lib/dataService';
+import { VortexPanel } from './DesignSystem';
 import { UpdateMetadataModal } from './UpdateMetadataModal';
 
 interface DeveloperControlPanelProps {
     token: TokenInfo;
     onUpdate: () => void;
+    onUpgrade: () => void;
     notify: (type: 'success' | 'error' | 'info', msg: string) => void;
 }
 
-export function DeveloperControlPanel({ token, onUpdate, notify }: DeveloperControlPanelProps) {
+const ROWS: [string, (t: TokenInfo) => string | null | undefined][] = [
+    ['Website', t => t.socials?.website],
+    ['X', t => t.socials?.twitter],
+    ['Telegram', t => t.socials?.telegram],
+    ['Banner', t => t.bannerURI ? 'Set' : null],
+    ['Logo', t => t.iconURI ? 'Set' : null],
+    ['Description', t => t.customDescription ? 'Set' : null],
+];
+
+/** Shown only to the wallet that claimed this token. */
+export function DeveloperControlPanel({ token, onUpdate, onUpgrade, notify }: DeveloperControlPanelProps) {
     const [showUpdateModal, setShowUpdateModal] = useState(false);
+    const enhanced = token.tier === 'Enhanced';
+    const boostUntil = token.boosted && token.boostExpiresAt ? new Date(token.boostExpiresAt) : null;
 
     return (
-        <div className="vortex-panel vortex-border-cyan vortex-glow-cyan">
-            <div className="vortex-flex-between vortex-mb-6">
-                <div className="vortex-flex-start vortex-gap-2">
-                    <Settings size={16} className="text-vortex-cyan" />
-                    <h3 className="vortex-card-title vortex-text-lg">Developer Control</h3>
-                </div>
-                <span className="badge-vortex badge-pro">ACTIVE_SESSION</span>
-            </div>
-
+        <VortexPanel title="Your project" subTitle="You claimed this profile" glowColor="none">
             <div className="vortex-flex-column vortex-gap-4">
-                <div className="vortex-grid-3 vortex-gap-3">
-                    <div className="vortex-input-container vortex-flex-column vortex-gap-1">
-                        <span className="vortex-label vortex-text-tiny">Website</span>
-                        <div className="vortex-flex-between">
-                            <span className="vortex-text-xs vortex-text-muted truncate">{token.socials?.website || 'NOT_SET'}</span>
-                            {token.socials?.website && <Globe size={12} className="text-vortex-cyan" />}
-                        </div>
-                    </div>
-                    <div className="vortex-input-container vortex-flex-column vortex-gap-1">
-                        <span className="vortex-label vortex-text-tiny">Twitter/X</span>
-                        <div className="vortex-flex-between">
-                            <span className="vortex-text-xs vortex-text-muted truncate">{token.socials?.twitter || 'NOT_SET'}</span>
-                            {token.socials?.twitter && <ExternalLink size={12} className="text-vortex-cyan" />}
-                        </div>
-                    </div>
-                    <div className="vortex-input-container vortex-flex-column vortex-gap-1">
-                        <span className="vortex-label vortex-text-tiny">Telegram</span>
-                        <div className="vortex-flex-between">
-                            <span className="vortex-text-xs vortex-text-muted truncate">{token.socials?.telegram || 'NOT_SET'}</span>
-                            {token.socials?.telegram && <MessageCircle size={12} className="text-vortex-cyan" />}
-                        </div>
-                    </div>
-                    <div className="vortex-input-container vortex-flex-column vortex-gap-1">
-                        <span className="vortex-label vortex-text-tiny">Banner</span>
-                        <div className="vortex-flex-between">
-                            <span className="vortex-text-xs vortex-text-muted truncate">{token.bannerURI ? 'VERIFIED_BANNER' : 'NOT_SET'}</span>
-                            {token.bannerURI && <Check size={12} className="text-vortex-cyan" />}
-                        </div>
-                    </div>
-                    <div className="vortex-input-container vortex-flex-column vortex-gap-1">
-                        <span className="vortex-label vortex-text-tiny">Custom Icon</span>
-                        <div className="vortex-flex-between">
-                            <span className="vortex-text-xs vortex-text-muted truncate">{token.iconURI ? 'VERIFIED_ICON' : 'NOT_SET'}</span>
-                            {token.iconURI && <Check size={12} className="text-vortex-cyan" />}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="vortex-input-container">
-                    <span className="vortex-label vortex-text-tiny">Project Description</span>
-                    <p className="vortex-text-xs vortex-text-muted vortex-line-clamp-2">
-                        {token.customDescription || 'No custom description provided. Enhance your project visibility by adding one.'}
-                    </p>
-                </div>
-
-                <button
-                    className="btn-vortex btn-vortex-primary vortex-w-full vortex-mt-2"
-                    onClick={() => setShowUpdateModal(true)}
-                >
-                    <Edit3 size={16} className="vortex-mr-2" />
-                    UPDATE_METADATA_PROTOCOLS
-                </button>
+                <dl className="vortex-check-list">
+                    <div><dt>Profile</dt><dd>{enhanced ? 'Enhanced' : 'Standard'}</dd></div>
+                    <div><dt>Trending boost</dt><dd>{boostUntil ? 'Until ' + boostUntil.toLocaleString() : 'Not active'}</dd></div>
+                    {enhanced && ROWS.map(([label, read]) => {
+                        const value = read(token);
+                        return <div key={label}><dt>{label}</dt><dd className="truncate">{value ? <><Check size={12} aria-hidden /> {value}</> : 'Not set'}</dd></div>;
+                    })}
+                </dl>
+                {enhanced
+                    ? <button className="btn-vortex btn-vortex-primary vortex-w-full" onClick={() => setShowUpdateModal(true)}><Edit3 size={16} aria-hidden /> Edit banner, logo and links</button>
+                    : <p className="vortex-text-muted">An Enhanced profile adds your banner, logo, links and description to this page.</p>}
+                <button className="btn-vortex btn-vortex-secondary vortex-w-full" onClick={onUpgrade}><Zap size={16} aria-hidden /> {enhanced ? 'Boost this token' : 'Upgrade or boost'}</button>
             </div>
 
             {showUpdateModal && (
@@ -89,6 +55,7 @@ export function DeveloperControlPanel({ token, onUpdate, notify }: DeveloperCont
                     notify={notify}
                 />
             )}
-        </div>
+        </VortexPanel>
     );
 }
+
