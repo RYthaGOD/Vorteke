@@ -1,6 +1,6 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, isServer } from '@tanstack/react-query';
 
-export const queryClient = new QueryClient({
+const makeQueryClient = () => new QueryClient({
     defaultOptions: {
         queries: {
             staleTime: 1000 * 60 * 5, // 5 minutes
@@ -10,3 +10,11 @@ export const queryClient = new QueryClient({
         },
     },
 });
+
+let browserQueryClient: QueryClient | undefined;
+
+/** One client per server render, so no cache is shared between visitors; one for the browser's lifetime. */
+export function getQueryClient() {
+    if (isServer) return makeQueryClient();
+    return (browserQueryClient ??= makeQueryClient());
+}
