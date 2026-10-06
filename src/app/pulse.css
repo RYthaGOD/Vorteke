@@ -298,3 +298,19 @@ th[aria-sort=ascending] .vortex-sort-button, th[aria-sort=descending] .vortex-so
 .vortex-tab { border-radius: var(--radius-tactical); }
 .vortex-input-mini { min-height: 40px; }
 .vortex-col-span-4 .vortex-text-muted-20 { color: var(--text-secondary); opacity: 1; }
+
+/* Token page: on wide screens the swap column spans the chart and signal rows; on narrow screens it follows the chart. */
+.vortex-grid-inner > .vortex-token-side { grid-row: span 2; align-self: start; }
+@media (max-width: 1024px) { .vortex-grid-inner > .vortex-token-side { grid-row: auto; } }
+
+/* Elite page */
+.vortex-elite-grid { margin: 24px 0; }
+.vortex-elite-grid .vortex-plan li span { display: block; }
+.vortex-access-code { margin-top: 16px; font-size: 13px; }
+.vortex-access-code summary { cursor: pointer; color: var(--text-secondary); }
+
+/* Legal pages */
+.vortex-legal-body { max-width: 760px; line-height: 1.7; color: var(--text-secondary); }
+.vortex-legal-body h2 { color: var(--text-primary); font-size: 18px; margin: 32px 0 8px; }
+.vortex-legal-body ul { padding-left: 20px; }
+.vortex-legal-nav { display: flex; flex-wrap: wrap; gap: 20px; margin: 40px 0; font-size: 13px; }

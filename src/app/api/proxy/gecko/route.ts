@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { dataHeaders, geckoJson } from '@/lib/server/gecko';
 
 // Allowlist: Only permit paths that start with recognized GeckoTerminal resource types
 const ALLOWED_PATH_PREFIXES = [
@@ -28,8 +29,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const baseUrl = 'https://api.geckoterminal.com/api/v2';
-        const targetUrl = new URL(`${baseUrl}/${cleanPath}`);
+        const targetUrl = new URL('https://placeholder.invalid/' + cleanPath);
 
         // Forward only safe, known query params
         const SAFE_PARAMS = ['aggregate', 'limit', 'ohlcv_limit', 'currency', 'token', 'page', 'include'];
@@ -39,18 +39,9 @@ export async function GET(req: NextRequest) {
             }
         });
 
-        const response = await fetch(targetUrl.toString(), {
-            headers: { 'Accept': 'application/json' },
-            next: { revalidate: 60 }
-        } as any);
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            return NextResponse.json(errorData, { status: response.status });
-        }
-
-        const data = await response.json();
-        return NextResponse.json(data);
+        // Shared cache: repeated views of a token reuse one provider call, and a rate limit serves the last answer.
+        const { data, at, stale } = await geckoJson(targetUrl.pathname + targetUrl.search, 60_000);
+        return NextResponse.json(data, { headers: dataHeaders(at, stale) });
     } catch (error) {
         console.error('GECKO_PROXY_ERROR:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

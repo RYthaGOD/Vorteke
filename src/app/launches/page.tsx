@@ -1,164 +1,70 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Rocket, Clock, ShieldCheck, ArrowRight, Activity, Search, RefreshCw, AlertTriangle } from 'lucide-react';
-import { VortexPanel, VortexButton } from '@/components/DesignSystem';
+import { Activity, ArrowUpRight, Radio, RefreshCw, Search, X } from 'lucide-react';
 import { MobileNav } from '@/components/MobileNav';
-import { formatCurrency, formatCompact } from '@/lib/dataService';
+import { TokenAvatar } from '@/components/TokenAvatar';
+import { FeedStatus } from '@/components/FeedStatus';
+import { formatCompact } from '@/lib/dataService';
+
+interface Launch { address: string; name: string; liquidityUsd: number; volume24h: number; poolCreatedAt: string; launchpad: string; logoURI?: string | null; tier?: string; boosted?: boolean }
+
+const age = (dateStr: string, now: number) => {
+    const seconds = Math.max(0, Math.floor((now - new Date(dateStr).getTime()) / 1000));
+    if (seconds < 60) return seconds + 's';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm';
+    return Math.floor(minutes / 60) + 'h ' + (minutes % 60) + 'm';
+};
 
 export default function NewLaunchesPage() {
-    const [searchFilter, setSearchFilter] = useState('');
-
-    const { data: launches = [], isLoading, isError, isRefetching, refetch } = useQuery({
+    const [filter, setFilter] = useState('');
+    const launches = useQuery({
         queryKey: ['new_launches'],
-        queryFn: async () => {
-            const res = await fetch('/api/launches');
-            if (!res.ok) throw new Error('Failed to fetch launches');
-            return res.json();
+        queryFn: async ({ signal }) => {
+            const res = await fetch('/api/launches', { signal });
+            if (!res.ok) throw new Error('New pairs unavailable');
+            return { rows: await res.json() as Launch[], updatedAt: res.headers.get('X-Data-Updated'), stale: res.headers.get('X-Data-Stale') === '1' };
         },
-        refetchInterval: 15000, // Refresh every 15s for new drops
+        refetchInterval: 30_000, staleTime: 15_000,
     });
+    const now = launches.dataUpdatedAt || Date.now();
+    const needle = filter.trim().toLowerCase();
+    const rows = (launches.data?.rows || []).filter(l => !needle || l.name.toLowerCase().includes(needle) || l.address.toLowerCase().includes(needle));
+    const updatedAt = launches.data?.updatedAt ? new Date(launches.data.updatedAt) : null;
 
-    // Time Ago formatter
-    const getTimeAgo = (dateStr: string) => {
-        const seconds = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
-        if (seconds < 60) return `${seconds}s ago`;
-        const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes}m ago`;
-        const hours = Math.floor(minutes / 60);
-        return `${hours}h ago`;
-    };
-
-    const filteredLaunches = launches.filter((l: any) => 
-        l.name.toLowerCase().includes(searchFilter.toLowerCase()) || 
-        l.address.toLowerCase().includes(searchFilter.toLowerCase())
-    );
-
-    return (
-        <main id="main-content" className="app-container">
-
-            <div className="vortex-container-centered vortex-mt-6 animate-stagger">
-                {/* Hero / Filter Section */}
-                <VortexPanel title="New pairs" subTitle="Solana pools" glowColor="cyan" className="vortex-mb-6">
-                    <div className="vortex-flex-between vortex-wrap vortex-gap-4">
-                        <div className="vortex-flex-column">
-                            <p className="vortex-text-sm vortex-text-muted vortex-m-0">
-                                New liquidity pools across Solana DEXs, refreshed every 15 seconds.
-                            </p>
-                            <div className="vortex-flex-start vortex-gap-2 vortex-mt-2">
-                                <span className="vortex-profile-label">Raydium</span>
-                                <span className="vortex-profile-label">Pump.fun</span>
-                                <span className="vortex-profile-label">Meteora</span>
-                            </div>
-                        </div>
-                        
-                        <div className="vortex-flex-center vortex-gap-3">
-                            <label className="vortex-market-search">
-                                <Search size={18} aria-hidden />
-                                <input
-                                    type="search"
-                                    aria-label="Filter new pairs"
-                                    autoComplete="off"
-                                    spellCheck={false}
-                                    placeholder="Filter pairs"
-                                    value={searchFilter}
-                                    onChange={(e) => setSearchFilter(e.target.value)}
-                                />
-                            </label>
-                            <VortexButton 
-                                variant="secondary" 
-                                className={`vortex-h-10 ${isRefetching ? 'vortex-animate-pulse' : ''}`}
-                                onClick={() => refetch()}
-                            >
-                                <RefreshCw size={14} className={`vortex-mr-2 ${isRefetching ? 'animate-spin' : ''}`} aria-hidden />
-                                Refresh
-                            </VortexButton>
-                        </div>
-                    </div>
-                </VortexPanel>
-
-                {/* Data Grid */}
-                <VortexPanel title="Latest pools" subTitle="Market data" glowColor="none">
-                    {isError ? <div className="vortex-empty" role="alert"><h2>Could not load new pairs</h2><p>The data provider may be busy. Try again in a moment.</p><VortexButton onClick={() => refetch()}>Retry</VortexButton></div> : isLoading ? (
-                        <div className="vortex-p-12 vortex-text-center vortex-flex-column vortex-flex-center">
-                            <Activity size={32} className="vortex-text-cyan animate-pulse vortex-mb-4" />
-                            <p className="vortex-font-mono vortex-text-cyan">Loading new pairs…</p>
-                        </div>
-                    ) : filteredLaunches.length === 0 ? (
-                        <div className="vortex-empty">
-                            <AlertTriangle size={28} aria-hidden />
-                            {searchFilter ? <><h2>No pairs match &ldquo;{searchFilter}&rdquo;</h2><p>Try another name or symbol.</p><button className="btn-vortex btn-vortex-secondary" onClick={() => setSearchFilter('')}>Clear search</button></> : <><h2>No new pairs yet</h2><p>New pools appear here as they launch. This list refreshes every 15 seconds.</p></>}
-                        </div>
-                    ) : (
-                        <div className="vortex-table-container">
-                            <table className="vortex-table">
-                                <thead>
-                                    <tr>
-                                        <th>Token</th>
-                                        <th>Age</th>
-                                        <th>DEX</th>
-                                        <th className="vortex-text-right">Liquidity</th>
-                                        <th className="vortex-text-right">24h volume</th>
-                                        <th className="vortex-text-right">Details</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredLaunches.map((launch: any) => (
-                                        <tr key={launch.address} className="vortex-table-row">
-                                            <td>
-                                                <div className="vortex-flex-start vortex-gap-3">
-                                                    {launch.logoURI ? (
-                                                        <img src={launch.logoURI} alt="Logo" className="vortex-logo-mini vortex-border-radius-full" />
-                                                    ) : (
-                                                        <div className="vortex-logo-mini vortex-border-radius-full vortex-bg-obsidian-soft vortex-flex-center">
-                                                            <Rocket size={14} className={launch.launchpadColor} />
-                                                        </div>
-                                                    )}
-                                                    <div className="vortex-flex-column">
-                                                        <div className="vortex-text-bold vortex-text-sm vortex-flex-start vortex-gap-2">
-                                                            {launch.name.split(' / ')[0]}
-                                                            {launch.isVerified && <ShieldCheck size={14} className="text-vortex-cyan" />}
-                                                        </div>
-                                                        <div className="vortex-text-tiny vortex-text-muted vortex-font-mono">
-                                                            {launch.address.slice(0, 8)}...{launch.address.slice(-4)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="vortex-flex-start vortex-gap-2 vortex-text-sm">
-                                                    <Clock size={12} className="vortex-text-muted" />
-                                                    {getTimeAgo(launch.poolCreatedAt)}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className={`recon-tag-safe ${launch.launchpadColor.replace('text-', 'vortex-border-')} ${launch.launchpadColor}`}>
-                                                    {launch.launchpad}
-                                                </span>
-                                            </td>
-                                            <td className="vortex-text-right vortex-text-sm vortex-font-mono">
-                                                {formatCurrency(launch.liquidityUsd)}
-                                            </td>
-                                            <td className="vortex-text-right vortex-text-sm vortex-font-mono">
-                                                {formatCurrency(launch.volume24h)}
-                                            </td>
-                                            <td className="vortex-text-right">
-                                                <Link className="btn-vortex btn-vortex-primary" href={`/token/${launch.address}`}>
-                                                    Explore <ArrowRight size={14} className="vortex-ml-2" aria-hidden />
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </VortexPanel>
+    return <main id="main-content" className="vortex-workspace vortex-pulse-workspace">
+        <div className="vortex-page-heading"><div>
+            <span className="vortex-eyebrow"><span className="vortex-status-dot" /> SOLANA / NEW PAIRS</span>
+            <h1>Fresh <em>liquidity.</em></h1>
+            <p>The newest pools across Solana DEXs and launchpads.</p>
+        </div><FeedStatus updatedAt={updatedAt?.getTime() || launches.dataUpdatedAt} fetching={launches.isFetching} error={launches.isError} /></div>
+        <section className="vortex-market-main" aria-label="New pairs">
+            <div className="vortex-market-toolbar">
+                <label className="vortex-market-search" htmlFor="pairs-filter"><Search size={18} aria-hidden />
+                    <input id="pairs-filter" type="search" autoComplete="off" spellCheck={false} placeholder="Filter by name or mint address" value={filter} onChange={e => setFilter(e.target.value)} />
+                    <span className="vortex-sr-only">Filter new pairs</span>
+                </label>
+                <button className="vortex-icon-btn" aria-label="Refresh new pairs" disabled={launches.isFetching} onClick={() => launches.refetch()}><RefreshCw size={18} aria-hidden className={launches.isFetching ? 'vortex-refreshing' : ''} /></button>
             </div>
-            
-            <MobileNav />
-        </main>
-    );
+            {launches.data?.stale && updatedAt && <p className="vortex-inline-notice" role="status">The data provider is busy. Showing pairs from {updatedAt.toLocaleTimeString()}.</p>}
+            {launches.isError ? <div className="vortex-empty" role="alert"><Activity size={28} aria-hidden /><h2>New pairs are unavailable</h2><p>The data provider may be busy. Try again in a moment.</p><button className="btn-vortex btn-vortex-secondary" onClick={() => launches.refetch()}>Try again</button></div> :
+                <div className="vortex-data-table-container" tabIndex={0} role="region" aria-label="Scrollable new pairs table"><table className="vortex-data-table"><thead><tr><th scope="col">Token</th><th scope="col">Age</th><th scope="col">Venue</th><th scope="col">Liquidity</th><th scope="col">24h volume</th></tr></thead><tbody>
+                    {launches.isLoading ? Array.from({ length: 7 }, (_, i) => <tr key={i}><td colSpan={5}><div className="vortex-market-skeleton" aria-label="Loading pair" role={i === 0 ? 'status' : undefined} /></td></tr>) :
+                        rows.map(launch => <tr key={launch.address}>
+                            <td><Link className="vortex-token-link" href={'/token/' + launch.address}><TokenAvatar symbol={launch.name.split(' / ')[0] || '?'} src={launch.logoURI || undefined} /><span><strong>{launch.name.split(' / ')[0]}</strong><small>{launch.address.slice(0, 6)}…{launch.address.slice(-4)}{launch.tier && launch.tier !== 'Basic' ? ' · Enhanced' : ''}{launch.boosted ? ' · Promoted' : ''}</small></span><ArrowUpRight size={14} aria-hidden /></Link></td>
+                            <td>{age(launch.poolCreatedAt, now)}</td>
+                            <td>{launch.launchpad}</td>
+                            <td>${formatCompact(launch.liquidityUsd)}</td>
+                            <td>${formatCompact(launch.volume24h)}</td>
+                        </tr>)}
+                </tbody></table>
+                    {!launches.isLoading && rows.length === 0 && <div className="vortex-empty"><Search size={28} aria-hidden />{needle ? <><h2>No pairs match &ldquo;{filter}&rdquo;</h2><p>Try another name or mint address.</p><button className="btn-vortex btn-vortex-secondary" onClick={() => setFilter('')}><X size={14} aria-hidden /> Clear filter</button></> : <><h2>No new pairs yet</h2><p>New pools appear here as they launch.</p></>}</div>}
+                </div>}
+            <p className="vortex-table-footnote"><Radio size={12} aria-hidden /> Refreshes every 30s. New pools are unvetted; open a token to run the free holder scan.</p>
+        </section>
+        <MobileNav />
+    </main>;
 }

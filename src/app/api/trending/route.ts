@@ -2,14 +2,13 @@ import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import { measureTrendingWindow } from '@/lib/vortex/trending-window.mjs';
 import type { TrendingResponse, TrendingToken } from '@/lib/vortex/trending-types';
+import { geckoJson } from '@/lib/server/gecko';
 
 type Pool = { attributes: { address: string }; relationships: { base_token: { data: { id: string } } } };
 type TokenEntity = { id: string; attributes: { name: string; symbol: string; image_url?: string } };
-const base = 'https://api.geckoterminal.com/api/v2';
-async function getJson(path: string) {
-    const response = await fetch(base + path, { signal: AbortSignal.timeout(10000), next: { revalidate: 120 } });
-    if (!response.ok) throw new Error('TRENDING_PROVIDER_UNAVAILABLE');
-    return response.json();
+// Shared provider cache: a rate-limited provider serves the last good answer instead of failing.
+async function getJson(path: string): Promise<any> {
+    return (await geckoJson(path, 110_000)).data;
 }
 // Cache the whole batch across visitors. This is a sampled discovery ranking,
 // not a claim to rank every Solana token or every liquidity pool.

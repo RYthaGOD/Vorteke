@@ -59,14 +59,11 @@ export const SolanaProvider = ({ children }: { children: React.ReactNode }) => {
         [network]
     );
 
-    const [mounted, setMounted] = React.useState(false);
-    React.useEffect(() => setMounted(true), []);
-
     return (
         <ConnectionProvider endpoint={endpoint}>
             <WalletProvider wallets={wallets} autoConnect>
                 <WalletModalProvider>
-                    {mounted && children}
+                    {children}
                 </WalletModalProvider>
             </WalletProvider>
         </ConnectionProvider>

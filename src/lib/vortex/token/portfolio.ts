@@ -1,9 +1,6 @@
 import { PublicKey } from '@solana/web3.js';
-import { TokenInfo, fetchTokenData } from '../../dataService';
+import { fetchTokenData } from '../../dataService';
 import { getResilientConnection } from '../../solana/connection';
-import { fetchTokenEnhancement } from '../../monetizationService';
-import { detectBundle } from '../security';
-import { verifyLPBurn, getMarketVelocity } from './metrics';
 
 export interface PortfolioItem {
     address: string;
@@ -15,44 +12,6 @@ export interface PortfolioItem {
     valueUsd: number;
     pnlPercent: number;
 }
-
-/**
- * Lightweight reconnaissance for search previews.
- */
-export const getQuickRecon = async (tokenOrAddress: string | TokenInfo): Promise<Partial<TokenInfo>> => {
-    const address = typeof tokenOrAddress === 'string' ? tokenOrAddress : tokenOrAddress.address;
-    const info = typeof tokenOrAddress === 'string' ? await fetchTokenData(tokenOrAddress) : tokenOrAddress;
-
-    if (!info) return { address, securityTags: ['UPLINK_OFFLINE'] };
-
-    const [bundle, lp, enhancement, velocity] = await Promise.all([
-        detectBundle(address).catch(() => ({ isBundled: false, percentage: 0, riskLevel: 'LOW' as const })),
-        verifyLPBurn(address).catch(() => 'unverified' as const),
-        fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic' as const, socials: {}, customDescription: '' })),
-        getMarketVelocity(address, info.volume24h || 0, info.priceChange24h || 0, info.liquidityUsd || 0).catch(() => ({ score: 50, activityLevel: 'DORMANT' as const }))
-    ]);
-
-    return {
-        ...info,
-        tier: (enhancement as any).tier || 'Basic',
-        owner: (enhancement as any).owner,
-        customDescription: (enhancement as any).customDescription,
-        socials: {
-            ...info.socials,
-            ...((enhancement as any).socials || {})
-        },
-        isSafe: lp === 'verified' && bundle.percentage < 10,
-        securityTags: Array.from(new Set([
-            ...(info.securityTags || []),
-            lp === 'verified' ? 'LP_BURNED' : 'LP_UNSECURED',
-            bundle.percentage < 15 ? 'CLEAN_BUNDLE' : bundle.riskLevel === 'HIGH' ? 'HIGH_BUNDLE' : 'BNDL_DRISK'
-        ])),
-        advancedMetrics: {
-            ...info.advancedMetrics,
-            marketVelocity: velocity
-        }
-    };
-};
 
 /**
  * Fetches user token holdings and resolves their metadata.
