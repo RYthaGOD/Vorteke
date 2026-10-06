@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
     try {
-        // Fetch all tokens that have purchased enhancement (Enhanced or Elite)
+        // Every token with a paid profile ('Elite' is the legacy name of the paid tier).
         const enhancements = await prisma.enhancement.findMany({
             where: {
                 tier: { in: ['Enhanced', 'Elite'] }

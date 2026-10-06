@@ -1,7 +1,6 @@
-import { Connection, PublicKey } from '@solana/web3.js';
-import { HELIUS_RPC, HELIUS_API_KEY, RPC_ENDPOINTS } from '../../constants';
+import { PublicKey } from '@solana/web3.js';
+import { HELIUS_RPC } from '../../constants';
 import { getResilientConnection } from '../../solana/connection';
-import { throttledFetch } from '../utils';
 
 export interface HeliusAsset {
     name: string;
@@ -14,6 +13,7 @@ export interface HeliusAsset {
     mintAuthority?: string;
     freezeAuthority?: string;
     supply?: number;
+    mutable?: boolean;
 }
 
 /**
@@ -22,7 +22,8 @@ export interface HeliusAsset {
  */
 export const fetchHeliusMetadata = async (address: string): Promise<HeliusAsset | null> => {
     try {
-        if (!HELIUS_API_KEY) return null;
+        // DAS lives on Helius RPC. HELIUS_API_KEY is server-only, so check the RPC address, which works in the browser too.
+        if (!HELIUS_RPC.includes('helius')) return null;
 
         const response = await fetch(HELIUS_RPC, {
             method: 'POST',
@@ -48,7 +49,8 @@ export const fetchHeliusMetadata = async (address: string): Promise<HeliusAsset 
             priceUsd: result.token_info?.price_info?.price_per_token || 0,
             mintAuthority: result.token_info?.mint_authority,
             freezeAuthority: result.token_info?.freeze_authority,
-            supply: result.token_info?.supply
+            supply: result.token_info?.supply,
+            mutable: typeof result.mutable === 'boolean' ? result.mutable : undefined
         };
     } catch (e) {
         console.warn("HELIUS_DAS_FAILURE:", e);
@@ -62,7 +64,7 @@ export const fetchHeliusMetadata = async (address: string): Promise<HeliusAsset 
  */
 export const getMetaplexMetadata = async (mintAddress: string): Promise<{ name?: string; symbol?: string; uri?: string } | null> => {
     try {
-        const TOKEN_METADATA_PROGRAM_ID = new PublicKey('metaqbxxUf32SC9L4Gwf9S2EZ7WNTfGT7nGG6LJjt7Y');
+        const TOKEN_METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
         const mint = new PublicKey(mintAddress);
 
         // Derive Metadata PDA

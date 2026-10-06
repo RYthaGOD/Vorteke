@@ -15,6 +15,8 @@ export interface TokenInfo {
     holders: number;
     owner?: string;
     tier?: TokenTier;
+    boosted?: boolean;
+    boostExpiresAt?: string | null;
     latency?: number;
     socials?: {
         twitter?: string;
@@ -25,21 +27,20 @@ export interface TokenInfo {
     bannerURI?: string;
     iconURI?: string;
     advancedMetrics: {
-        top10HolderPercent: number;
-        devWalletStatus: 'selling' | 'holding' | 'accumulating' | 'burnt';
+        top10HolderPercent: number | null;
         lpBurnStatus: 'verified' | 'unverified' | 'locked';
         slippage1k: number;
         slippage10k: number;
         snipeVolumePercent: number;
-        mintAuthority: 'renounced' | 'active';
-        freezeAuthority: 'renounced' | 'active';
-        metadataMutable: boolean;
+        mintAuthority: 'revoked' | 'active' | 'unknown';
+        freezeAuthority: 'revoked' | 'active' | 'unknown';
+        metadataMutable?: boolean;
         transferFeeBps?: number;
         holderIntelligence?: {
             clusterDetected: boolean;
             clusterSize: number;
             riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-            top10Percent: number;
+            top10Percent: number | null;
         };
         marketVelocity?: {
             score: number;
@@ -50,10 +51,6 @@ export interface TokenInfo {
             status: 'STAGNANT' | 'STABLE' | 'ACCELERATING' | 'BREAKOUT';
             ratio: number;
         };
-        velocitySentiment?: {
-            buyPercent: number;
-            sellPercent: number;
-        };
         cluster?: string[];
         fundingSource?: {
             source: string;
@@ -61,7 +58,6 @@ export interface TokenInfo {
         } | null;
     };
     securityTags?: string[];
-    isSafe?: boolean;
     tags?: string[];
     isPumpFun?: boolean;
     velocityScore?: number;

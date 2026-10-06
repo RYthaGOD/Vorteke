@@ -5,6 +5,8 @@ import bs58 from 'bs58';
 import { prisma } from '@/lib/prisma';
 import { PROTECTED_MINT_ADDRESSES } from '@/lib/constants';
 import { getResilientConnection } from '@/lib/solana/connection';
+import { resolveProjectAuthorities } from '@/lib/solana/creator.mjs';
+import { canEditProfile } from '@/lib/profiles.mjs';
 
 export async function POST(request: NextRequest) {
     try {
@@ -57,11 +59,9 @@ export async function POST(request: NextRequest) {
         }
 
         if (!existing?.owner) {
-            const token = await prisma.token.findUnique({ where: { address } });
-            const mint = await getResilientConnection(c => c.getParsedAccountInfo(new PublicKey(address)));
-            const data = mint.value?.data;
-            const authority = data && 'parsed' in data ? data.parsed?.info?.mintAuthority : null;
-            if (authority !== wallet && token?.creator !== wallet) {
+            // Proof of control comes from chain state read here, never from stored or client-sent data.
+            const authorities = await getResilientConnection(c => resolveProjectAuthorities(c, address));
+            if (!authorities.some(a => a.wallet === wallet)) {
                 return NextResponse.json({ error: 'PROJECT_AUTHORITY_NOT_VERIFIED' }, { status: 403 });
             }
         }
@@ -133,6 +133,9 @@ export async function PATCH(request: NextRequest) {
 
         if (!existing || existing.owner !== wallet) {
             return NextResponse.json({ error: 'UNAUTHORIZED_OWNER' }, { status: 403 });
+        }
+        if (!canEditProfile(existing.tier)) {
+            return NextResponse.json({ error: 'ENHANCED_PROFILE_REQUIRED' }, { status: 402 });
         }
 
         // FIX: Server-side URL validation — client-side checks in UpdateMetadataModal are bypassable

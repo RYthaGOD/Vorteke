@@ -12,7 +12,7 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'MISSING_WALLET' }, { status: 400 });
         }
 
-        const access = await (prisma as any).testAccess.findUnique({
+        const access = await prisma.eliteAccess.findUnique({
             where: { wallet }
         });
 
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             success: true,
-            tier: access.tier,
+            tier: 'Elite',
             expiresAt: access.expiresAt.toISOString()
         });
     } catch (e: any) {
@@ -73,22 +73,17 @@ export async function POST(req: Request) {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);
 
-        const access = await (prisma as any).testAccess.upsert({
+        // A code never shortens access the wallet already has.
+        const existing = await prisma.eliteAccess.findUnique({ where: { wallet } });
+        const access = existing && existing.expiresAt >= expiresAt ? existing : await prisma.eliteAccess.upsert({
             where: { wallet },
-            update: {
-                tier: 'Elite',
-                expiresAt,
-            },
-            create: {
-                wallet,
-                tier: 'Elite',
-                expiresAt,
-            },
+            update: { expiresAt, source: 'code' },
+            create: { wallet, expiresAt, source: 'code' },
         });
 
         return NextResponse.json({
             success: true,
-            tier: access.tier,
+            tier: 'Elite',
             expiresAt: access.expiresAt.toISOString()
         });
     } catch (e: any) {

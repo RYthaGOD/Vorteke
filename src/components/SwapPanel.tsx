@@ -2,10 +2,11 @@
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
 import { TokenInfo } from '@/lib/dataService';
-import { ArrowDown, Zap, Settings2, ShieldAlert } from 'lucide-react';
+import { ArrowDown, Zap, ShieldAlert } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PROTOCOL_FLAT_FEE_SOL, SOL_MINT, JITO_DEFAULT_TIP_LAMPORTS } from '@/lib/constants';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useQuery } from '@tanstack/react-query';
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
 
 interface SwapPanelProps {
@@ -32,13 +33,25 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
     const { executeSwap, executing, execStatus } = useSwapExecution(token, notify, isElite);
 
     const { connected } = useWallet();
+    const solPrice = useQuery({
+        queryKey: ['sol-usd'],
+        queryFn: async () => {
+            const res = await fetch('/api/proxy/jup-price?ids=' + SOL_MINT);
+            const body = await res.json();
+            const price = Number(body?.data?.[SOL_MINT]?.price);
+            return Number.isFinite(price) && price > 0 ? price : null;
+        },
+        staleTime: 60_000,
+    }).data;
+    const feeSol = isElite ? 0 : PROTOCOL_FLAT_FEE_SOL;
+    const feeUsd = solPrice && feeSol ? ' (about $' + (feeSol * solPrice).toFixed(2) + ')' : '';
 
     useEffect(() => { highImpactConfirmed.current = false; setShowHighImpactWarning(false); }, [amount, slippage, swapMode, token.address, quote]);
 
     const handleExecute = async () => {
         if (!quote || loading || executing) return;
         if (!connected) {
-            notify('error', 'AUTHORIZATION_REQUIRED: Connect wallet to execute order.');
+            notify('error', 'Connect a wallet to swap.');
             // Add subtle haptic/visual feedback if needed, but notify is core
             return;
         }
@@ -85,19 +98,10 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                         SELL
                     </button>
                 </div>
-                {isElite ? (
-                    <div className="badge-vortex vortex-bg-purple text-vortex-obsidian vortex-animate-pulse vortex-mr-2">
-                        ELITE_ACCESS_ACTIVE
+                {isElite && (
+                    <div className="badge-vortex vortex-bg-purple text-vortex-obsidian vortex-mr-2">
+                        Elite: no swap fee
                     </div>
-                ) : (
-                    <button
-                        className="vortex-icon-btn vortex-p-1"
-                        title="Execution Settings"
-                        aria-label="Execution settings"
-                        onClick={() => notify('info', 'SETTINGS_PANEL_LOCKED: Acquire the Vortex Elite NFT to unlock.')}
-                    >
-                        <Settings2 size={16} className="text-vortex-gray" />
-                    </button>
                 )}
             </div>
 
@@ -210,7 +214,7 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                 <div className="vortex-mt-4 vortex-p-4 vortex-bg-red vortex-bg-opacity-10 vortex-border vortex-border-vortex-red vortex-border-radius-md">
                     <div className="vortex-flex-start vortex-gap-2 vortex-mb-2">
                         <ShieldAlert size={16} className="text-vortex-red" />
-                        <span className="vortex-text-xs vortex-text-red vortex-text-bold">CRITICAL_PRICE_IMPACT</span>
+                        <span className="vortex-text-xs vortex-text-red vortex-text-bold">High price impact</span>
                     </div>
                     <p className="vortex-text-tiny vortex-text-muted vortex-mb-4">
                         Execution will result in a {quote?.priceImpact}% slippage loss. Route liquidity is extremely shallow.
@@ -229,7 +233,7 @@ export function SwapPanel({ token, notify }: SwapPanelProps) {
                 aria-busy={executing}
                 onClick={handleExecute}
             >{executing ? execStatus : loading ? 'Getting quote…' : !quote ? 'Enter an amount' : swapMode === 'BUY' ? 'Buy ' + token.symbol : 'Sell ' + token.symbol}</button>}
-            <p className="vortex-disclosure">VORTEX fee: {isElite ? 0 : PROTOCOL_FLAT_FEE_SOL} SOL per swap{isElite ? " (Elite waiver)" : ""}. Network fees are additional.{priorityLevel === "Turbo" && " Turbo adds a " + (JITO_DEFAULT_TIP_LAMPORTS / 1e9) + " SOL tip and higher network priority fees."}</p>
+            <p className="vortex-disclosure">VORTEX fee: {feeSol} SOL per swap{feeUsd}{isElite ? " (Elite waiver)" : ""}. Network fees are additional.{priorityLevel === "Turbo" && " Turbo adds a " + (JITO_DEFAULT_TIP_LAMPORTS / 1e9) + " SOL tip and higher network priority fees."}</p>
         </VortexPanel>
     );
 }

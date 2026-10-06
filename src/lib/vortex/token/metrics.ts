@@ -1,7 +1,7 @@
-import { TokenInfo } from '../../dataService';
 import { PublicKey } from '@solana/web3.js';
 import { getResilientConnection } from '../../solana/connection';
 import { PROTECTED_MINT_ADDRESSES } from '../../constants';
+import { fetchLargestHolders, summarizeHolders } from '../../scan/holders.mjs';
 
 /**
  * Verify LP Burn status by checking the largest holders of the LP Token.
@@ -55,47 +55,29 @@ export const getHolderConcentration = async (address: string): Promise<{
     clusterDetected: boolean;
     clusterSize: number;
     riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-    top10Percent: number;
+    top10Percent: number | null;
 }> => {
     try {
-        const pubkey = new PublicKey(address);
-        const [largestAccounts, supplyInfo] = await Promise.all([
-            getResilientConnection(async (c) => {
-                const res = await c.getTokenLargestAccounts(pubkey, 'confirmed');
-                res.value = res.value.slice(0, 20);
-                return res;
-            }),
-            getResilientConnection(c => c.getTokenSupply(pubkey))
-        ]);
-
-        // TACTICAL_FIX: Comparing Account Addresses to Program IDs was logically invalid.
-        // We now filter based on known high-liquidity protocol accounts and authorities.
-        const PROTOCOL_ACCOUNTS = [
-            '5Q544fKrwwS3zqSLSrfUA8LcgS83fA4K6n151V84nF43', // Raydium Authority
-            'GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ', // Raydium LP Authority
-            '6EF8rrecthR5Dkzon8Nwu78hRvfX9PNn2A9zH8GfE7rL', // Pump.fun Program/Pool
-            '39393939393939393939393939393939393939393939', // Token-2022 Burn
-            address // The mint itself (rare but possible in some txs)
-        ];
-
-        const userAccounts = largestAccounts.value.filter((acc: any) => {
-            const addr = acc.address.toBase58();
-            return !PROTOCOL_ACCOUNTS.includes(addr);
-        });
-
-        const top10Total = userAccounts.slice(0, 10).reduce((acc: number, curr: any) => acc + (curr.uiAmount || 0), 0);
-        const supply = supplyInfo.value.uiAmount || 1;
-        const top10Percent = (top10Total / supply) * 100;
-
-        const isHighRisk = top10Percent > 50;
+        // Wallet concentration only: pools, bonding curves and burns are excluded by account owner.
+        // In the browser this reads the cached server scan; on the server it reads the chain directly.
+        let top10Percent: number;
+        let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+        if (typeof window !== 'undefined') {
+            const response = await fetch('/api/scan/' + encodeURIComponent(address));
+            if (!response.ok) throw new Error('SCAN_UNAVAILABLE');
+            ({ top10WalletPercent: top10Percent, riskLevel } = await response.json());
+        } else {
+            const largest = await getResilientConnection(c => fetchLargestHolders(c, address));
+            ({ top10WalletPercent: top10Percent, riskLevel } = summarizeHolders(largest));
+        }
         return {
-            clusterDetected: isHighRisk,
-            clusterSize: isHighRisk ? (top10Percent > 70 ? 10 : 5) : 0,
-            riskLevel: top10Percent > 70 ? 'HIGH' : isHighRisk ? 'MEDIUM' : 'LOW',
-            top10Percent: parseFloat(top10Percent.toFixed(2))
+            clusterDetected: riskLevel !== 'LOW',
+            clusterSize: 0,
+            riskLevel,
+            top10Percent,
         };
     } catch (e) {
-        return { clusterDetected: false, clusterSize: 0, riskLevel: 'LOW' as const, top10Percent: 0 };
+        return { clusterDetected: false, clusterSize: 0, riskLevel: 'LOW' as const, top10Percent: null };
     }
 };
 

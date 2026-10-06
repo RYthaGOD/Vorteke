@@ -1,7 +1,9 @@
 /**
  * Admin grant of a token profile, seeded from DexScreener.
  *
- *   npx tsx scripts/grant-profile.ts <mint> [Enhanced|Elite]
+ *   npx tsx scripts/grant-profile.ts <mint> [boost-hours]
+ *
+ * Grants an Enhanced profile. With boost-hours, also adds a Trending boost for that many hours.
  *
  * Images are expected in public/images/tokens/<mint>/{logo,banner}.jpg (committed so
  * they ship with the app); DexScreener's CDN URLs are used as a fallback.
@@ -11,10 +13,12 @@ import { PrismaClient } from '@prisma/client';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
-const [address, tierArg = 'Enhanced'] = process.argv.slice(2);
-const tier = tierArg === 'Elite' ? 'Elite' : 'Enhanced';
+const [address, boostArg] = process.argv.slice(2);
+const tier = 'Enhanced';
+const boostHours = boostArg ? Number(boostArg) : 0;
+if (!Number.isFinite(boostHours) || boostHours < 0) throw new Error(`Invalid boost hours: ${boostArg}`);
 if (!address) {
-    console.error('Usage: npx tsx scripts/grant-profile.ts <mint> [Enhanced|Elite]');
+    console.error('Usage: npx tsx scripts/grant-profile.ts <mint> [boost-hours]');
     process.exit(1);
 }
 
@@ -49,10 +53,13 @@ async function main() {
         },
     });
 
-    const profile = { tier, socials: JSON.stringify(socials), iconURI, bannerURI, lastPaymentTime: new Date() };
+    const profile = {
+        tier, socials: JSON.stringify(socials), iconURI, bannerURI, lastPaymentTime: new Date(),
+        ...(boostHours ? { boostExpiresAt: new Date(Date.now() + boostHours * 3_600_000) } : {}),
+    };
     await prisma.enhancement.upsert({ where: { address }, update: profile, create: { address, ...profile } });
 
-    console.log(`Granted ${tier} profile to ${pair.baseToken.symbol} (${address})`);
+    console.log(`Granted ${tier} profile to ${pair.baseToken.symbol} (${address})${boostHours ? ` with a ${boostHours}-hour boost` : ''}`);
     console.log({ iconURI, bannerURI, socials });
 }
 

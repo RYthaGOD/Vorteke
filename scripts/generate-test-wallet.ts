@@ -16,34 +16,28 @@ async function main() {
         generatedAt: new Date().toISOString()
     };
 
-    const filePath = path.join(process.cwd(), 'tmp', 'test-wallet.json');
+    // .scratch/ is git-ignored. Never commit a wallet file: this repository is public.
+    const filePath = path.join(process.cwd(), '.scratch', 'test-wallet.json');
     if (!fs.existsSync(path.dirname(filePath))) {
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
     }
     fs.writeFileSync(filePath, JSON.stringify(walletData, null, 2));
 
-    console.log(`TACTICAL_WALLET_GENERATED: ${publicKey}`);
-    console.log(`STORAGE_PATH: ${filePath}`);
+    console.log(`Test wallet: ${publicKey}`);
+    console.log(`Saved to: ${filePath}`);
 
     // Provision Elite Access directly via Prisma
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     try {
-        const access = await prisma.testAccess.upsert({
+        const access = await prisma.eliteAccess.upsert({
             where: { wallet: publicKey },
-            update: {
-                tier: 'Elite',
-                expiresAt,
-            },
-            create: {
-                wallet: publicKey,
-                tier: 'Elite',
-                expiresAt,
-            },
+            update: { expiresAt, source: 'grant' },
+            create: { wallet: publicKey, expiresAt, source: 'grant' },
         });
 
-        console.log(`ELITE_PROVISIONED_SUCCESSFULLY: ${access.expiresAt}`);
+        console.log(`Elite granted until ${access.expiresAt.toISOString()}`);
     } catch (e: any) {
         console.error("PROVISION_DB_ERROR:", e);
     } finally {

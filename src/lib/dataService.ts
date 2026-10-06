@@ -1,20 +1,18 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { RPC_ENDPOINTS, PROTECTED_MINT_ADDRESSES, SOL_MINT } from './constants';
-import { TokenTier, TokenEnhancement, fetchTokenEnhancement, verifyEliteAccess } from './monetizationService';
-import { captureException, logger } from './logger';
-import { detectBundle as modularDetectBundle, detectCreatorCluster, traceFundingOrigins } from './vortex/security';
+import { RPC_ENDPOINTS } from './constants';
+import { TokenEnhancement, fetchTokenEnhancement } from './monetizationService';
+import { captureException } from './logger';
+import { detectBundle as modularDetectBundle, detectCreatorCluster } from './vortex/security';
 import { decodeVortexSwap } from './solana/txDecoder';
 import { getResilientConnection } from './solana/connection';
-import { HELIUS_RPC, HELIUS_API_KEY, JUPITER_API_KEY } from './constants';
+import { HELIUS_RPC, HELIUS_API_KEY } from './constants';
 
 // Modularized Service Layer Imports
 import { fetchHeliusMetadata, getMetaplexMetadata } from './vortex/token/metadata';
 import { verifyLPBurn, getHolderConcentration, getMarketVelocity } from './vortex/token/metrics';
 import { getInitialChartData, subscribeToTokenChart, Timeframe, ChartTick } from './vortex/token/charts';
 export type { Timeframe, ChartTick };
-import { getDiscoveryList } from './vortex/token/discovery';
-import { resolveSearch } from './vortex/token/search';
-import { getQuickRecon, getUserPortfolio } from './vortex/token/portfolio';
+import { getUserPortfolio } from './vortex/token/portfolio';
 import { throttledFetch, sleep } from './vortex/utils';
 import { aetherClient } from './vortex/aetherClient';
 
@@ -30,9 +28,7 @@ export {
     fetchHeliusMetadata, getMetaplexMetadata,
     verifyLPBurn, getHolderConcentration, getMarketVelocity,
     getInitialChartData, subscribeToTokenChart,
-    getDiscoveryList,
-    resolveSearch,
-    getQuickRecon, getUserPortfolio,
+    getUserPortfolio,
     throttledFetch, sleep,
     detectBundle,
     formatCurrency, formatCompact, formatPercent,
@@ -143,12 +139,12 @@ export interface VortexTx {
 // Storage and Formatting utilities are imported from './vortex/token/storage' and './vortex/token/formatting'
 
 // --- Server Persistence Sync ---
-export const syncTokenToServer = async (token: TokenInfo) => {
+export const syncTokenToServer = async (address: string) => {
     try {
         await fetch('/api/tokens', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(token)
+            body: JSON.stringify({ address })
         });
     } catch (e) {
         console.warn("SERVER_SYNC_FAILURE:", e);
@@ -170,9 +166,8 @@ export const fetchTokenFromServer = async (address: string): Promise<TokenInfo |
  * Fetch token metadata and security metrics from Mainnet
  * Enhanced with DexScreener API for metadata resolution
  */
-export const fetchTokenData = async (address: string, viewerWallet?: string): Promise<TokenInfo | null> => {
+export const fetchTokenData = async (address: string, _viewerWallet?: string): Promise<TokenInfo | null> => {
     try {
-        let isElite = viewerWallet ? await verifyEliteAccess(viewerWallet) : false;
         if (!address || address.length < 32 || address.length > 44) {
             throw new Error(`INVALID_ADDRESS_FORMAT: ${address}`);
         }
@@ -196,12 +191,12 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
             }),
             fetchHeliusMetadata(address) as Promise<any>,
             throttledFetch(`/api/proxy/jup-price?ids=${address}`).catch(() => null), // V2 Migration
-            getHolderConcentration(address).catch(() => ({ clusterDetected: false, clusterSize: 0, riskLevel: 'LOW' as const, top10Percent: 0 })),
+            fetch('/api/scan/' + encodeURIComponent(address)).then(r => r.ok ? r.json() : null).catch(() => null),
             detectBundle(address).catch(() => ({ isBundled: false, percentage: 0, riskLevel: 'LOW' as const })),
             verifyLPBurn(address).catch(() => 'unverified' as const),
             fetchTokenEnhancement(address).catch(() => ({ address, tier: 'Basic', socials: {}, customDescription: '' } as TokenEnhancement)),
             aetherClient.searchTokens(address).catch(() => []),
-            throttledFetch(`https://api.geckoterminal.com/api/v2/networks/solana/tokens/${address}`).catch(() => null)
+            fetch(`/api/proxy/gecko?path=networks/solana/tokens/${address}`).then(r => r.ok ? r.json() : null).catch(() => null)
         ]);
 
         const rpcResult = batchResults[0] as PromiseSettledResult<any>;
@@ -217,13 +212,14 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
         const mintInfo = rpcResult.status === 'fulfilled' ? rpcResult.value : null;
         const helius = heliusResult.status === 'fulfilled' ? heliusResult.value : null;
         const jupPriceData = jupResult.status === 'fulfilled' ? jupResult.value : null;
-        const hIntel: any = holderIntel.status === 'fulfilled' ? holderIntel.value : { clusterDetected: false, clusterSize: 0, riskLevel: 'LOW', top10Percent: 0 };
+        // The server holder scan supplies wallet concentration and the on-chain creator.
+        const scan: any = holderIntel.status === 'fulfilled' ? holderIntel.value : null;
+        const hIntel: any = scan ? { clusterDetected: scan.riskLevel !== 'LOW', clusterSize: 0, riskLevel: scan.riskLevel, top10Percent: scan.top10WalletPercent } : { clusterDetected: false, clusterSize: 0, riskLevel: 'LOW', top10Percent: null };
         const bdl: any = bundle.status === 'fulfilled' ? bundle.value : { isBundled: false, percentage: 0, riskLevel: 'LOW' };
         const lpStatus = lp.status === 'fulfilled' ? lp.value : 'unverified';
         const enh: any = enhancement.status === 'fulfilled' ? enhancement.value : { address, tier: 'Basic', socials: {}, customDescription: '' };
         const aetherData = aetherResult.status === 'fulfilled' ? aetherResult.value?.[0] : null;
 
-        isElite = isElite || enh?.tier === 'Elite';
 
         const parsedData = (mintInfo?.value?.data as any)?.parsed?.info;
         
@@ -237,7 +233,7 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
             (parsedData?.supply ? (parseFloat(parsedData.supply) / Math.pow(10, decimals)) : 0);
 
         // 2. Resolve Metadata with Hierarchical Priority
-        const creator = helius?.owner || (parsedData as any)?.mintAuthority || null;
+        const creator: string | null = scan?.creator ?? null;
 
         const geckoData = geckoResult?.status === 'fulfilled' ? geckoResult.value : null;
 
@@ -277,13 +273,14 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
         const velocityScore = Math.min(100, Math.floor(velocityRatio * 33));
 
         // 5. Fetch Dependent Reconnaissance (Second Batch: Dependencies on first batch)
-        const [velocity, cluster, funding] = await Promise.all([
+        const [velocity, cluster] = await Promise.all([
             getMarketVelocity(address, 0, 0, 0).catch(() => ({ score: 50, activityLevel: 'DORMANT' as const })), // Velocity defaults when completely decoupled from Dex volume mapping
-            creator ? detectCreatorCluster(creator).catch(() => []) : Promise.resolve([]),
-            creator ? traceFundingOrigins(creator).catch(() => null) : Promise.resolve(null)
+            // Other tokens by the same creator that VORTEX has seen, not counting this one.
+            creator ? detectCreatorCluster(creator).then(list => list.filter(a => a !== address)).catch(() => []) : Promise.resolve([]),
         ]);
 
-        const logoURI = enh?.iconURI || helius?.logoURI || (helius as any)?.content?.links?.image || geckoData?.data?.attributes?.image_url || '/logo-placeholder.png';
+        // CDN-hosted provider images first: IPFS gateways often refuse cross-origin image loads.
+        const logoURI = enh?.iconURI || geckoData?.data?.attributes?.image_url || helius?.logoURI || undefined;
 
         // 6. Build and Return Tactical Token Object
         const token: any = {
@@ -300,9 +297,11 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
             liquidityUsd: parseFloat(geckoData?.data?.attributes?.total_reserve_in_usd || '0'), 
             fdv: (currentPrice * supply) || parseFloat(geckoData?.data?.attributes?.fdv_usd || '0'),
             mcap: mcap || 0,
-            holders: 0, 
+            holders: 0,
             owner: enh?.owner,
             tier: enh?.tier || 'Basic',
+            boosted: !!enh?.boosted,
+            boostExpiresAt: enh?.boostExpiresAt ?? null,
             customDescription: enh?.customDescription,
             socials: {
                 website: enh?.socials?.website,
@@ -310,15 +309,15 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
                 telegram: enh?.socials?.telegram,
             },
             advancedMetrics: {
-                top10HolderPercent: hIntel.top10Percent || 0,
-                devWalletStatus: helius?.mintAuthority ? 'holding' : 'burnt',
+                top10HolderPercent: hIntel.top10Percent ?? null,
                 lpBurnStatus: lpStatus,
                 slippage1k: 0,
                 slippage10k: 0,
                 snipeVolumePercent: bdl.percentage,
-                mintAuthority: helius?.mintAuthority ? 'active' : (lpStatus === 'verified' ? 'renounced' : 'active'),
-                freezeAuthority: helius?.freezeAuthority ? 'active' : (lpStatus === 'verified' ? 'renounced' : 'active'),
-                metadataMutable: true,
+                // Read straight from the mint account; never inferred from other signals.
+                mintAuthority: !parsedData ? 'unknown' : parsedData.mintAuthority ? 'active' : 'revoked',
+                freezeAuthority: !parsedData ? 'unknown' : parsedData.freezeAuthority ? 'active' : 'revoked',
+                metadataMutable: typeof helius?.mutable === 'boolean' ? helius.mutable : undefined,
                 transferFeeBps,
                 holderIntelligence: hIntel,
                 marketVelocity: velocity,
@@ -327,21 +326,16 @@ export const fetchTokenData = async (address: string, viewerWallet?: string): Pr
                     status: velocityStatus,
                     ratio: velocityRatio
                 },
-                velocitySentiment: {
-                    buyPercent: (velocity.score > 50) ? Math.min(95, velocity.score + 10) : 50,
-                    sellPercent: (velocity.score <= 50) ? Math.min(95, 100 - velocity.score + 10) : 50
-                },
-                cluster: (isElite) ? cluster : [],
-                fundingSource: (isElite) ? funding : undefined
+                cluster,
             },
             creator: creator,
-            securityTags: cluster.length > 0 ? ['HIGH_CHURN_CREATOR', 'SERIAL_LAUNCHER'] : ['LIQUIDITY_DISCOVERED'],
-            isSafe: lpStatus === 'verified' && !helius?.mintAuthority && hIntel.top10Percent < 40 && cluster.length < 3
+            // Only a check that ran produces a tag: the creator has other tokens VORTEX has seen.
+            securityTags: cluster.length > 0 ? ['SERIAL_LAUNCHER'] : [],
         };
 
         // 7. Sync to Vortex Indexer (Background)
         if (token.address) {
-            syncTokenToServer(token).catch(() => { });
+            syncTokenToServer(token.address).catch(() => { });
             aetherClient.triggerIndexing(token.address).catch(() => { }); // Launch Sovereign Indexer
         }
 

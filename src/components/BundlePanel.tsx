@@ -9,7 +9,7 @@ interface BundlePanelProps {
 }
 
 import { VortexPanel, VortexButton } from '@/components/DesignSystem';
-import { DeepScanModal } from './DeepScanModal';
+import { HolderScanModal } from './HolderScanModal';
 
 export function BundlePanel({ token, onEnhance }: BundlePanelProps) {
     const [showDeepScan, setShowDeepScan] = useState(false);
@@ -60,10 +60,10 @@ export function BundlePanel({ token, onEnhance }: BundlePanelProps) {
                         className="vortex-full-width vortex-bg-cyan text-vortex-obsidian vortex-text-bold vortex-ls-wide"
                         onClick={() => setShowDeepScan(true)}
                     >
-                        Open deep scan · 0.05 SOL
+                        Run holder scan · free
                     </VortexButton>
 
-                    {token.tier !== 'Elite' && (
+                    {token.tier !== 'Enhanced' && (
                         <VortexButton
                             variant="ghost"
                             className="vortex-full-width vortex-text-tiny text-vortex-muted hover:text-vortex-cyan"
@@ -75,7 +75,7 @@ export function BundlePanel({ token, onEnhance }: BundlePanelProps) {
                 </div>
             </div>
 
-            <DeepScanModal
+            <HolderScanModal
                 isOpen={showDeepScan}
                 onClose={() => setShowDeepScan(false)}
                 tokenSymbol={token.symbol}

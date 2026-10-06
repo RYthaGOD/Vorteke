@@ -3,13 +3,14 @@
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { useState, useEffect } from 'react';
-import { verifyEliteAccess } from '@/lib/monetizationService';
+import { EliteStatus, fetchEliteStatus } from '@/lib/monetizationService';
 
 export function useVortexAuth() {
     const { publicKey: realPK, connected: realConnected, wallet, disconnect, select, connecting, disconnecting, signMessage } = useWallet();
     const [auditPK, setAuditPK] = useState<PublicKey | null>(null);
     const [isAuditMode, setIsAuditMode] = useState(false);
-    const [isElite, setIsElite] = useState(false);
+    const [elite, setElite] = useState<EliteStatus>({ isElite: false, expiresAt: null });
+    const [eliteCheck, setEliteCheck] = useState(0);
 
     useEffect(() => {
         // SECURITY: Only allow audit mode in development builds — never in production
@@ -33,11 +34,11 @@ export function useVortexAuth() {
 
     useEffect(() => {
         if (publicKey && connected) {
-            verifyEliteAccess(publicKey.toString()).then(setIsElite);
+            fetchEliteStatus(publicKey.toString()).then(setElite);
         } else {
-            setIsElite(false);
+            setElite({ isElite: false, expiresAt: null });
         }
-    }, [publicKey, connected]);
+    }, [publicKey, connected, eliteCheck]);
 
     return {
         publicKey: publicKey as any,
@@ -45,7 +46,9 @@ export function useVortexAuth() {
         realPK,
         realConnected,
         isAuditMode,
-        isElite,
+        isElite: elite.isElite,
+        eliteExpiresAt: elite.expiresAt,
+        refreshElite: () => setEliteCheck(n => n + 1),
         wallet,
         disconnect,
         select,

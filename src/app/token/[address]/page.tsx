@@ -8,50 +8,27 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
     let displayName = `${address.slice(0, 4)}...${address.slice(-4)}`;
     let symbol = '';
 
-    // VORTEX_SOVEREIGN_RECON: Fetch real token metadata from DB for perfect SEO
+    // Name and symbol come from the server-side token record, never from browser input.
     try {
         const { prisma } = await import('@/lib/prisma');
-        const token = await prisma.token.findUnique({ where: { address } });
-        const enhancement = await prisma.enhancement.findUnique({ where: { address } });
-
+        const token = await prisma.token.findUnique({ where: { address }, select: { name: true, symbol: true } });
         if (token) {
             displayName = token.name || displayName;
             symbol = token.symbol || '';
-        }
-        
-        // Add dynamic OG image if available
-        if (enhancement?.iconURI || token?.logoURI) {
-            // We can pass this to OG images later
         }
     } catch (e) {
         console.warn("SSR_METADATA_FETCH_FAILED", e);
     }
 
-    const title = `VORTEX | ${displayName} ${symbol ? `(${symbol})` : ''} - Live Intelligence`;
-    const description = `Intercept whale telemetry, audit bundle risk, and execute accelerated swaps for ${displayName} on the Vortex Network.`;
+    const title = `${symbol || displayName} price, chart and holders | VORTEX`;
+    const description = `Live ${displayName}${symbol ? ' (' + symbol + ')' : ''} price, liquidity, holder scan and swaps on Solana.`;
 
+    // The preview image comes from opengraph-image.tsx next to this page.
     return {
         title,
         description,
-        openGraph: {
-            title,
-            description,
-            type: 'website',
-            images: [
-                {
-                    url: `/og-image.png`,
-                    width: 1200,
-                    height: 630,
-                    alt: `Vortex Recon: ${displayName}`,
-                }
-            ]
-        },
-        twitter: {
-            card: 'summary_large_image',
-            title,
-            description,
-            images: [`/og-image.png`],
-        }
+        openGraph: { title, description, type: 'website' },
+        twitter: { card: 'summary_large_image', title, description },
     };
 }
 

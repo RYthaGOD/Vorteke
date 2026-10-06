@@ -15,9 +15,11 @@ import { DeveloperControlPanel } from '@/components/DeveloperControlPanel';
 import { VortexPanel } from '@/components/DesignSystem';
 import { ScreenerHeader } from '@/components/ScreenerHeader';
 import { VortexVerdict } from '@/components/VortexVerdict';
+import { EliteResearchPanel } from '@/components/EliteResearchPanel';
 import { TrendingStrip } from '@/components/TrendingStrip';
 import { FeedStatus } from '@/components/FeedStatus';
 import { useNotificationStore } from '@/lib/store';
+import { trackEvent } from '@/lib/analytics';
 
 const EnhancementModal = dynamic(() => import('@/components/EnhancementModal').then(m => m.EnhancementModal), { ssr: false });
 const TokenChart = dynamic(() => import('@/components/TokenChart').then(mod => mod.TokenChart), { ssr: false, loading: () => <div className="vortex-empty" role="status"><Loader2 size={24} aria-hidden />Loading chart…</div> });
@@ -35,6 +37,7 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
             const token = await fetchTokenData(address, publicKey?.toString());
             if (!token) throw new Error('Token unavailable');
             registerRecentlyViewed(token);
+            trackEvent('token_view', address);
             return token;
         },
         enabled: !!address, refetchInterval: 60000, staleTime: 30000,
@@ -93,17 +96,20 @@ function TokenDetailContent({ initialAddress }: { initialAddress?: string }) {
                                 {chart.isLoading ? <div className="vortex-empty" role="status"><Activity size={24} aria-hidden /><h2>Loading price history</h2><p>Fetching on-chain candles for this token.</p></div> : <TokenChart key={address + timeframe} address={address} initialData={chart.data || []} realtimeTx={latestTx || null} timeframe={timeframe} onTimeframeChange={setTimeframe} />}
                             </VortexPanel>
                             <p className="vortex-disclosure">{prices.isError && "Fast price updates are unavailable; showing the last market snapshot. "}{prices.data?.source === 'GeckoTerminal' ? 'GeckoTerminal market snapshots refresh every 60s.' : 'Jupiter quotes refresh every ' + (isElite ? '5' : '15') + 's.'} Provider caching can add delay. Candles refresh every minute. Recent trades appear when the upstream stream delivers them.</p>
-                            <div className="vortex-grid-2 vortex-gap-4 vortex-mt-4">
-                                <BundlePanel token={token} onEnhance={() => setShowEnhanceModal(true)} />
-                                <VortexPanel title="Token checks" subTitle="On-chain context" glowColor="none"><dl className="vortex-check-list">{[['Mint authority', token.advancedMetrics?.mintAuthority], ['Freeze authority', token.advancedMetrics?.freezeAuthority], ['LP signal (heuristic)', token.advancedMetrics?.lpBurnStatus], ['Top 10 holders', token.advancedMetrics?.top10HolderPercent != null ? token.advancedMetrics.top10HolderPercent.toFixed(1) + '%' : null]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Unavailable'}</dd></div>)}</dl><p className="vortex-disclosure">Checks provide context, not a guarantee of safety.</p></VortexPanel>
-                            </div>
                         </div>
-                        <div className="vortex-col-span-4 vortex-flex-column vortex-gap-4">
+                        <div className="vortex-col-span-4 vortex-flex-column vortex-gap-4 vortex-token-side">
                             <SwapPanel token={token} notify={notify} />
                             <VortexPanel title="Recent trades" subTitle={txs.length ? 'On-chain events' : 'Waiting for trades'} glowColor="none">
                                 {txs.length ? <ul className="vortex-trades-list">{txs.map(tx => <li key={tx.signature}><span className={tx.type === 'BUY' ? 'vortex-positive' : 'vortex-negative'}>{tx.type}</span><span>{tx.priceUsd && tx.priceUsd > 0 ? formatCurrency(tx.priceUsd) : '—'}</span><a href={'https://solscan.io/tx/' + tx.signature} target="_blank" rel="noreferrer" aria-label={'View ' + tx.type.toLowerCase() + ' transaction on Solscan'}>{new Date(tx.blockTime * 1000).toLocaleTimeString()}<ExternalLink size={12} aria-hidden /></a></li>)}</ul> : <div className="vortex-empty"><Activity size={24} aria-hidden /><p>No trades received yet. An idle feed does not mean the token has no trading activity.</p></div>}
                             </VortexPanel>
-                            {connected && token.owner === publicKey?.toString() && <DeveloperControlPanel token={token} onUpdate={market.refetch} notify={notify} />}
+                            {connected && token.owner === publicKey?.toString() && <DeveloperControlPanel token={token} onUpdate={market.refetch} onUpgrade={() => setShowEnhanceModal(true)} notify={notify} />}
+                        </div>
+                        <div className="vortex-col-span-8 vortex-flex-column vortex-gap-4">
+                            <div className="vortex-grid-2 vortex-gap-4">
+                                <BundlePanel token={token} onEnhance={() => setShowEnhanceModal(true)} />
+                                <VortexPanel title="Token checks" subTitle="On-chain context" glowColor="none"><dl className="vortex-check-list">{[['Mint authority', token.advancedMetrics?.mintAuthority], ['Freeze authority', token.advancedMetrics?.freezeAuthority], ['LP signal (heuristic)', token.advancedMetrics?.lpBurnStatus], ['Top 10 holders', token.advancedMetrics?.top10HolderPercent != null ? token.advancedMetrics.top10HolderPercent.toFixed(1) + '%' : null]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Unavailable'}</dd></div>)}</dl><p className="vortex-disclosure">Checks provide context, not a guarantee of safety.</p></VortexPanel>
+                            </div>
+                            <EliteResearchPanel address={address} />
                         </div>
                     </div>
                     {(token.customDescription || token.bannerURI || safeSocials.length > 0) && <VortexPanel title="About this project" subTitle="Project-supplied information" glowColor="none">

@@ -1,7 +1,6 @@
 /**
- * Vortex Observability Layer
- * Centralized logging for production-grade error tracking.
- * Can be swapped for Sentry, Axiom, or Datadog.
+ * Structured logging. On the server, lines go to Railway's logs as JSON. In the browser, errors
+ * are also sent to /api/client-error so they show up in the same logs.
  */
 
 type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
@@ -10,7 +9,7 @@ interface LogContext {
     wallet?: string;
     mint?: string;
     signature?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export const logger = {
@@ -21,37 +20,22 @@ export const logger = {
 };
 
 function log(level: LogLevel, message: string, context?: LogContext) {
-    const timestamp = new Date().toISOString();
-    const payload = {
-        timestamp,
-        level,
-        message,
-        ...context,
-        vortex_version: '1.0.0-recon',
-    };
-
-    // In production, this would ship to an external aggregator
     if (process.env.NODE_ENV === 'production') {
-        // Example: Sentry.captureMessage(message, { level, extra: context });
-        console.log(JSON.stringify(payload));
+        console.log(JSON.stringify({ timestamp: new Date().toISOString(), level, message, ...context }));
     } else {
-        // Pretty print for development
         const color = level === 'ERROR' || level === 'FATAL' ? '\x1b[31m' : level === 'WARN' ? '\x1b[33m' : '\x1b[36m';
         console.log(`${color}[${level}]\x1b[0m ${message}`, context || '');
     }
 }
 
-/**
- * Global Error Boundary Helper
- */
-export const captureException = (error: Error, context?: LogContext) => {
-    logger.error(error.message, {
-        stack: error.stack,
-        ...context
-    });
+// At most a few reports per page load, so a render loop can't flood the endpoint.
+let reportsLeft = 5;
 
-    // In production, ship to Sentry
-    if (process.env.NODE_ENV === 'production') {
-        // Sentry.captureException(error, { extra: context });
-    }
+/** Logs an error, and from the browser reports it to the server log as well. */
+export const captureException = (error: Error, context?: LogContext) => {
+    logger.error(error.message, { stack: error.stack, ...context });
+    if (typeof window === 'undefined' || process.env.NODE_ENV !== 'production' || reportsLeft <= 0) return;
+    reportsLeft--;
+    const body = JSON.stringify({ message: error.message, stack: error.stack?.slice(0, 2000), context, path: window.location.pathname });
+    try { navigator.sendBeacon?.('/api/client-error', new Blob([body], { type: 'application/json' })); } catch { /* best effort */ }
 };

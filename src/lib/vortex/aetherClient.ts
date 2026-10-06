@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const AETHER_API_URL = process.env.NEXT_PUBLIC_AETHER_API_URL || 'http://localhost:4000/graphql';
+// The Aether indexer is optional and parked. With no URL configured, every query is skipped.
+const AETHER_API_URL = process.env.NEXT_PUBLIC_AETHER_API_URL || '';
 
 export interface Ohlcv {
     window_start: string;
@@ -35,6 +36,7 @@ export interface VolumeCluster {
 
 class AetherClient {
     private async query(query: string, variables: any = {}) {
+        if (!AETHER_API_URL) return { data: null };
         try {
             const response = await axios.post(AETHER_API_URL, {
                 query,

@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import { Target, AlertCircle, CheckCircle2, Zap, TrendingUp, ShieldAlert } from 'lucide-react';
 import { TokenInfo, VortexTx } from '@/lib/dataService';
 import { VortexPanel } from '@/components/DesignSystem';
 
@@ -9,75 +8,30 @@ interface VortexVerdictProps {
     recentTxs: VortexTx[];
 }
 
+/** Plain counts from the trades seen on this page. A summary of activity, not a rating or advice. */
 export function VortexVerdict({ token, recentTxs }: VortexVerdictProps) {
-    // Mission Calculus Logic (Alpha)
-    const whaleBuys = recentTxs.filter(tx => tx.type === 'BUY' && tx.amountSol > 10).length;
+    const buys = recentTxs.filter(tx => tx.type === 'BUY');
+    const sells = recentTxs.filter(tx => tx.type === 'SELL');
+    const largeBuys = buys.filter(tx => tx.amountSol > 10).length;
     const devSells = recentTxs.filter(tx => tx.labels?.includes('DEV_DUMP')).length;
-    const bundleRisk = token.advancedMetrics?.holderIntelligence?.riskLevel || 'LOW';
-    const velocityStatus = token.advancedMetrics?.marketVelocity?.activityLevel || 'STABLE';
-    const lpStatus = token.advancedMetrics?.lpBurnStatus || 'unverified';
+    const volume = (list: VortexTx[]) => list.reduce((total, tx) => total + (Number.isFinite(tx.amountSol) ? tx.amountSol : 0), 0);
+    const concentration = token.advancedMetrics?.holderIntelligence?.riskLevel;
 
-    let verdict = 'NEUTRAL';
-    let summary = 'Awaiting further forensic on-chain confirmation.';
-    let color: 'cyan' | 'yellow' | 'none' = 'cyan';
-    let textColor = 'text-vortex-cyan';
-
-    if (devSells > 0) {
-        verdict = 'AVOID';
-        summary = 'Dev wallet dump detected. High rug risk identified via trade trace.';
-        color = 'none';
-        textColor = 'text-vortex-red';
-    } else if (bundleRisk === 'HIGH' || lpStatus === 'unverified') {
-        verdict = 'CAUTION';
-        summary = lpStatus === 'unverified'
-            ? 'LP lock not verified on-chain. Counterparty risk detected.'
-            : 'High launch block concentration. Potential sniper exit pending.';
-        color = 'none';
-        textColor = 'text-vortex-red';
-    } else if (whaleBuys > 2 && velocityStatus === 'VOLATILE') {
-        verdict = 'BULLISH';
-        summary = 'Whale accumulation + high velocity signal detected.';
-        color = 'yellow';
-        textColor = 'text-vortex-yellow';
-    } else if (token.tier === 'Elite') {
-        verdict = 'STABLE';
-        summary = 'Verified Elite asset with organic liquidity footprint.';
-        color = 'cyan';
-        textColor = 'text-vortex-cyan';
-    }
+    const rows: [string, string][] = [
+        ['Trades seen', `${recentTxs.length} (${buys.length} buys, ${sells.length} sells)`],
+        ['Buy volume', volume(buys).toFixed(2) + ' SOL'],
+        ['Sell volume', volume(sells).toFixed(2) + ' SOL'],
+        ['Buys over 10 SOL', String(largeBuys)],
+        ['Sells by the creator', String(devSells)],
+        ['Top 10 wallet concentration', concentration === 'HIGH' ? 'Very high' : concentration === 'MEDIUM' ? 'High' : concentration === 'LOW' ? 'Moderate or low' : 'Unavailable'],
+    ];
 
     return (
-        <VortexPanel title="VORTEX_VERDICT" subTitle={verdict} glowColor={color}>
-            <div className="vortex-flex-column vortex-gap-4">
-                <div className="vortex-p-3 vortex-bg-obsidian-soft vortex-border-radius-md">
-                    <p className="vortex-text-sm vortex-text-muted vortex-m-0">
-                        <span className={`vortex-text-bold ${textColor}`}>FORENSIC_ANALYSIS:</span> {summary}
-                    </p>
-                </div>
-
-                <div className="vortex-grid-4 vortex-gap-3">
-                    <div className="vortex-flex-column vortex-center">
-                        <Zap size={16} className={whaleBuys > 0 ? 'text-vortex-yellow' : 'text-vortex-muted'} />
-                        <span className="vortex-text-tiny vortex-mt-2">WHALE_PULSE</span>
-                        <span className="vortex-text-xs vortex-text-extrabold">{whaleBuys} BUYS</span>
-                    </div>
-                    <div className="vortex-flex-column vortex-center">
-                        <ShieldAlert size={16} className={bundleRisk === 'HIGH' ? 'text-vortex-red' : 'text-vortex-yellow'} />
-                        <span className="vortex-text-tiny vortex-mt-2">BUNDLE_RISK</span>
-                        <span className="vortex-text-xs vortex-text-extrabold">{bundleRisk}</span>
-                    </div>
-                    <div className="vortex-flex-column vortex-center">
-                        <CheckCircle2 size={16} className={lpStatus === 'verified' ? 'text-vortex-cyan' : 'text-vortex-red'} />
-                        <span className="vortex-text-tiny vortex-mt-2">LP_STATUS</span>
-                        <span className="vortex-text-xs vortex-text-extrabold">{lpStatus.toUpperCase()}</span>
-                    </div>
-                    <div className="vortex-flex-column vortex-center">
-                        <TrendingUp size={16} className={velocityStatus === 'VOLATILE' ? 'text-vortex-yellow' : 'text-vortex-muted'} />
-                        <span className="vortex-text-tiny vortex-mt-2">VELOCITY</span>
-                        <span className="vortex-text-xs vortex-text-extrabold">{velocityStatus}</span>
-                    </div>
-                </div>
-            </div>
+        <VortexPanel title="Recent activity" subTitle="Trades seen since you opened this page" glowColor="none">
+            <dl className="vortex-check-list">
+                {rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+            </dl>
+            <p className="vortex-disclosure">Counts cover only the trades streamed to this page. This is a summary, not a rating or advice.</p>
         </VortexPanel>
     );
 }
