@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { LAMPORTS_PER_SOL, PublicKey, VersionedTransaction, AddressLookupTableAccount } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { TokenInfo } from '@/lib/dataService';
-import { SOL_MINT, TREASURY_SWAPS, PROTOCOL_FLAT_FEE_LAMPORTS, JITO_TIP_ACCOUNTS, JITO_DEFAULT_TIP_LAMPORTS } from '@/lib/constants';
+import { SOL_MINT, TREASURY_SWAPS, PROTOCOL_FLAT_FEE_LAMPORTS, JITO_DEFAULT_TIP_LAMPORTS, randomTipAccount } from '@/lib/constants';
 import bs58 from 'bs58';
 import { prepareSwapTransaction } from '@/lib/solana/swapTransaction.mjs';
 import { captureException } from '@/lib/logger';
+
+const TURBO_GRACE_MS = 8000;
 
 interface SwapQuote { outAmount: number; priceImpact: number; feeBps: number; raw: Record<string, unknown>; }
 
@@ -116,6 +118,16 @@ export function useSwapExecution(
     const [executing, setExecuting] = useState(false);
     const [execStatus, setExecStatus] = useState('');
 
+    const appeared = async (signature: string, ms: number) => {
+        const deadline = Date.now() + ms;
+        while (Date.now() < deadline) {
+            const { value } = await connection.getSignatureStatuses([signature]);
+            if (value[0]) return true;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        return false;
+    };
+
     const executeSwap = async (
         amount: string,
         swapMode: 'BUY' | 'SELL',
@@ -126,7 +138,7 @@ export function useSwapExecution(
         if (!publicKey || !signTransaction || !quote) return;
 
         setExecuting(true);
-        setExecStatus('INITIALIZING...');
+        setExecStatus('Preparing swap…');
 
         try {
             const swapConfig: any = {
@@ -137,7 +149,7 @@ export function useSwapExecution(
             };
 
             if (priorityLevel === 'Turbo') {
-                setExecStatus('ROUTING_TURBO...');
+                setExecStatus('Routing through Turbo…');
                 swapConfig.prioritizationFeeLamports = 2500000;
             } else {
                 swapConfig.prioritizationFeeLamports = 'auto';
@@ -151,11 +163,11 @@ export function useSwapExecution(
 
             if (!swapRes.ok) throw new Error('Could not prepare the swap. Refresh the quote and retry.');
             const { swapTransaction, lastValidBlockHeight } = await swapRes.json();
-            if (!swapTransaction) throw new Error("ROUTE_UNAVAILABLE");
+            if (!swapTransaction) throw new Error('No route is available for this swap right now.');
 
             let transaction = VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
 
-            setExecStatus('PREPARING_TRANSACTION_STATE...');
+            setExecStatus('Building transaction…');
             const altPks = transaction.message.addressTableLookups.map(a => a.accountKey);
             const altInfos = await connection.getMultipleAccountsInfo(altPks);
             const addressLookupTableAccounts = altInfos.map((info, idx) => {
@@ -169,20 +181,20 @@ export function useSwapExecution(
             transaction = prepareSwapTransaction(transaction, publicKey, addressLookupTableAccounts, {
                 treasury: TREASURY_SWAPS,
                 feeLamports: isElite ? 0 : PROTOCOL_FLAT_FEE_LAMPORTS,
-                tip: priorityLevel === 'Turbo' ? { address: JITO_TIP_ACCOUNTS[Math.floor(Math.random() * JITO_TIP_ACCOUNTS.length)], lamports: JITO_DEFAULT_TIP_LAMPORTS } : undefined,
+                tip: priorityLevel === 'Turbo' ? { address: randomTipAccount(), lamports: JITO_DEFAULT_TIP_LAMPORTS } : undefined,
             });
 
-            setExecStatus('SIMULATING...');
+            setExecStatus('Checking the transaction…');
             const simulation = await connection.simulateTransaction(transaction);
-            if (simulation.value.err) throw new Error("SIMULATION_FAILED");
+            if (simulation.value.err) throw new Error('The swap would fail on-chain. Refresh the quote or raise slippage.');
 
-            setExecStatus('SIGNING...');
+            setExecStatus('Waiting for your wallet…');
             const signed = await signTransaction(transaction);
             const serialized = Buffer.from(signed.serialize()).toString('base64');
 
             let sig = '';
             if (priorityLevel === 'Turbo') {
-                setExecStatus('SUBMITTING_JITO_BUNDLE...');
+                setExecStatus('Sending through Turbo…');
                 try {
                     const jitoRes = await fetch('/api/proxy/jito-bundle', {
                         method: 'POST',
@@ -196,26 +208,32 @@ export function useSwapExecution(
                     if (jitoData.error || !jitoData.result) throw new Error('JITO_SUBMISSION_FAILED');
                     // sendBundle returns a bundle ID, not a transaction signature.
                     sig = bs58.encode(signed.signatures[0]);
+                    // A bundle can be accepted and still dropped. Resend the same signed transaction
+                    // through RPC if it hasn't appeared; the shared signature means it can only land once.
+                    if (!(await appeared(sig, TURBO_GRACE_MS))) {
+                        setExecStatus('Turbo is slow, sending normally…');
+                        await connection.sendRawTransaction(signed.serialize(), { skipPreflight: true });
+                    }
                 } catch (jitoErr: any) {
                     console.error("JITO_FAIL_FALLBACK", jitoErr);
                     // Fallback to standard transmission if Jito fails, so user doesn't lose the trade
                     sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: true });
                 }
             } else {
-                setExecStatus('TRANSMITTING...');
+                setExecStatus('Sending…');
                 sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: true });
             }
 
-            setExecStatus('CONFIRMING...');
+            setExecStatus('Confirming…');
             const confirmation = Number.isInteger(lastValidBlockHeight)
                 ? await connection.confirmTransaction({ signature: sig, blockhash: signed.message.recentBlockhash, lastValidBlockHeight }, 'confirmed')
                 : await connection.confirmTransaction(sig, 'confirmed');
             if (confirmation.value.err) throw new Error('The transaction was confirmed with an error. No swap completed.');
 
-            notify('success', `ORDER_EXECUTED: [${sig.slice(0, 8)}...]`);
+            notify('success', `Swap confirmed (${sig.slice(0, 8)}…).`);
             return true;
         } catch (e: any) {
-            notify('error', `EXECUTION_FAILED: ${e.message}`);
+            notify('error', `Swap failed: ${e.message}`);
             captureException(e, { context: 'SWAP_HOOK' });
             return false;
         } finally {

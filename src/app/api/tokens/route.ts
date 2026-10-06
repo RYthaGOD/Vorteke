@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PublicKey } from '@solana/web3.js';
 import { prisma } from '@/lib/prisma';
+import { getResilientConnection } from '@/lib/solana/connection';
+import { primaryCreator, resolveProjectAuthorities } from '@/lib/solana/creator.mjs';
+import { fetchHeliusMetadata } from '@/lib/vortex/token/metadata';
 
 export async function GET(request: NextRequest) {
     try {
@@ -37,44 +40,44 @@ export async function GET(request: NextRequest) {
     }
 }
 
+const REFRESH_MS = 6 * 3_600_000;
+
+/**
+ * Records that a token was viewed. Only the address is taken from the caller: name, symbol,
+ * logo and creator are looked up here, so nobody can plant data that claims or page titles trust.
+ */
 export async function POST(request: NextRequest) {
     try {
-        const token = await request.json();
-        if (!token.address) {
+        const { address } = await request.json();
+        if (typeof address !== 'string') {
             return NextResponse.json({ error: 'MISSING_ADDRESS' }, { status: 400 });
         }
-
-        // FIX: Validate that the address is a real Solana public key before upsert
-        try { new PublicKey(token.address); } catch {
+        try { new PublicKey(address); } catch {
             return NextResponse.json({ error: 'INVALID_SOLANA_ADDRESS' }, { status: 400 });
         }
 
+        const existing = await prisma.token.findUnique({ where: { address }, select: { lastUpdated: true } });
+        if (existing && Date.now() - existing.lastUpdated.getTime() < REFRESH_MS) {
+            return NextResponse.json({ success: true });
+        }
+
+        const [metadata, authorities] = await Promise.all([
+            fetchHeliusMetadata(address),
+            getResilientConnection(c => resolveProjectAuthorities(c, address)).catch(() => null),
+        ]);
+        if (!metadata?.name && !metadata?.symbol) {
+            return NextResponse.json({ error: 'TOKEN_NOT_FOUND' }, { status: 404 });
+        }
+
         const data = {
-            name: token.name || 'Unknown',
-            symbol: token.symbol || 'UNK',
-            logoURI: token.logoURI || null,
-            priceUsd: typeof token.priceUsd === 'number' ? token.priceUsd : 0,
-            priceChange24h: typeof token.priceChange24h === 'number' ? token.priceChange24h : 0,
-            volume24h: typeof token.volume24h === 'number' ? token.volume24h : 0,
-            liquidityUsd: typeof token.liquidityUsd === 'number' ? token.liquidityUsd : 0,
-            fdv: typeof token.fdv === 'number' ? token.fdv : 0,
-            mcap: typeof token.mcap === 'number' ? token.mcap : 0,
-            tier: token.tier || 'Basic',
-            creator: token.creator || null,
-            securityTags: token.securityTags || null,
-            advancedMetrics: token.advancedMetrics || null,
+            name: metadata.name || metadata.symbol,
+            symbol: metadata.symbol || '?',
+            logoURI: typeof metadata.logoURI === 'string' && metadata.logoURI.startsWith('https://') ? metadata.logoURI : null,
+            ...(authorities ? { creator: primaryCreator(authorities) } : {}),
             lastUpdated: new Date()
         };
 
-        await prisma.token.upsert({
-            where: { address: token.address },
-            update: data,
-            create: {
-                address: token.address,
-                ...data
-            }
-        });
-
+        await prisma.token.upsert({ where: { address }, update: data, create: { address, ...data } });
         return NextResponse.json({ success: true });
     } catch (e) {
         console.error("TOKEN_UPSERT_ERROR:", e);

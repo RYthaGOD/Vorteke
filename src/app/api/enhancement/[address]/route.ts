@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PublicKey } from '@solana/web3.js';
 import { prisma } from '@/lib/prisma';
+import { publicProfile } from '@/lib/profiles.mjs';
 
 export async function GET(
     request: NextRequest,
@@ -15,31 +16,8 @@ export async function GET(
     }
 
     try {
-        const enhancement = await prisma.enhancement.findUnique({
-            where: { address }
-        });
-
-        if (!enhancement) {
-            return NextResponse.json({ address, tier: 'Basic' });
-        }
-
-        // Sanitize socials to avoid malformed JSON breaking the frontend
-        let rawSocials: any = {};
-        if (enhancement.socials) {
-            try {
-                rawSocials = JSON.parse(enhancement.socials as string);
-            } catch (e) {}
-        }
-        const sanitizedSocials = {
-            twitter: typeof rawSocials.twitter === 'string' ? rawSocials.twitter : undefined,
-            telegram: typeof rawSocials.telegram === 'string' ? rawSocials.telegram : undefined,
-            website: typeof rawSocials.website === 'string' ? rawSocials.website : undefined,
-        };
-
-        return NextResponse.json({
-            ...enhancement,
-            socials: sanitizedSocials
-        });
+        const enhancement = await prisma.enhancement.findUnique({ where: { address } });
+        return NextResponse.json(publicProfile(enhancement) ?? { address, tier: 'Basic', boosted: false, socials: {} });
     } catch (e) {
         return NextResponse.json({ error: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
     }

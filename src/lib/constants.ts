@@ -9,10 +9,8 @@ export const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY || '';
 
 // System-wide RPC fallback topology
 export const SOLANA_NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet' ? 'devnet' : 'mainnet-beta';
-export const RPC_ENDPOINTS = SOLANA_NETWORK === 'devnet' ? ['https://api.devnet.solana.com'] : [
-    HELIUS_RPC,
-    'https://api.mainnet-beta.solana.com'
-].filter(Boolean);
+// The public mainnet endpoint rejects most app traffic (403), so it is only used when no primary RPC is configured.
+export const RPC_ENDPOINTS = SOLANA_NETWORK === 'devnet' ? ['https://api.devnet.solana.com'] : [HELIUS_RPC || 'https://api.mainnet-beta.solana.com'];
 
 export const PROTECTED_MINT_ADDRESSES = [
     'So11111111111111111111111111111111111111112', // Wrapped SOL
@@ -30,22 +28,10 @@ export const TREASURY_SWAPS = 'C29gx6Wq2fvuBXrj9YjoTTFYHXhsB5dD5cWd7bmu9PDp'; //
 export const TREASURY_ENHANCEMENTS = 'jawKuQ3xtcYoAuqE9jyG2H35sv2pWJSzsyjoNpsxG38'; // Elite Enhancements Revenue
 export const VORTEX_OPS = '8hLpEK6D2msZnC2HKeaxHiEiTLLSwRvd31FqUCNrYnP2'; // Vortex Ops Beta
 
-// Single source of truth for tier pricing in SOL. /api/pay/initiate builds the charge
-// and /api/pay/verify checks the treasury received it — both must read from here.
-// (Previously these were hardcoded separately in each file and had drifted out of sync,
-// which made every payment verification fail. See src/app/api/pay/verify/route.ts.)
-export const TIER_PRICES_SOL: Record<string, number> = {
-    Enhanced: 0.20, // ~$29 "BOOST_PROFILE"
-    Elite: 0.035,   // ~$5 "TRENDING_BOOST"
-    DeepScan: 0.05,
-};
+// Product prices live in src/lib/payments/pricing.mjs (USD, converted to SOL when a payment starts).
 
 // Jito-Turbo Protocol Constants
-export const JITO_TIP_ACCOUNTS = [
-    '96g9sAg9u3mBsJqcRepo4m9637jg7BSM7zXv8Uf8SdfS',
-    'HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gM8',
-    'Cw8CFFL1T49q9895AB6Yv8sUygM96shKthshLdK8T7n6'
-];
+export { JITO_TIP_ACCOUNTS, randomTipAccount } from './solana/jito.mjs';
 export const JITO_BUNDLE_API = 'https://mainnet.block-engine.jito.wtf/api/v1/bundles';
 export const JITO_DEFAULT_TIP_LAMPORTS = 100000; // 0.0001 SOL tactical base
 
