@@ -1,6 +1,6 @@
 {
     "extends": ["next/core-web-vitals", "next/typescript"],
-    "ignorePatterns": ["src/aether-temp/**", "Vorteke/**", "tmp/**", "sdk/**"],
+    "ignorePatterns": ["aether/**", "Vorteke/**", "tmp/**", "sdk/**"],
     "rules": {
         "@typescript-eslint/no-explicit-any": "warn"
     }
